@@ -1,0 +1,44 @@
+{
+  "language": {
+    "name": "English",
+    "label": "Language"
+  },
+  "legal": {
+    "imprint": {
+      "slug": "imprint",
+      "title": "Imprint"
+    },
+    "privacy": {
+      "slug": "privacy",
+      "title": "Privacy statement"
+    }
+  },
+  "page": {
+    "title": "{view} · {site}",
+    "notFound": "Page not found",
+    "landing": "Status pages",
+    "admin": "SitRep admin",
+    "adminTitle": "{view} · SitRep admin"
+  },
+  "error": {
+    "internal": "Something went wrong on the server.",
+    "invalid": "Some fields are invalid.",
+    "invalid_json": "The request could not be read.",
+    "too_large": "The request is too large.",
+    "not_found": "This does not exist.",
+    "unauthorized": "Please sign in again.",
+    "forbidden": "The request was refused.",
+    "unsupported_media_type": "The request has an unsupported format.",
+    "throttled": "Too many attempts. Please try again later.",
+    "invalid_credentials": "Username or password is wrong.",
+    "required": "This field is required.",
+    "invalid_value": "This value is not allowed.",
+    "unsupported_language": "This language is not supported.",
+    "duplicate": "This value appears more than once.",
+    "primary_not_enabled": "The primary language must be enabled.",
+    "route_conflict": "This address is already used by another status page."
+  },
+  "incidents": {
+    "all": "All incidents"
+  }
+}

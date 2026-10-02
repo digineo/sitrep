@@ -1,0 +1,44 @@
+{
+  "language": {
+    "name": "Deutsch",
+    "label": "Sprache"
+  },
+  "legal": {
+    "imprint": {
+      "slug": "impressum",
+      "title": "Impressum"
+    },
+    "privacy": {
+      "slug": "datenschutz",
+      "title": "Datenschutzerklärung"
+    }
+  },
+  "page": {
+    "title": "{view} · {site}",
+    "notFound": "Seite nicht gefunden",
+    "landing": "Statusseiten",
+    "admin": "SitRep-Verwaltung",
+    "adminTitle": "{view} · SitRep-Verwaltung"
+  },
+  "error": {
+    "internal": "Auf dem Server ist ein Fehler aufgetreten.",
+    "invalid": "Einige Felder sind ungültig.",
+    "invalid_json": "Die Anfrage konnte nicht gelesen werden.",
+    "too_large": "Die Anfrage ist zu groß.",
+    "not_found": "Das existiert nicht.",
+    "unauthorized": "Bitte melden Sie sich erneut an.",
+    "forbidden": "Die Anfrage wurde abgelehnt.",
+    "unsupported_media_type": "Die Anfrage hat ein nicht unterstütztes Format.",
+    "throttled": "Zu viele Versuche. Bitte versuchen Sie es später erneut.",
+    "invalid_credentials": "Benutzername oder Passwort ist falsch.",
+    "required": "Dieses Feld ist erforderlich.",
+    "invalid_value": "Dieser Wert ist nicht zulässig.",
+    "unsupported_language": "Diese Sprache wird nicht unterstützt.",
+    "duplicate": "Dieser Wert kommt mehrfach vor.",
+    "primary_not_enabled": "Die Hauptsprache muss aktiviert sein.",
+    "route_conflict": "Diese Adresse wird bereits von einer anderen Statusseite verwendet."
+  },
+  "incidents": {
+    "all": "Alle Vorfälle"
+  }
+}
