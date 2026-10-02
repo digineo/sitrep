@@ -1,7 +1,7 @@
 {
   "language": {
     "name": "English",
-    "label": "Language"
+    "current": "Language: {name}"
   },
   "legal": {
     "imprint": {
@@ -20,6 +20,84 @@
     "admin": "SitRep admin",
     "adminTitle": "{view} · SitRep admin"
   },
+  "common": {
+    "dismiss": "Dismiss",
+    "close": "Close",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "theme": {
+    "current": "Color scheme: {name}",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "landing": {
+    "tagline": "Status pages for your services",
+    "toAdmin": "Go to administration"
+  },
+  "notFound": {
+    "text": "This page does not exist.",
+    "toOverview": "Back to the overview",
+    "toAdminHome": "Back to the status pages"
+  },
+  "incidents": {
+    "all": "All incidents"
+  },
+  "admin": {
+    "unreachable": "The server cannot be reached. Reload the page to try again."
+  },
+  "login": {
+    "title": "Sign in",
+    "continue": "Sign in to continue.",
+    "sso": "Sign in with single sign-on",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Sign in",
+    "failed": "Sign-in failed. Check your username and password.",
+    "throttled": "Too many attempts. Please try again later.",
+    "unavailable": "Sign-in is temporarily unavailable. Please try again later.",
+    "signedOut": "You have been signed out."
+  },
+  "nav": {
+    "label": "Main navigation",
+    "menu": "Menu",
+    "global": "Global",
+    "settings": "Settings",
+    "signOut": "Sign out",
+    "signedInAs": "Signed in as"
+  },
+  "home": {
+    "title": "Status pages",
+    "empty": "No status pages yet."
+  },
+  "settings": {
+    "title": "Settings",
+    "languages": "Languages",
+    "appearance": "Appearance",
+    "defaultTheme": "Default color scheme",
+    "defaultThemeHelp": "Used on pages that do not set their own, unless visitors choose one.",
+    "saved": "Settings saved."
+  },
+  "languages": {
+    "enabled": "Enabled languages",
+    "enabledHelp": "Visitors can choose among these languages, in this order. New status pages start with them.",
+    "primary": "Primary language",
+    "primaryHelp": "Required texts need a value in this language. It is shown when a text is missing in another language.",
+    "moveUp": "Move {language} up",
+    "moveDown": "Move {language} down"
+  },
+  "toast": {
+    "saveFailed": "Saving failed"
+  },
+  "unsaved": {
+    "title": "Discard changes?",
+    "message": "Your changes on this page have not been saved.",
+    "discard": "Discard changes"
+  },
+  "notice": {
+    "loadFailed": "Loading failed: {message}"
+  },
   "error": {
     "internal": "Something went wrong on the server.",
     "invalid": "Some fields are invalid.",
@@ -36,9 +114,7 @@
     "unsupported_language": "This language is not supported.",
     "duplicate": "This value appears more than once.",
     "primary_not_enabled": "The primary language must be enabled.",
-    "route_conflict": "This address is already used by another status page."
-  },
-  "incidents": {
-    "all": "All incidents"
+    "route_conflict": "This address is already used by another status page.",
+    "network": "The server cannot be reached."
   }
 }

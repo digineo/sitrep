@@ -1,7 +1,7 @@
 {
   "language": {
     "name": "Deutsch",
-    "label": "Sprache"
+    "current": "Sprache: {name}"
   },
   "legal": {
     "imprint": {
@@ -20,6 +20,84 @@
     "admin": "SitRep-Verwaltung",
     "adminTitle": "{view} · SitRep-Verwaltung"
   },
+  "common": {
+    "dismiss": "Ausblenden",
+    "close": "Schließen",
+    "cancel": "Abbrechen",
+    "save": "Speichern"
+  },
+  "theme": {
+    "current": "Farbschema: {name}",
+    "light": "Hell",
+    "dark": "Dunkel",
+    "system": "System"
+  },
+  "landing": {
+    "tagline": "Statusseiten für Ihre Dienste",
+    "toAdmin": "Zur Verwaltung"
+  },
+  "notFound": {
+    "text": "Diese Seite existiert nicht.",
+    "toOverview": "Zurück zur Übersicht",
+    "toAdminHome": "Zurück zu den Statusseiten"
+  },
+  "incidents": {
+    "all": "Alle Vorfälle"
+  },
+  "admin": {
+    "unreachable": "Der Server ist nicht erreichbar. Laden Sie die Seite neu, um es erneut zu versuchen."
+  },
+  "login": {
+    "title": "Anmelden",
+    "continue": "Melden Sie sich an, um fortzufahren.",
+    "sso": "Mit Single Sign-on anmelden",
+    "username": "Benutzername",
+    "password": "Passwort",
+    "submit": "Anmelden",
+    "failed": "Anmeldung fehlgeschlagen. Prüfen Sie Benutzername und Passwort.",
+    "throttled": "Zu viele Versuche. Bitte versuchen Sie es später erneut.",
+    "unavailable": "Die Anmeldung ist vorübergehend nicht möglich. Bitte versuchen Sie es später erneut.",
+    "signedOut": "Sie wurden abgemeldet."
+  },
+  "nav": {
+    "label": "Hauptnavigation",
+    "menu": "Menü",
+    "global": "Allgemein",
+    "settings": "Einstellungen",
+    "signOut": "Abmelden",
+    "signedInAs": "Angemeldet als"
+  },
+  "home": {
+    "title": "Statusseiten",
+    "empty": "Noch keine Statusseiten."
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "languages": "Sprachen",
+    "appearance": "Darstellung",
+    "defaultTheme": "Standard-Farbschema",
+    "defaultThemeHelp": "Gilt für Seiten ohne eigenes Farbschema, solange Besucher kein anderes wählen.",
+    "saved": "Einstellungen gespeichert."
+  },
+  "languages": {
+    "enabled": "Aktivierte Sprachen",
+    "enabledHelp": "Besucher können zwischen diesen Sprachen wählen, in dieser Reihenfolge. Neue Statusseiten übernehmen sie.",
+    "primary": "Hauptsprache",
+    "primaryHelp": "Pflichttexte brauchen einen Wert in dieser Sprache. Er wird angezeigt, wenn ein Text in einer anderen Sprache fehlt.",
+    "moveUp": "{language} nach oben verschieben",
+    "moveDown": "{language} nach unten verschieben"
+  },
+  "toast": {
+    "saveFailed": "Speichern fehlgeschlagen"
+  },
+  "unsaved": {
+    "title": "Änderungen verwerfen?",
+    "message": "Ihre Änderungen auf dieser Seite wurden nicht gespeichert.",
+    "discard": "Änderungen verwerfen"
+  },
+  "notice": {
+    "loadFailed": "Laden fehlgeschlagen: {message}"
+  },
   "error": {
     "internal": "Auf dem Server ist ein Fehler aufgetreten.",
     "invalid": "Einige Felder sind ungültig.",
@@ -36,9 +114,7 @@
     "unsupported_language": "Diese Sprache wird nicht unterstützt.",
     "duplicate": "Dieser Wert kommt mehrfach vor.",
     "primary_not_enabled": "Die Hauptsprache muss aktiviert sein.",
-    "route_conflict": "Diese Adresse wird bereits von einer anderen Statusseite verwendet."
-  },
-  "incidents": {
-    "all": "Alle Vorfälle"
+    "route_conflict": "Diese Adresse wird bereits von einer anderen Statusseite verwendet.",
+    "network": "Der Server ist nicht erreichbar."
   }
 }
