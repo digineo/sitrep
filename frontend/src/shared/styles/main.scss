@@ -1,0 +1,55 @@
+// Status colors double as Bulma's success, warning and danger colors; the
+// product accent is the primary and link color.
+@use "bulma/sass" with (
+  $primary: #2f6feb,
+  $link: #2f6feb,
+  $success: #2f9e6b,
+  $warning: #e0a52b,
+  $danger: #e5484d,
+);
+
+:focus-visible {
+  outline: 2px solid #2f6feb;
+  outline-offset: 2px;
+}
+
+.sr-dialog {
+  padding: 0;
+  border: none;
+  border-radius: var(--bulma-radius-large);
+  max-width: min(32rem, calc(100vw - 2rem));
+  background: transparent;
+
+  &::backdrop {
+    background: rgb(10 10 10 / 50%);
+  }
+
+  > .box {
+    margin: 0;
+  }
+}
+
+.sr-corner {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+
+.sr-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
+  }
+}
