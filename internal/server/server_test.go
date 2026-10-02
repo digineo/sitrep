@@ -1,0 +1,491 @@
+package server
+
+import (
+	"encoding/json"
+	"html"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/digineo/xlog"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/digineo/sitrep/internal/auth"
+	"github.com/digineo/sitrep/internal/config"
+	"github.com/digineo/sitrep/internal/model"
+	"github.com/digineo/sitrep/internal/store"
+)
+
+// testProvider signs in everyone who posts to /auth/test/login.
+type testProvider struct{}
+
+func (testProvider) Method() auth.Method { return auth.MethodCredentials }
+func (testProvider) Available() bool     { return true }
+func (testProvider) Routes(mux *http.ServeMux, core *auth.Core) {
+	login := func(w http.ResponseWriter, r *http.Request) {
+		err := core.Login(w, r, auth.Identity{
+			Subject:     "ann",
+			DisplayName: "Ann",
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+	mux.HandleFunc("POST /auth/test/login", login)
+}
+
+type fixture struct {
+	t   *testing.T
+	db  *store.DB
+	srv http.Handler
+}
+
+func newFixture(t *testing.T) *fixture {
+	t.Helper()
+	db, err := store.Open(filepath.Join(t.TempDir(), "sitrep.db"))
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+
+	cfg := config.Config{
+		BaseDomains: []string{"status.example.com", "sitrep.localhost"},
+	}
+	core := auth.NewCore(
+		xlog.NewDiscard(),
+		db,
+		"test",
+		testProvider{},
+		time.Hour,
+		false,
+	)
+	f := &fixture{
+		t:   t,
+		db:  db,
+		srv: newServer(xlog.NewDiscard(), cfg, db, core, testAssets()),
+	}
+
+	for _, site := range []*model.Site{
+		{
+			Name: model.Text{"de": "Acme </script><script>alert(1)</script>"},
+			Languages: model.Languages{
+				Enabled: []string{"de"},
+				Primary: "de",
+			},
+			Route: model.Route{
+				Mode: model.RoutePath,
+				Slug: "acme",
+			},
+		},
+		{
+			Name: model.Text{
+				"en": "Beta",
+				"de": "Beta DE",
+			},
+			Languages: model.Languages{
+				Enabled: []string{"de", "en"},
+				Primary: "en",
+			},
+			Route: model.Route{
+				Mode: model.RouteSubdomain,
+				Slug: "beta",
+			},
+		},
+		{
+			Name: model.Text{"en": "Gamma"},
+			Languages: model.Languages{
+				Enabled: []string{"en"},
+				Primary: "en",
+			},
+			Route: model.Route{
+				Mode:   model.RouteCustom,
+				Domain: "status.gamma.org",
+			},
+		},
+	} {
+		require.NoError(t, db.CreateSite(site))
+	}
+	return f
+}
+
+func (f *fixture) do(r *http.Request) *httptest.ResponseRecorder {
+	w := httptest.NewRecorder()
+	f.srv.ServeHTTP(w, r)
+	return w
+}
+
+func (f *fixture) get(
+	host, path string,
+	headers ...string,
+) *httptest.ResponseRecorder {
+	r := httptest.NewRequest(http.MethodGet, path, nil)
+	r.Host = host
+	for i := 0; i < len(headers); i += 2 {
+		r.Header.Add(headers[i], headers[i+1])
+	}
+	return f.do(r)
+}
+
+var bootstrapPattern = regexp.MustCompile(
+	`<script type="application/json" id="bootstrap">(.*)</script>`,
+)
+
+func parseBootstrap(t *testing.T, body string) bootstrap {
+	t.Helper()
+	m := bootstrapPattern.FindStringSubmatch(body)
+	require.NotNil(t, m, body)
+	var b bootstrap
+	require.NoError(t, json.Unmarshal([]byte(m[1]), &b))
+	return b
+}
+
+func TestHostRouting(t *testing.T) {
+	assert := assert.New(t)
+
+	f := newFixture(t)
+	tests := []struct {
+		host, path string
+		status     int
+		location   string
+		mode       string
+	}{
+		{"status.example.com", "/", http.StatusFound, "/en/", ""},
+		{"status.example.com", "/en/", http.StatusOK, "", "landing"},
+		{"status.example.com", "/nope", http.StatusNotFound, "", "landing"},
+		{"Status.Example.com.:2607", "/en/", http.StatusOK, "", "landing"},
+		{"status.example.com", "/admin", http.StatusOK, "", "admin"},
+		{"status.example.com", "/admin/sites/x", http.StatusOK, "", "admin"},
+		{"status.example.com", "/administrator", http.StatusNotFound, "", "landing"},
+		{"status.example.com", "/acme/", http.StatusOK, "", "site"},
+		{"sitrep.localhost", "/acme/", http.StatusOK, "", "site"},
+		{"status.example.com", "/acme", http.StatusFound, "/acme/", ""},
+		{"status.example.com", "/acme/de/", http.StatusFound, "/acme/", ""},
+		{"status.example.com", "/acme/incidents", http.StatusOK, "", "site"},
+		{"status.example.com", "/acme/nope", http.StatusNotFound, "", "site"},
+		{"beta.status.example.com", "/", http.StatusFound, "/en/", ""},
+		{"beta.sitrep.localhost", "/de/", http.StatusOK, "", "site"},
+		{"beta.status.example.com", "/admin", http.StatusNotFound, "", "site"},
+		{"beta.status.example.com", "/acme/", http.StatusNotFound, "", "site"},
+		{"status.gamma.org", "/", http.StatusOK, "", "site"},
+		{"STATUS.gamma.org.", "/incidents", http.StatusOK, "", "site"},
+		{"acme.status.example.com", "/", http.StatusNotFound, "", ""},
+		{"x.beta.status.example.com", "/", http.StatusNotFound, "", ""},
+		{"example.com", "/", http.StatusNotFound, "", ""},
+		{"gamma.org", "/", http.StatusNotFound, "", ""},
+	}
+	for _, tt := range tests {
+		w := f.get(tt.host, tt.path)
+		name := tt.host + tt.path
+		assert.Equal(tt.status, w.Code, name)
+		assert.Equal(tt.location, w.Header().Get("Location"), name)
+		assert.Equal("nosniff", w.Header().Get("X-Content-Type-Options"), name)
+		if tt.mode != "" {
+			assert.Equal(tt.mode, parseBootstrap(t, w.Body.String()).Mode, name)
+		}
+	}
+}
+
+func TestApexOnlyRoutes(t *testing.T) {
+	f := newFixture(t)
+	for _, path := range []string{"/auth/session", "/api/admin/settings"} {
+		code := f.get("status.example.com", path).Code
+		assert.NotEqual(t, http.StatusNotFound, code, path)
+		for _, host := range []string{
+			"beta.status.example.com",
+			"status.gamma.org",
+		} {
+			w := f.get(host, path)
+			assert.Equal(t, http.StatusNotFound, w.Code, host+path)
+			assert.NotContains(t, w.Body.String(), "unauthorized", host+path)
+		}
+	}
+}
+
+func TestEveryHostRoutes(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	f := newFixture(t)
+	for _, host := range []string{
+		"status.example.com",
+		"beta.status.example.com",
+		"status.gamma.org",
+		"unknown.example",
+	} {
+		w := f.get(host, "/healthz")
+		assert.Equal(http.StatusOK, w.Code, host)
+		assert.Equal("ok\n", w.Body.String(), host)
+		assert.Equal(http.StatusOK, f.get(host, "/assets/admin-abc.js").Code, host)
+	}
+
+	require.NoError(f.db.Close())
+	code := f.get("status.example.com", "/healthz").Code
+	assert.Equal(http.StatusServiceUnavailable, code)
+}
+
+func TestNegotiatedRedirects(t *testing.T) {
+	assert := assert.New(t)
+
+	f := newFixture(t)
+	w := f.get(
+		"beta.status.example.com",
+		"/incidents?page=2",
+		"Accept-Language", "de-AT, en;q=0.5",
+	)
+	assert.Equal(http.StatusFound, w.Code)
+	assert.Equal("/de/incidents?page=2", w.Header().Get("Location"))
+	assert.Equal("private, no-cache", w.Header().Get("Cache-Control"))
+	assert.Equal("Accept-Language, Cookie", w.Header().Get("Vary"))
+
+	w = f.get(
+		"beta.status.example.com",
+		"/",
+		"Accept-Language", "de",
+		"Cookie", "lang=en",
+	)
+	assert.Equal("/en/", w.Header().Get("Location"), "the cookie wins")
+
+	w = f.get("beta.status.example.com", "/de")
+	assert.Equal("/de/", w.Header().Get("Location"))
+	assert.Empty(w.Header().Get("Vary"), "not negotiated")
+	assert.Empty(w.Header().Get("Cache-Control"))
+}
+
+func TestSiteShell(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	f := newFixture(t)
+	w := f.get(
+		"beta.status.example.com:8080",
+		"/de/incidents",
+		"Cookie", "theme=dark",
+	)
+	require.Equal(http.StatusOK, w.Code)
+	body := w.Body.String()
+	assert.Contains(body, `<html lang="de" data-theme="dark">`)
+	assert.Contains(body, "<title>Alle Vorfälle · Beta DE</title>")
+	assert.Contains(body, `<link rel="canonical" href="http://beta.status.example.com:8080/de/incidents">`)
+	assert.Contains(body, `<link rel="alternate" hreflang="de" href="http://beta.status.example.com:8080/de/incidents">`)
+	assert.Contains(body, `<link rel="alternate" hreflang="en" href="http://beta.status.example.com:8080/en/incidents">`)
+	assert.Contains(body, `<link rel="alternate" hreflang="x-default" href="http://beta.status.example.com:8080/incidents">`)
+	assert.Contains(body, `<script type="module" src="/assets/public-abc.js"></script>`)
+	assert.Contains(body, "<link rel=\"stylesheet\" href=\"/assets/shared-abc.css\">\n<link rel=\"stylesheet\" href=\"/assets/public-abc.css\">")
+	assert.Contains(body, `<link rel="icon" type="image/svg+xml" href="data:image/svg`)
+
+	site, err := f.db.SiteByRoute(model.Route{
+		Mode: model.RouteSubdomain,
+		Slug: "beta",
+	})
+	require.NoError(err)
+	want := bootstrap{
+		Mode:      "site",
+		SiteID:    site.ID,
+		BasePath:  "",
+		Lang:      "de",
+		Languages: []string{"de", "en"},
+		Primary:   "en",
+	}
+	assert.Equal(want, parseBootstrap(t, body))
+
+	h := w.Header()
+	assert.Equal("text/html; charset=utf-8", h.Get("Content-Type"))
+	assert.Equal(cspPublic, h.Get("Content-Security-Policy"))
+	assert.NotContains(cspPublic, "unsafe-eval")
+	assert.NotContains(cspPublic, "script-src")
+	assert.Equal("strict-origin-when-cross-origin", h.Get("Referrer-Policy"))
+}
+
+func TestShellEscapesBootstrap(t *testing.T) {
+	w := httptest.NewRecorder()
+	writeShell(w, http.StatusOK, shell{Bootstrap: bootstrap{BasePath: "</script><script>alert(1)</script><!--"}})
+	body := w.Body.String()
+	assert.NotContains(t, body, "<script>alert")
+	assert.NotContains(t, body, "<!--")
+	b := parseBootstrap(t, body)
+	assert.Equal(t, "</script><script>alert(1)</script><!--", b.BasePath)
+}
+
+func TestShellEscapesTitle(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	f := newFixture(t)
+	w := f.get("status.example.com", "/acme/")
+	require.Equal(http.StatusOK, w.Code)
+	body := w.Body.String()
+	assert.NotContains(body, "<script>alert")
+	escaped := html.EscapeString("Acme </script><script>alert(1)</script>")
+	assert.Contains(body, "<title>"+escaped+"</title>")
+	b := parseBootstrap(t, body)
+	assert.Equal("/acme", b.BasePath)
+	alt := regexp.MustCompile(`<link rel="alternate"`).FindString(body)
+	assert.Empty(alt, "one language has no alternates")
+	assert.Contains(body, `<link rel="canonical" href="http://status.example.com/acme/">`)
+}
+
+func TestNotFoundShell(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	f := newFixture(t)
+	w := f.get("status.gamma.org", "/nope")
+	require.Equal(http.StatusNotFound, w.Code)
+	body := w.Body.String()
+	assert.Contains(body, "<title>Page not found · Gamma</title>")
+	assert.NotContains(body, `rel="canonical"`)
+	assert.Equal("site", parseBootstrap(t, body).Mode)
+
+	for _, path := range []string{
+		"/incidents/0192",
+		"/imprint",
+		"/feed.atom",
+		"/incidents.json",
+	} {
+		code := f.get("status.gamma.org", path).Code
+		assert.Equal(http.StatusNotFound, code, path)
+	}
+}
+
+func TestLandingShell(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	f := newFixture(t)
+	require.NoError(f.db.PutSettings(model.Settings{
+		Languages: model.Languages{
+			Enabled: []string{"de"},
+			Primary: "de",
+		},
+		DefaultTheme: "light",
+	}))
+
+	w := f.get("status.example.com", "/")
+	require.Equal(http.StatusOK, w.Code)
+	body := w.Body.String()
+	assert.Contains(body, `<html lang="de" data-theme="light">`)
+	assert.Contains(body, "<title>Statusseiten</title>")
+	want := bootstrap{
+		Mode:      "landing",
+		Lang:      "de",
+		Languages: []string{"de"},
+		Primary:   "de",
+	}
+	assert.Equal(want, parseBootstrap(t, body))
+
+	w = f.get("status.example.com", "/", "Cookie", "theme=system")
+	assert.Contains(
+		w.Body.String(),
+		`<html lang="de">`,
+		"the visitor's choice wins over the default",
+	)
+
+	w = f.get("status.example.com", "/", "Cookie", "theme=pink")
+	assert.Contains(w.Body.String(), `<html lang="de" data-theme="light">`)
+}
+
+func TestAdminShell(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	f := newFixture(t)
+	w := f.get("status.example.com", "/admin/settings", "Accept-Language", "de-DE")
+	require.Equal(http.StatusOK, w.Code)
+	body := w.Body.String()
+	assert.Contains(body, `<html lang="de">`)
+	assert.Contains(body, "<title>SitRep-Verwaltung</title>")
+	assert.Equal(cspAdmin, w.Header().Get("Content-Security-Policy"))
+	assert.Contains(cspAdmin, "frame-ancestors 'none'")
+	want := bootstrap{
+		Mode:      "admin",
+		BasePath:  "/admin",
+		Lang:      "de",
+		Languages: []string{"de", "en"},
+		Primary:   "en",
+	}
+	assert.Equal(want, parseBootstrap(t, body))
+
+	w = f.get(
+		"status.example.com",
+		"/admin",
+		"Accept-Language", "de-DE",
+		"Cookie", "lang=en",
+	)
+	assert.Equal("en", parseBootstrap(t, w.Body.String()).Lang)
+}
+
+func TestSettingsAPI(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	f := newFixture(t)
+	request := func(
+		method, body string,
+		cookie *http.Cookie,
+	) *httptest.ResponseRecorder {
+		r := httptest.NewRequest(
+			method,
+			"http://status.example.com/api/admin/settings",
+			strings.NewReader(body),
+		)
+		r.Header.Set("Origin", "http://status.example.com")
+		r.Header.Set("Content-Type", "application/json")
+		if cookie != nil {
+			r.AddCookie(cookie)
+		}
+		return f.do(r)
+	}
+
+	assert.Equal(http.StatusUnauthorized, request(http.MethodGet, "", nil).Code)
+
+	w := f.do(func() *http.Request {
+		r := httptest.NewRequest(
+			http.MethodPost,
+			"http://status.example.com/auth/test/login",
+			strings.NewReader("{}"),
+		)
+		r.Header.Set("Origin", "http://status.example.com")
+		r.Header.Set("Content-Type", "application/json")
+		return r
+	}())
+
+	cookies := w.Result().Cookies()
+	require.Len(cookies, 1)
+	session := cookies[0]
+
+	w = request(http.MethodGet, "", session)
+	require.Equal(http.StatusOK, w.Code)
+	assert.JSONEq(`{"languages": {"enabled": ["en", "de"], "primary": "en"}, "defaultTheme": "system"}`, w.Body.String())
+
+	w = request(http.MethodPut, `{"languages": {"enabled": ["de"], "primary": "en"}, "defaultTheme": "dark"}`, session)
+	assert.Equal(http.StatusBadRequest, w.Code)
+	assert.Contains(w.Body.String(), `{"path":"languages.primary","code":"primary_not_enabled"}`)
+
+	w = request(http.MethodPut, `{"languages": {"enabled": ["de"], "primary": "de"}, "defaultTheme": "dark", "extra": 1}`, session)
+	assert.Equal(http.StatusBadRequest, w.Code, "unknown fields are rejected")
+
+	w = request(http.MethodPut, `{"languages": {"enabled": ["de", "en"], "primary": "de"}, "defaultTheme": "dark"}`, session)
+	require.Equal(http.StatusOK, w.Code)
+	s, err := f.db.Settings()
+	require.NoError(err)
+	want := model.Settings{
+		Languages: model.Languages{
+			Enabled: []string{"de", "en"},
+			Primary: "de",
+		},
+		DefaultTheme: "dark",
+	}
+	assert.Equal(want, s)
+
+	r := httptest.NewRequest(
+		http.MethodPut,
+		"http://status.example.com/api/admin/settings",
+		strings.NewReader(`{}`),
+	)
+	r.Header.Set("Content-Type", "application/json")
+	r.AddCookie(session)
+	assert.Equal(http.StatusForbidden, f.do(r).Code, "CSRF protection")
+}
