@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  bands,
+  bandsAt,
   fractionDigits,
   latest,
   palette,
@@ -75,5 +77,78 @@ describe("chart helpers", () => {
         { name: "b", values: [null, null, null] },
       ],
     })).toEqual([2, null])
+  })
+})
+
+describe("bands", () => {
+  // The plot spans 100 to 400 device pixels for the times 1000 to 4000.
+  const toPos = (t: number) => 100 + (t - 1000) / 10
+  const plot = {
+    left:  100,
+    width: 300,
+  }
+  const iso = (t: number) => new Date(t * 1000).toISOString()
+
+  it("places closed and open spans", () => {
+    expect(bands(
+      [
+        { id: "a", title: "A", severity: "critical", from: iso(2000), until: iso(2500) },
+        { id: "b", title: "B", severity: "major", from: iso(3000) },
+      ],
+      toPos,
+      plot,
+    )).toEqual([
+      { id: "a", title: "A", left: 200, width: 50, color: "#e5484d" },
+      { id: "b", title: "B", left: 300, width: 100, color: "#e0a52b" },
+    ])
+  })
+
+  it("clips to the plot and drops spans outside", () => {
+    expect(bands(
+      [
+        { id: "a", title: "A", from: iso(0), until: iso(1500) },
+        { id: "b", title: "B", from: iso(0), until: iso(900) },
+        { id: "c", title: "C", from: iso(5000) },
+      ],
+      toPos,
+      plot,
+    )).toEqual([
+      { id: "a", title: "A", left: 100, width: 50, color: "#8892a0" },
+    ])
+  })
+
+  it("keeps short spans at least 2 pixels wide, inside the plot", () => {
+    const short = bands(
+      [{ id: "a", title: "A", from: iso(2000), until: iso(2001) }],
+      toPos,
+      plot,
+    )
+    expect(short[0]).toMatchObject({
+      left:  200,
+      width: 2,
+    })
+
+    const atEdge = bands(
+      [{ id: "a", title: "A", from: iso(4000), until: iso(4000) }],
+      toPos,
+      plot,
+    )
+    expect(atEdge[0]).toMatchObject({
+      left:  398,
+      width: 2,
+    })
+  })
+
+  it("finds the bands at a pixel", () => {
+    const list = bands(
+      [
+        { id: "a", title: "A", from: iso(2000), until: iso(3000) },
+        { id: "b", title: "B", from: iso(2500) },
+      ],
+      toPos,
+      plot,
+    )
+    expect(bandsAt(list, 260).map(b => b.id)).toEqual(["a", "b"])
+    expect(bandsAt(list, 150)).toEqual([])
   })
 })

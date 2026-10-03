@@ -113,17 +113,64 @@
   --sr-code-label: #a3326c;
 }
 
+// Light tags keep a dark background in the dark color scheme.
+@mixin light-tags-dark {
+  .tag.is-light.is-warning {
+    color: #f0c46a;
+    background: rgb(224 165 43 / 20%);
+  }
+
+  .tag.is-light.is-danger {
+    color: #f28b8e;
+    background: rgb(229 72 77 / 20%);
+  }
+}
+
 [data-theme="dark"] {
   @include code-dark;
+  @include light-tags-dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     @include code-dark;
+    @include light-tags-dark;
   }
 }
 
 .textarea.sr-autogrow {
   field-sizing: content;
   min-height: 4.5em;
+}
+
+.sr-back {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+// A vertical timeline: a line on the left with a dot per entry.
+.sr-timeline {
+  padding: 0;
+  margin-left: 0.375rem;
+  list-style: none;
+  border-left: 2px solid var(--bulma-border);
+
+  > li {
+    position: relative;
+    padding: 0 0 1.5rem 1.25rem;
+
+    &::before {
+      position: absolute;
+      top: 0.4rem;
+      left: calc(-0.375rem - 1px);
+      width: 0.75rem;
+      height: 0.75rem;
+      content: "";
+      background: var(--bulma-scheme-main);
+      border: 2px solid var(--bulma-border);
+      border-radius: 50%;
+    }
+  }
 }

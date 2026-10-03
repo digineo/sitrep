@@ -60,20 +60,77 @@ export interface PanelData {
   warnings?:  Warning[]
 }
 
+export type IncidentStatus = "planned"
+  | "active"
+  | "investigating"
+  | "monitoring"
+  | "resolved"
+
+export type Severity = "minor" | "major" | "critical"
+
+/** IncidentUpdate is one entry of an incident's timeline. */
+export interface IncidentUpdate {
+  id:        string
+  at:        string
+  status?:   IncidentStatus
+  severity?: Severity
+  /** html is the rendered description. */
+  html:      string
+}
+
+/**
+ * Incident is an incident as visitors see it; its updates are ordered by
+ * time.
+ */
+export interface Incident {
+  id:           string
+  title:        string
+  phase:        "upcoming" | "ongoing" | "finished"
+  status:       IncidentStatus
+  severity?:    Severity
+  lastActivity: string
+  updates:      IncidentUpdate[]
+}
+
+/**
+ * Span is an incident's time range in charts; without until, the incident is
+ * ongoing.
+ */
+export interface Span {
+  id:        string
+  title:     string
+  severity?: Severity
+  from:      string
+  until?:    string
+}
+
+/**
+ * IncidentsSection holds the public incidents by phase, most recent activity
+ * first.
+ */
+export interface IncidentsSection {
+  ongoing:  Incident[]
+  upcoming: Incident[]
+  finished: Incident[]
+  spans:    Span[]
+}
+
 /** Payload is one response of a site payload request. */
 export interface Payload {
-  cursor:  string
-  status:  State
-  site?:   SiteSection
-  panels?: Record<string, PanelData>
+  cursor:     string
+  status:     State
+  site?:      SiteSection
+  incidents?: IncidentsSection
+  panels?:    Record<string, PanelData>
 }
 
 /** SiteData is the state of a site page, merged from payload responses. */
 export interface SiteData {
-  cursor: string
-  status: State
-  site:   SiteSection
-  panels: Record<string, PanelData>
+  cursor:    string
+  status:    State
+  site:      SiteSection
+  incidents: IncidentsSection
+  panels:    Record<string, PanelData>
 }
 
 /**
@@ -83,8 +140,9 @@ export interface SiteData {
  */
 export function merge(prev: SiteData | null, next: Payload): SiteData {
   const site = next.site ?? prev?.site
-  if (!site) {
-    throw new Error("the first response must carry the site section")
+  const incidents = next.incidents ?? prev?.incidents
+  if (!site || !incidents) {
+    throw new Error("the first response must carry every section")
   }
 
   const panels: Record<string, PanelData> = {}
@@ -98,6 +156,7 @@ export function merge(prev: SiteData | null, next: Payload): SiteData {
     cursor: next.cursor,
     status: next.status,
     site,
+    incidents,
     panels,
   }
 }

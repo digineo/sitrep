@@ -1,12 +1,13 @@
 <script setup lang="ts">
 defineProps<{
-  color?: "warning" | "danger"
+  color?: "info" | "link" | "success" | "warning" | "danger"
+  light?: boolean
 }>()
 </script>
 
 <template>
   <span
       class="tag"
-      :class="color && `is-${color}`"
+      :class="[color && `is-${color}`, { 'is-light': light }]"
   ><slot /></span>
 </template>

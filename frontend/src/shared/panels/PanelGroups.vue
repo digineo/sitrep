@@ -1,16 +1,21 @@
 <script setup lang="ts">
 import { computed } from "vue"
+import type { RouteLocationRaw } from "vue-router"
 
-import type { PanelData, PanelInfo } from "../payload"
+import type { PanelData, PanelInfo, Span } from "../payload"
 import PanelBoundary from "./PanelBoundary.vue"
 import StatPanel from "./StatPanel.vue"
 import StatusTable from "./StatusTable.vue"
 import TimeseriesPanel from "./TimeseriesPanel.vue"
 
 const props = defineProps<{
-  panels:   PanelInfo[]
-  data:     Record<string, PanelData>
-  timezone: string
+  panels:        PanelInfo[]
+  data:          Record<string, PanelData>
+  timezone:      string
+  /** spans are the incidents to shade in charts. */
+  spans?:        Span[]
+  /** incidentLink returns the location a click on an incident's band opens. */
+  incidentLink?: (id: string) => RouteLocationRaw
 }>()
 
 defineSlots<{
@@ -80,6 +85,8 @@ const charts = byType("timeseries")
           :panel
           :data="data[panel.id]"
           :timezone
+          :spans
+          :incident-link
       >
         <template #actions>
           <slot

@@ -1,4 +1,5 @@
-import type { SeriesData } from "./payload"
+import { severityColors } from "./incidents"
+import type { SeriesData, Span } from "./payload"
 
 /** palette holds the series colors, legible on light and dark backgrounds. */
 export const palette = [
@@ -80,4 +81,52 @@ export function toggled(hidden: string[], name: string): string[] {
 /** latest returns the latest value of each series, or null without any. */
 export function latest(data: SeriesData): (number | null)[] {
   return data.series.map(s => s.values.findLast(v => v !== null) ?? null)
+}
+
+/** Band is the rectangle of an incident's span in a chart, in device pixels. */
+export interface Band {
+  id:    string
+  title: string
+  left:  number
+  width: number
+  color: string
+}
+
+/**
+ * bands places incident spans in the plot: toPos maps Unix seconds to a
+ * horizontal device pixel. Bands are clipped to the plot and at least
+ * minWidth wide; an open span reaches the right edge. Spans without a
+ * severity are neutral.
+ */
+export function bands(
+  spans: Span[],
+  toPos: (t: number) => number,
+  plot: {
+    left:  number
+    width: number
+  },
+  minWidth = 2,
+): Band[] {
+  const right = plot.left + plot.width
+  return spans.flatMap((s) => {
+    const left = Math.max(plot.left, toPos(Date.parse(s.from) / 1000))
+    const end = Math.min(right, s.until ? toPos(Date.parse(s.until) / 1000) : right)
+    if (left > end) {
+      return []
+    }
+
+    const width = Math.max(minWidth, end - left)
+    return [{
+      id:    s.id,
+      title: s.title,
+      left:  Math.min(left, right - width),
+      width,
+      color: severityColors[s.severity ?? "minor"],
+    }]
+  })
+}
+
+/** bandsAt returns the bands at a horizontal device pixel. */
+export function bandsAt(list: Band[], x: number): Band[] {
+  return list.filter(b => x >= b.left && x <= b.left + b.width)
 }

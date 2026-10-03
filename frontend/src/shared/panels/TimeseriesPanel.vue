@@ -12,8 +12,12 @@ import {
   watch,
 } from "vue"
 import { useI18n } from "vue-i18n"
+import { type RouteLocationRaw, useRouter } from "vue-router"
 
 import {
+  type Band,
+  bands,
+  bandsAt,
   fractionDigits,
   latest,
   seriesColor,
@@ -23,15 +27,20 @@ import {
 } from "../chart"
 import StaleTag from "../components/StaleTag.vue"
 import { formatDateTime, formatNumber, formatRange, formatTick } from "../format"
-import type { PanelData, PanelInfo, SeriesData } from "../payload"
+import type { PanelData, PanelInfo, SeriesData, Span } from "../payload"
 
 const props = defineProps<{
-  panel:    PanelInfo
-  data?:    PanelData
-  timezone: string
+  panel:         PanelInfo
+  data?:         PanelData
+  timezone:      string
+  /** spans are the incidents to shade. */
+  spans?:        Span[]
+  /** incidentLink returns the location a click on an incident's band opens. */
+  incidentLink?: (id: string) => RouteLocationRaw
 }>()
 
 const { t, locale } = useI18n()
+const router = useRouter()
 const wrapper = useTemplateRef<HTMLElement>("wrapper")
 const canvas = useTemplateRef<HTMLElement>("canvas")
 const tip = useTemplateRef<HTMLElement>("tip")
@@ -39,9 +48,10 @@ const tip = useTemplateRef<HTMLElement>("tip")
 /** hidden lists the names of series the visitor switched off. */
 const hidden = ref<string[]>([])
 const tooltip = ref<{
-  left: number
-  top:  number
-  time: string
+  left:      number
+  top:       number
+  time:      string
+  incidents: string[]
   rows: {
     color: string
     name:  string
@@ -49,6 +59,8 @@ const tooltip = ref<{
   }[]
 } | null>(null)
 let plot: uPlot | null = null
+/** shaded are the incident bands as last drawn. */
+let shaded: Band[] = []
 let observer: ResizeObserver | null = null
 
 const series = computed(
@@ -149,12 +161,50 @@ function options(s: SeriesData): uPlot.Options {
       show:     !hidden.value.includes(x.name),
       spanGaps: false,
     }))],
-    hooks: { setCursor: [showTooltip] },
+    hooks: {
+      drawClear: [drawBands],
+      setCursor: [showTooltip],
+      ready:     [u => u.over.addEventListener("click", () => openIncident(u))],
+    },
+  }
+}
+
+/** drawBands shades the incidents' spans behind the series. */
+function drawBands(u: uPlot) {
+  const { left, top, width, height } = u.bbox
+  shaded = bands(props.spans ?? [], t => u.valToPos(t, "x", true), {
+    left,
+    width,
+  })
+  u.ctx.save()
+  for (const b of shaded) {
+    u.ctx.fillStyle = `${b.color}30`
+    u.ctx.fillRect(b.left, top, b.width, height)
+  }
+
+  u.ctx.restore()
+}
+
+/** bandsAtCursor returns the incident bands under the cursor. */
+function bandsAtCursor(u: uPlot): Band[] {
+  const x = u.cursor.left
+  return x === undefined || x < 0
+    ? []
+    : bandsAt(shaded, u.bbox.left + x * uPlot.pxRatio)
+}
+
+function openIncident(u: uPlot) {
+  const hit = bandsAtCursor(u)[0]
+  if (hit && props.incidentLink) {
+    void router.push(props.incidentLink(hit.id))
   }
 }
 
 /** showTooltip shows the values at the cursor next to it. */
 async function showTooltip(u: uPlot) {
+  const hits = bandsAtCursor(u)
+  u.over.style.cursor = hits.length && props.incidentLink ? "pointer" : ""
+
   const idx = u.cursor.idx
   const s = series.value
   if (idx === null || idx === undefined || !s
@@ -170,6 +220,7 @@ async function showTooltip(u: uPlot) {
       name:  x.name,
       value: format(x.values[idx]),
     }])
+  const incidents = hits.map(b => t("panel.incident", { title: b.title }))
   tooltip.value = {
     left: 0,
     top:  0,
@@ -178,6 +229,7 @@ async function showTooltip(u: uPlot) {
       locale.value,
       props.timezone,
     ),
+    incidents,
     rows,
   }
 
@@ -224,6 +276,7 @@ watch(
   [locale, () => props.timezone, () => props.panel],
   () => void nextTick(create),
 )
+watch(() => props.spans, () => plot?.redraw(false))
 
 function toggle(name: string, i: number) {
   hidden.value = toggled(hidden.value, name)
@@ -291,6 +344,12 @@ onBeforeUnmount(() => {
       >
         <div class="has-text-weight-semibold">
           {{ tooltip.time }}
+        </div>
+        <div
+            v-for="incident in tooltip.incidents"
+            :key="incident"
+        >
+          {{ incident }}
         </div>
         <div
             v-for="row in tooltip.rows"

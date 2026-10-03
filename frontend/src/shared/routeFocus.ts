@@ -4,7 +4,8 @@ import { type Router, START_LOCATION } from "vue-router"
 /**
  * focusHeadingOnNavigation moves the focus to the main heading and scrolls
  * to the top after each route change, so that screen readers announce the
- * new view.
+ * new view. The main heading is the one marked with data-main-heading, or
+ * else the first h1.
  */
 export function focusHeadingOnNavigation(router: Router) {
   router.afterEach(async(_to, from, failure) => {
@@ -14,10 +15,11 @@ export function focusHeadingOnNavigation(router: Router) {
 
     await nextTick()
     window.scrollTo(0, 0)
-    const h1 = document.querySelector("h1")
-    if (h1) {
-      h1.tabIndex = -1
-      h1.focus()
+    const heading = document.querySelector<HTMLElement>("[data-main-heading]")
+      ?? document.querySelector("h1")
+    if (heading) {
+      heading.tabIndex = -1
+      heading.focus()
     }
   })
 }
