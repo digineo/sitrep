@@ -279,6 +279,22 @@ func TestDeletedPanelStops(t *testing.T) {
 	assert.False(t, ok, "results of stopped polls are discarded")
 }
 
+func TestPausedSiteStops(t *testing.T) {
+	f := newFixture(t, time.Hour)
+	f.await(t, fresh)
+
+	f.site.Availability = model.AvailabilityPaused
+	require.NoError(t, f.db.UpdateSite(f.site))
+	f.p.SiteChanged(f.site.ID)
+	_, ok := f.p.Entry(f.panel.ID)
+	assert.False(t, ok, "polling stops and the entry is discarded")
+
+	f.site.Availability = model.AvailabilityOffline
+	require.NoError(t, f.db.UpdateSite(f.site))
+	f.p.SiteChanged(f.site.ID)
+	f.await(t, fresh)
+}
+
 func TestShutdownWaitsForPolls(t *testing.T) {
 	require := require.New(t)
 	assert := assert.New(t)

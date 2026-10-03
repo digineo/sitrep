@@ -124,8 +124,8 @@ func (p *Poller) stop() {
 }
 
 // Reconcile starts, restarts and stops schedules to match the panels in
-// the database. A panel whose definition or data source changed loses its
-// cached result.
+// the database. Panels of paused sites are not polled. A panel whose
+// definition or data source changed loses its cached result.
 func (p *Poller) Reconcile() {
 	p.reconciling.Lock()
 	defer p.reconciling.Unlock()
@@ -142,6 +142,11 @@ func (p *Poller) Reconcile() {
 		sources[ds.ID] = ds
 	}
 
+	paused := map[string]bool{}
+	for _, site := range snap.Sites {
+		paused[site.ID] = site.Availability == model.AvailabilityPaused
+	}
+
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -151,6 +156,10 @@ func (p *Poller) Reconcile() {
 
 	polled := map[string]bool{}
 	for _, panel := range snap.Panels {
+		if paused[panel.Site] {
+			continue
+		}
+
 		polled[panel.ID] = true
 		ds := sources[panel.DataSource]
 		refresh := model.Duration(panel.Refresh)

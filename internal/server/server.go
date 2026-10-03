@@ -288,12 +288,18 @@ func (s *Server) serveSite(
 		return
 	}
 
+	online := site.Online()
 	switch res.page.kind {
-	case pageFeed:
-		s.serveFeed(w, r, info, site, base, res.lang)
-		return
-	case pageJSON:
-		s.serveIncidentsJSON(w, r, site, res.lang)
+	case pageFeed, pageJSON:
+		switch {
+		case !online:
+			err := apierr.New(http.StatusServiceUnavailable, apierr.SiteUnavailable)
+			httpx.WriteError(w, r, s.log, err)
+		case res.page.kind == pageFeed:
+			s.serveFeed(w, r, info, site, base, res.lang)
+		default:
+			s.serveIncidentsJSON(w, r, site, res.lang)
+		}
 		return
 	}
 
@@ -301,52 +307,59 @@ func (s *Server) serveSite(
 	c := i18n.Get(res.lang)
 	status := http.StatusOK
 	title := ""
-	switch res.page.kind {
-	case pageOverview:
-	case pageArchive:
-		title = c.T("incidents.all", nil)
-		incidents, err := s.db.Incidents(site.ID)
-		if err != nil {
-			httpx.WriteError(w, r, s.log, err)
-			return
-		}
+	legal := res.page.kind == pageImprint || res.page.kind == pagePrivacy
+	if !online && !legal {
+		// Unavailable sites show only their legal pages.
+		status = http.StatusServiceUnavailable
+	} else {
+		switch res.page.kind {
+		case pageArchive:
+			title = c.T("incidents.all", nil)
+			incidents, err := s.db.Incidents(site.ID)
+			if err != nil {
+				httpx.WriteError(w, r, s.log, err)
+				return
+			}
 
-		pageNum := r.URL.Query().Get("page")
-		_, _, _, ok := paginate(pageNum, len(incidents), archivePageSize)
-		if !ok {
+			pageNum := r.URL.Query().Get("page")
+			_, _, _, ok := paginate(pageNum, len(incidents), archivePageSize)
+			if !ok {
+				res.page.kind = pageNotFound
+				status = http.StatusNotFound
+				title = c.T("page.notFound", nil)
+			}
+		case pageIncident:
+			inc, err := s.db.Incident(site.ID, res.page.id)
+			e, ok := errors.AsType[*apierr.Error](err)
+			if ok && e.Status == http.StatusNotFound {
+				res.page.kind = pageNotFound
+				status = http.StatusNotFound
+				title = c.T("incidents.notFound", nil)
+				break
+			} else if err != nil {
+				httpx.WriteError(w, r, s.log, err)
+				return
+			}
+
+			title = inc.Title.Resolve(res.lang, langs)
+		case pageImprint, pagePrivacy:
+			var handled bool
+			if title, handled = legalShell(w, r, res, site, settings); handled {
+				return
+			}
+		}
+		if title == "" && res.page.kind != pageOverview {
 			res.page.kind = pageNotFound
 			status = http.StatusNotFound
 			title = c.T("page.notFound", nil)
 		}
-	case pageIncident:
-		inc, err := s.db.Incident(site.ID, res.page.id)
-		e, ok := errors.AsType[*apierr.Error](err)
-		if ok && e.Status == http.StatusNotFound {
-			res.page.kind = pageNotFound
-			status = http.StatusNotFound
-			title = c.T("incidents.notFound", nil)
-			break
-		} else if err != nil {
-			httpx.WriteError(w, r, s.log, err)
-			return
-		}
-
-		title = inc.Title.Resolve(res.lang, langs)
-	case pageImprint, pagePrivacy:
-		var handled bool
-		if title, handled = legalShell(w, r, res, site, settings); handled {
-			return
-		}
-	}
-	if title == "" && res.page.kind != pageOverview {
-		res.page.kind = pageNotFound
-		status = http.StatusNotFound
-		title = c.T("page.notFound", nil)
 	}
 
 	sh := pageShell(info, base, langs, res, title, name)
-	feed := pagePath(page{kind: pageFeed}, res.lang, len(langs.Enabled) > 1)
-	sh.Feed = info.Origin + base + feed
+	if online {
+		feed := pagePath(page{kind: pageFeed}, res.lang, len(langs.Enabled) > 1)
+		sh.Feed = info.Origin + base + feed
+	}
 
 	def := settings.DefaultTheme
 	if site.Theme != "" && site.Theme != "inherit" {

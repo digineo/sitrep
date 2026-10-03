@@ -24,14 +24,40 @@ type payload struct {
 }
 
 type sitePayload struct {
-	Name       string      `json:"name"`
-	Theme      string      `json:"theme"`
-	BrandColor string      `json:"brandColor,omitempty"`
-	Logo       string      `json:"logo,omitempty"` // URL
-	Legal      legalLinks  `json:"legal"`
-	Languages  []string    `json:"languages"`
-	Timezone   string      `json:"timezone"`
-	Panels     []panelInfo `json:"panels"`
+	siteBasics
+	Timezone string      `json:"timezone"`
+	Panels   []panelInfo `json:"panels"`
+}
+
+// siteBasics are what visitors see of a site, also while it is
+// unavailable.
+type siteBasics struct {
+	Name       string     `json:"name"`
+	Theme      string     `json:"theme"` // the effective default
+	BrandColor string     `json:"brandColor,omitempty"`
+	Logo       string     `json:"logo,omitempty"` // URL
+	Legal      legalLinks `json:"legal"`
+	Languages  []string   `json:"languages"`
+}
+
+func newSiteBasics(
+	site *model.Site,
+	settings model.Settings,
+	lang string,
+	langs model.Languages,
+) siteBasics {
+	b := siteBasics{
+		Name:       site.Name.Resolve(lang, langs),
+		Theme:      site.Theme,
+		BrandColor: site.BrandColor,
+		Logo:       logoURL(site),
+		Legal:      newLegalLinks(site, settings, lang),
+		Languages:  langs.Enabled,
+	}
+	if site.Theme == "inherit" {
+		b.Theme = settings.DefaultTheme
+	}
+	return b
 }
 
 // panelInfo is a panel's presentation, in display order.
@@ -227,7 +253,7 @@ func (s *Server) sitePayload(
 	now := time.Now()
 	p := payload{
 		Cursor: s.poller.Cursor(seq),
-		Status: s.status(panels, incidents).Overall,
+		Status: s.status(site, panels, incidents).Overall,
 		Panels: map[string]panelPayload{},
 	}
 	if !incremental || s.poller.IncidentsSeq(site.ID, now) > after {
@@ -240,19 +266,10 @@ func (s *Server) sitePayload(
 
 	if !incremental || s.poller.SiteSeq(site.ID) > after {
 		p.Site = &sitePayload{
-			Name:       site.Name.Resolve(lang, langs),
-			Theme:      site.Theme,
-			BrandColor: site.BrandColor,
-			Logo:       logoURL(site),
-			Legal:      newLegalLinks(site, settings, lang),
-			Languages:  langs.Enabled,
+			siteBasics: newSiteBasics(site, settings, lang, langs),
 			Timezone:   site.Timezone,
 			Panels:     []panelInfo{},
 		}
-		if site.Theme == "inherit" {
-			p.Site.Theme = settings.DefaultTheme
-		}
-
 		for _, panel := range panels {
 			p.Site.Panels = append(p.Site.Panels, panelInfo{
 				ID:          panel.ID,
@@ -310,6 +327,27 @@ func (s *Server) publicSiteOf(r *http.Request) (*model.Site, error) {
 	return s.db.Site(id)
 }
 
+// onlineSiteOf returns the site of a public API request. Requests for an
+// offline or paused site fail; the error's details are what visitors see
+// of the site in the requested language.
+func (s *Server) onlineSiteOf(r *http.Request) (*model.Site, error) {
+	site, err := s.publicSiteOf(r)
+	if err != nil || site.Online() {
+		return site, err
+	}
+
+	settings, err := s.db.Settings()
+	if err != nil {
+		return nil, err
+	}
+
+	langs := site.Languages.Effective()
+	lang := contentLang(r.URL.Query().Get("lang"), langs)
+	e := apierr.New(http.StatusServiceUnavailable, apierr.SiteUnavailable)
+	e.Details = newSiteBasics(site, settings, lang, langs)
+	return nil, e
+}
+
 // writePublic answers a successful public API request, cacheable for a
 // short time, or the error.
 func (s *Server) writePublic(
@@ -329,7 +367,7 @@ func (s *Server) writePublic(
 // publicSite answers the site payload for visitors, in the requested
 // language.
 func (s *Server) publicSite(w http.ResponseWriter, r *http.Request) {
-	site, err := s.publicSiteOf(r)
+	site, err := s.onlineSiteOf(r)
 	var p payload
 	if err == nil {
 		q := r.URL.Query()
@@ -341,7 +379,7 @@ func (s *Server) publicSite(w http.ResponseWriter, r *http.Request) {
 // publicIncident answers an incident of a site for visitors, in the
 // requested language. Every incident of the site has a detail page.
 func (s *Server) publicIncident(w http.ResponseWriter, r *http.Request) {
-	site, err := s.publicSiteOf(r)
+	site, err := s.onlineSiteOf(r)
 	id := r.PathValue("incident")
 	if err == nil && !validID(id) {
 		err = apierr.New(http.StatusBadRequest, apierr.InvalidValue)
@@ -365,7 +403,7 @@ func (s *Server) publicIncident(w http.ResponseWriter, r *http.Request) {
 // publicArchive answers a page of all incidents of a site, most recent
 // activity first, with the number of pages.
 func (s *Server) publicArchive(w http.ResponseWriter, r *http.Request) {
-	site, err := s.publicSiteOf(r)
+	site, err := s.onlineSiteOf(r)
 	var incidents []model.Incident
 	if err == nil {
 		incidents, err = s.db.Incidents(site.ID)

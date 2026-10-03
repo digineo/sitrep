@@ -177,7 +177,8 @@
     "network": "The server cannot be reached.",
     "invalid_link": "Enter a full address starting with https:// or http://.",
     "invalid_svg": "This file is not an SVG image.",
-    "svg_too_large": "The image is larger than 64 KiB, even after removing unsafe content."
+    "svg_too_large": "The image is larger than 64 KiB, even after removing unsafe content.",
+    "site_unavailable": "This status page is currently unavailable."
   },
   "panel": {
     "seriesName": "{title} #{n}",

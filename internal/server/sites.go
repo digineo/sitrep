@@ -12,11 +12,12 @@ import (
 
 // siteSummary is a site in the admin console's lists.
 type siteSummary struct {
-	ID        string          `json:"id"`
-	Name      model.Text      `json:"name"`
-	Languages model.Languages `json:"languages"`
-	Route     model.Route     `json:"route"`
-	Status    siteStatus      `json:"status"`
+	ID           string          `json:"id"`
+	Name         model.Text      `json:"name"`
+	Languages    model.Languages `json:"languages"`
+	Route        model.Route     `json:"route"`
+	Availability string          `json:"availability"`
+	Status       siteStatus      `json:"status"`
 	// Missing counts the site, panels and incidents with missing
 	// translations.
 	Missing int `json:"missing"`
@@ -39,8 +40,10 @@ func panelState(e poller.Entry, ok bool) string {
 }
 
 // status computes a site's status from its status panels and its ongoing
-// incidents: a critical one means down, any other degraded.
+// incidents: a critical one means down, any other degraded. Paused sites
+// are not polled, so only their incidents count.
 func (s *Server) status(
+	site *model.Site,
 	panels []model.Panel,
 	incidents []model.Incident,
 ) siteStatus {
@@ -69,6 +72,9 @@ func (s *Server) status(
 	}
 
 	st.Overall = process.Worst(st.Panels, st.Incidents)
+	if site.Availability == model.AvailabilityPaused {
+		st.Overall = st.Incidents
+	}
 	return st
 }
 
@@ -110,11 +116,12 @@ func (s *Server) listSites(w http.ResponseWriter, r *http.Request) {
 	for _, site := range snap.Sites {
 		langs := site.Languages.Effective()
 		sum := siteSummary{
-			ID:        site.ID,
-			Name:      site.Name,
-			Languages: langs,
-			Route:     site.Route,
-			Status:    s.status(panels[site.ID], incidents[site.ID]),
+			ID:           site.ID,
+			Name:         site.Name,
+			Languages:    langs,
+			Route:        site.Route,
+			Availability: site.Availability,
+			Status:       s.status(&site, panels[site.ID], incidents[site.ID]),
 		}
 		if missing(langs, append(site.Legal.Texts(), site.Name)...) {
 			sum.Missing++

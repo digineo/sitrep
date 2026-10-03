@@ -101,4 +101,5 @@ var (
 	InvalidLink          = code("invalid_link")
 	InvalidSVG           = code("invalid_svg")
 	SVGTooLarge          = code("svg_too_large")
+	SiteUnavailable      = code("site_unavailable")
 )
