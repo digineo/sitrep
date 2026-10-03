@@ -1,13 +1,16 @@
 package model
 
 import (
+	"errors"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/digineo/sitrep/internal/apierr"
 	"github.com/digineo/sitrep/internal/i18n"
+	"github.com/digineo/sitrep/internal/svg"
 )
 
 // Length limits of texts, in characters per language.
@@ -28,6 +31,23 @@ const (
 	RouteCustom    = "custom"
 )
 
+// Availabilities of a site. Visitors see neither offline nor paused sites,
+// and paused sites are not polled either.
+const (
+	AvailabilityOnline  = "online"
+	AvailabilityOffline = "offline"
+	AvailabilityPaused  = "paused"
+)
+
+var (
+	availabilities = []string{
+		AvailabilityOnline,
+		AvailabilityOffline,
+		AvailabilityPaused,
+	}
+	colorPattern = regexp.MustCompile(`^#[0-9a-f]{6}$`)
+)
+
 // SiteThemes are the color schemes a site can choose; "inherit" uses the
 // instance default.
 var SiteThemes = []string{"inherit", "light", "dark", "system"}
@@ -43,11 +63,17 @@ type Site struct {
 	Timezone  string    `json:"timezone"`
 	Route     Route     `json:"route"`
 	Theme     string    `json:"theme"`
+	// BrandColor colors the header and footer of the site, as "#rrggbb".
+	BrandColor string `json:"brandColor,omitempty"`
+	// Logo is the sanitized SVG source of the site's logo.
+	Logo  string `json:"logo,omitempty"`
+	Legal Legal  `json:"legal"`
 	// AllowedOrigins may read incidents.json from other sites (CORS).
 	AllowedOrigins []string `json:"allowedOrigins"`
 	// IncidentRetentionDays deletes finished incidents that long after
 	// their last activity; 0 keeps them forever.
 	IncidentRetentionDays int       `json:"incidentRetentionDays"`
+	Availability          string    `json:"availability"`
 	CreatedAt             time.Time `json:"createdAt"`
 	UpdatedAt             time.Time `json:"updatedAt"`
 }
@@ -60,11 +86,25 @@ type Route struct {
 	Domain string `json:"domain,omitempty"`
 }
 
-// Normalize trims the texts, fills defaults, drops the route field the
-// mode does not use and writes allowed origins in canonical form, without
-// blank entries and duplicates.
+// Online reports whether visitors can see the site.
+func (s *Site) Online() bool {
+	return s.Availability != AvailabilityOffline &&
+		s.Availability != AvailabilityPaused
+}
+
+// Normalize trims the texts, fills defaults, drops the fields the route
+// and legal page modes do not use, sanitizes the logo and writes allowed
+// origins in canonical form, without blank entries and duplicates. A logo
+// that cannot be sanitized stays as it is, for Validate to report.
 func (s *Site) Normalize() {
 	s.Name = s.Name.Normalize()
+	s.BrandColor = strings.ToLower(strings.TrimSpace(s.BrandColor))
+	s.Logo = strings.TrimSpace(s.Logo)
+	if logo, err := svg.Sanitize(s.Logo); err == nil {
+		s.Logo = logo
+	}
+
+	s.Legal = s.Legal.normalize(LegalInherit)
 
 	origins := []string{}
 	for _, o := range s.AllowedOrigins {
@@ -88,6 +128,10 @@ func (s *Site) Normalize() {
 
 	if s.Theme == "" {
 		s.Theme = "inherit"
+	}
+
+	if s.Availability == "" {
+		s.Availability = AvailabilityOnline
 	}
 
 	if s.Route.Mode == RouteCustom {
@@ -131,6 +175,21 @@ func (s *Site) Validate(baseDomains []string) error {
 		f.Add("theme", apierr.InvalidValue)
 	}
 
+	if s.BrandColor != "" && !colorPattern.MatchString(s.BrandColor) {
+		f.Add("brandColor", apierr.InvalidValue)
+	}
+
+	if s.Logo != "" {
+		switch _, err := svg.Sanitize(s.Logo); {
+		case errors.Is(err, svg.ErrTooLarge):
+			f.Add("logo", apierr.SVGTooLarge)
+		case err != nil:
+			f.Add("logo", apierr.InvalidSVG)
+		}
+	}
+
+	s.Legal.validate(&f, "legal", s.Languages, siteLegalModes)
+
 	for i, o := range s.AllowedOrigins {
 		if _, ok := NormalizeOrigin(o); !ok {
 			f.Add(fmt.Sprintf("allowedOrigins[%d]", i), apierr.InvalidOrigin)
@@ -139,6 +198,10 @@ func (s *Site) Validate(baseDomains []string) error {
 
 	if s.IncidentRetentionDays < 0 || s.IncidentRetentionDays > maxRetentionDays {
 		f.Add("incidentRetentionDays", apierr.OutOfRange)
+	}
+
+	if !slices.Contains(availabilities, s.Availability) {
+		f.Add("availability", apierr.InvalidValue)
 	}
 	return f.Err()
 }

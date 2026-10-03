@@ -24,6 +24,7 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	settings.Normalize()
 	if err := settings.Validate(); err != nil {
 		httpx.WriteError(w, r, s.log, err)
 		return

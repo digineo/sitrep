@@ -25,6 +25,7 @@ func TestTextResolve(t *testing.T) {
 		{"falls back to primary", Text{"en": "Hello", "fr": "Bonjour"}, "de", "Hello"},
 		{"falls back to first enabled with value", Text{"fr": "Bonjour"}, "de", "Bonjour"},
 		{"skips disabled languages", Text{"it": "Ciao"}, "de", ""},
+		{"never shows a disabled requested language", Text{"it": "Ciao", "fr": "Bonjour"}, "it", "Bonjour"},
 		{"empty", nil, "de", ""},
 	}
 	for _, tt := range tests {
@@ -81,6 +82,7 @@ func TestSettingsValidate(t *testing.T) {
 	require.NoError(DefaultSettings().Validate())
 
 	fields := func(s Settings) []apierr.Field {
+		s.Normalize()
 		err := s.Validate()
 		require.Error(err)
 		e, ok := errors.AsType[*apierr.Error](err)

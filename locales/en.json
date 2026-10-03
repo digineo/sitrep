@@ -174,7 +174,10 @@
     "first_update_must_open": "The first update of an incident must set the status to planned or active.",
     "status_or_severity_required": "Choose a status, a severity or both.",
     "invalid_origin": "Enter an origin like https://www.example.com, without a path.",
-    "network": "The server cannot be reached."
+    "network": "The server cannot be reached.",
+    "invalid_link": "Enter a full address starting with https:// or http://.",
+    "invalid_svg": "This file is not an SVG image.",
+    "svg_too_large": "The image is larger than 64 KiB, even after removing unsafe content."
   },
   "panel": {
     "seriesName": "{title} #{n}",

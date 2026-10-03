@@ -98,4 +98,7 @@ var (
 	FirstUpdateMustOpen  = code("first_update_must_open")
 	StatusOrSeverity     = code("status_or_severity_required")
 	InvalidOrigin        = code("invalid_origin")
+	InvalidLink          = code("invalid_link")
+	InvalidSVG           = code("invalid_svg")
+	SVGTooLarge          = code("svg_too_large")
 )

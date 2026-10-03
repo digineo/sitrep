@@ -69,10 +69,11 @@ func (l Languages) validate(f *apierr.Fields, path string) {
 // trimmed on save, so blank values are empty.
 type Text map[string]string
 
-// Resolve returns the text to show in lang. It falls back to the primary
-// language, then to the first enabled language that has a value.
+// Resolve returns the text to show in lang, if it is enabled. It falls back
+// to the primary language, then to the first enabled language that has a
+// value. Values of languages that are not enabled are never shown.
 func (t Text) Resolve(lang string, l Languages) string {
-	if v := t[lang]; v != "" {
+	if v := t[lang]; v != "" && slices.Contains(l.Enabled, lang) {
 		return v
 	}
 

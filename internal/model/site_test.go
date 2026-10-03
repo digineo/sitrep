@@ -58,6 +58,13 @@ func TestSiteNormalize(t *testing.T) {
 		Slug: "acme",
 	}
 	assert.Equal(route, s.Route)
+	assert.Equal(AvailabilityOnline, s.Availability)
+	legal := Legal{
+		Imprint: LegalPage{Mode: LegalInherit},
+		Privacy: LegalPage{Mode: LegalInherit},
+	}
+	assert.Equal(legal, s.Legal)
+	assert.True(s.Online())
 
 	s.Route = Route{
 		Mode:   RouteCustom,
@@ -104,6 +111,15 @@ func TestSiteValidate(t *testing.T) {
 		{"languages", func(s *Site) { s.Languages.Enabled = []string{"de", "en"} }, nil},
 		{"primary not enabled", func(s *Site) { s.Languages.Primary = "de" },
 			map[string]string{"languages.primary": "primary_not_enabled", "name.de": "required"}},
+		{"brand color", func(s *Site) { s.BrandColor = "#0a1b2c" }, nil},
+		{"short brand color", func(s *Site) { s.BrandColor = "#abc" }, map[string]string{"brandColor": "invalid_value"}},
+		{"named brand color", func(s *Site) { s.BrandColor = "red" }, map[string]string{"brandColor": "invalid_value"}},
+		{"logo", func(s *Site) { s.Logo = `<svg xmlns="http://www.w3.org/2000/svg"></svg>` }, nil},
+		{"logo that is no SVG", func(s *Site) { s.Logo = "<html></html>" }, map[string]string{"logo": "invalid_svg"}},
+		{"availability", func(s *Site) { s.Availability = AvailabilityPaused }, nil},
+		{"unknown availability", func(s *Site) { s.Availability = "hidden" }, map[string]string{"availability": "invalid_value"}},
+		{"unknown legal mode", func(s *Site) { s.Legal.Privacy.Mode = "pdf" }, map[string]string{"legal.privacy.mode": "invalid_value"}},
+		{"legal text", func(s *Site) { s.Legal.Imprint = LegalPage{Mode: LegalText, Text: Text{"en": "Acme Inc."}} }, nil},
 	}
 	for _, tt := range tests {
 		s := validSite()
@@ -194,5 +210,40 @@ func TestSiteRetention(t *testing.T) {
 			want := map[string]string{"incidentRetentionDays": "out_of_range"}
 			assert.Equal(t, want, fieldCodes(t, s.Validate(bases)), days)
 		}
+	}
+}
+
+func TestSiteBranding(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	s := validSite()
+	s.BrandColor = " #A0B1C2 "
+	s.Logo = "\n<!-- logo --><svg xmlns=\"http://www.w3.org/2000/svg\" onload=\"x()\"><script/><rect/></svg>\n"
+	s.Normalize()
+	require.NoError(s.Validate(bases))
+	assert.Equal("#a0b1c2", s.BrandColor)
+	want := `<svg xmlns="http://www.w3.org/2000/svg"><rect></rect></svg>`
+	assert.Equal(want, s.Logo, "sanitized on save")
+
+	s.Logo = "<svg xmlns=\"http://www.w3.org/2000/svg\"><path d=\"" +
+		strings.Repeat("M", 70000) + "\"/></svg>"
+	s.Normalize()
+	codes := map[string]string{"logo": "svg_too_large"}
+	assert.Equal(codes, fieldCodes(t, s.Validate(bases)))
+
+	s.Logo = "  "
+	s.Normalize()
+	assert.Empty(s.Logo)
+}
+
+func TestSiteAvailability(t *testing.T) {
+	for availability, online := range map[string]bool{
+		AvailabilityOnline:  true,
+		AvailabilityOffline: false,
+		AvailabilityPaused:  false,
+	} {
+		s := &Site{Availability: availability}
+		assert.Equal(t, online, s.Online(), availability)
 	}
 }

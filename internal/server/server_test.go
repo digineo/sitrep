@@ -524,7 +524,8 @@ func TestSettingsAPI(t *testing.T) {
 
 	w = request(http.MethodGet, "", session)
 	require.Equal(http.StatusOK, w.Code)
-	assert.JSONEq(`{"languages": {"enabled": ["en", "de"], "primary": "en"}, "defaultTheme": "system"}`, w.Body.String())
+	assert.JSONEq(`{"languages": {"enabled": ["en", "de"], "primary": "en"}, "defaultTheme": "system",
+		"legal": {"imprint": {"mode": "none"}, "privacy": {"mode": "none"}}}`, w.Body.String())
 
 	w = request(http.MethodPut, `{"languages": {"enabled": ["de"], "primary": "en"}, "defaultTheme": "dark"}`, session)
 	assert.Equal(http.StatusBadRequest, w.Code)
@@ -543,8 +544,12 @@ func TestSettingsAPI(t *testing.T) {
 			Primary: "de",
 		},
 		DefaultTheme: "dark",
+		Legal: model.Legal{
+			Imprint: model.LegalPage{Mode: "none"},
+			Privacy: model.LegalPage{Mode: "none"},
+		},
 	}
-	assert.Equal(want, s)
+	assert.Equal(want, s, "legal pages default to none")
 
 	r := httptest.NewRequest(
 		http.MethodPut,
