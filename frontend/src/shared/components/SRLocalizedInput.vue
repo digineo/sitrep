@@ -36,15 +36,15 @@ const anySet = computed(
 )
 
 /** missing marks a blank language while another one has a value. */
-const missing = (lang: string) => lang !== props.languages.primary
-  && anySet.value && !value(lang).trim()
+const missing = (lang: string) => anySet.value && !value(lang).trim()
 
-/** marker returns the hint shown on a language's tab. */
-function marker(lang: string): string {
-  if (lang === props.languages.primary) {
-    return t("localized.primary")
-  }
-  return missing(lang) ? t("localized.missing") : ""
+/** tabLabel names a language's tab with its hints. */
+function tabLabel(lang: string): string {
+  return [
+    endonym(lang),
+    lang === props.languages.primary && t("localized.primary"),
+    missing(lang) && t("localized.missing"),
+  ].filter(Boolean).join(", ")
 }
 
 function update(lang: string, v: string) {
@@ -112,17 +112,20 @@ function onInvalid(lang: string) {
               class="sr-tab"
               :aria-selected="lang === active"
               :aria-controls="`${id}-panel-${lang}`"
-              :aria-label="[endonym(lang), marker(lang)].filter(Boolean).join(', ')"
+              :aria-label="tabLabel(lang)"
               :tabindex="lang === active ? 0 : -1"
               @click="select(lang)"
               @keydown="onTabKey($event, i)"
           >
             <span :lang>{{ endonym(lang) }}</span>
             <span
-                v-if="marker(lang)"
+                v-if="lang === languages.primary"
                 class="tag ml-1"
-                :class="{ 'is-warning': missing(lang) }"
-            >{{ marker(lang) }}</span>
+            >{{ t("localized.primary") }}</span>
+            <span
+                v-if="missing(lang)"
+                class="tag is-warning ml-1"
+            >{{ t("localized.missing") }}</span>
             <span
                 v-if="errors?.[lang]"
                 class="tag is-danger is-small ml-1"

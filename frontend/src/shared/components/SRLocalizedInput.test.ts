@@ -53,6 +53,23 @@ describe("SRLocalizedInput", () => {
     expect(labels).toEqual(["English, Primary", "Deutsch"])
   })
 
+  it("marks a blank primary language as missing while another one has a value", () => {
+    const wrapper = mount(SRLocalizedInput, {
+      props: {
+        label:     "Description",
+        languages: {
+          enabled: ["en", "de"],
+          primary: "en",
+        },
+        modelValue: { de: "Beschreibung" },
+      },
+      global: { plugins: [createAppI18n("en")] },
+    })
+    const labels = wrapper.findAll("[role=tab]")
+      .map(t => t.attributes("aria-label"))
+    expect(labels).toEqual(["English, Primary, Missing", "Deutsch"])
+  })
+
   it("keeps values of languages that are not enabled", async() => {
     const updates: Record<string, string>[] = []
     const wrapper = mount(SRLocalizedInput, {
