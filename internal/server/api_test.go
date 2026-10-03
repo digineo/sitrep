@@ -1163,23 +1163,60 @@ func TestPublicLeak(t *testing.T) {
 		"description": obj{"en": "**bold** [x](javascript:SECRET-SOURCE)"},
 	})
 
+	source := obj{"en": "**bold** [x](javascript:SECRET-SOURCE)"}
+	legal := obj{
+		"imprint": obj{
+			"mode": "text",
+			"text": source,
+		},
+		"privacy": obj{"mode": "none"},
+	}
+	f.putLegal([]string{"en", "de"}, legal, source)
+	f.putSiteLegal(site, model.Legal{Privacy: model.LegalPage{
+		Mode: model.LegalText,
+		Text: model.Text{"en": "**bold** [x](javascript:SECRET-SOURCE)"},
+	}})
+
 	markers := []string{
 		"SECRET", "31337", `"fake"`, "17h", "max", "internal", "Ann", "ann",
 		`"author"`, "editedBy", "editedAt", "displayName", "**",
 	}
-	for _, path := range []string{
-		"/api/public/sites/" + site,
-		"/api/public/sites/" + site + "?lang=de",
-		"/shop/en/",
-		"/shop/de/",
-		"/api/public/sites/" + site + "/incidents",
-		"/api/public/sites/" + site + "/incidents/" + inc.ID,
-		"/shop/en/feed.atom",
-		"/shop/de/incidents.json",
-	} {
-		body := f.get("status.example.com", path).Body.String()
-		for _, m := range markers {
-			assert.NotContains(t, body, m, path)
+	check := func(paths ...string) {
+		for _, path := range paths {
+			body := f.get("status.example.com", path).Body.String()
+			for _, m := range markers {
+				assert.NotContains(t, body, m, path)
+			}
 		}
 	}
+
+	check(
+		"/api/public/sites/"+site,
+		"/api/public/sites/"+site+"?lang=de",
+		"/shop/en/",
+		"/shop/de/",
+		"/api/public/sites/"+site+"/incidents",
+		"/api/public/sites/"+site+"/incidents/"+inc.ID,
+		"/shop/en/feed.atom",
+		"/shop/de/incidents.json",
+		"/shop/en/privacy",
+		"/api/public/sites/"+site+"/legal/privacy",
+		"/api/public/sites/"+site+"/legal/imprint",
+		"/api/public/landing",
+		"/api/public/legal",
+		"/api/public/legal/imprint",
+		"/en/imprint",
+	)
+
+	w := f.admin(http.MethodGet, "/api/admin/sites/"+site, nil)
+	stored := decode[model.Site](t, w, http.StatusOK)
+	stored.Availability = model.AvailabilityOffline
+	w = f.admin(http.MethodPut, "/api/admin/sites/"+site, stored)
+	require.Equal(t, http.StatusOK, w.Code)
+	check(
+		"/api/public/sites/"+site,
+		"/shop/en/",
+		"/api/public/sites/"+site+"/incidents/"+inc.ID,
+		"/shop/en/feed.atom",
+	)
 }
