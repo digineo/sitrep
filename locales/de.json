@@ -65,11 +65,22 @@
     "global": "Allgemein",
     "settings": "Einstellungen",
     "signOut": "Abmelden",
-    "signedInAs": "Angemeldet als"
+    "signedInAs": "Angemeldet als",
+    "newSite": "Neue Statusseite",
+    "dataSources": "Datenquellen",
+    "unusable": "Eine Datenquelle ist nicht nutzbar",
+    "sites": "Statusseiten",
+    "status": "Status: {status}",
+    "panels": "Panels",
+    "siteSettings": "Einstellungen"
   },
   "home": {
     "title": "Statusseiten",
-    "empty": "Noch keine Statusseiten."
+    "empty": "Noch keine Statusseiten.",
+    "missing": "1 fehlende Übersetzung | {n} fehlende Übersetzungen",
+    "noDataSource": "Statusseiten zeigen Daten aus Datenquellen. Legen Sie zuerst eine Datenquelle an.",
+    "panelsOf": "Panels von {site}",
+    "settingsOf": "Einstellungen von {site}"
   },
   "settings": {
     "title": "Einstellungen",
@@ -88,7 +99,8 @@
     "moveDown": "{language} nach unten verschieben"
   },
   "toast": {
-    "saveFailed": "Speichern fehlgeschlagen"
+    "saveFailed": "Speichern fehlgeschlagen",
+    "deleteFailed": "Löschen fehlgeschlagen"
   },
   "unsaved": {
     "title": "Änderungen verwerfen?",
@@ -144,7 +156,22 @@
   },
   "site": {
     "currentStatus": "Aktueller Dienststatus",
-    "loadFailed": "Der Status konnte nicht geladen werden. Diese Seite versucht es weiter."
+    "loadFailed": "Der Status konnte nicht geladen werden. Diese Seite versucht es weiter.",
+    "create": "Neue Statusseite",
+    "createSubmit": "Statusseite anlegen",
+    "created": "Statusseite angelegt.",
+    "name": "Name",
+    "nameIn": "Name ({language})",
+    "nameHelp": "Weitere Sprachen können Sie später in den Einstellungen ergänzen.",
+    "settingsOf": "Einstellungen von {site}",
+    "saved": "Statusseite gespeichert.",
+    "timezone": "Zeitzone",
+    "timezoneHelp": "Zeiten auf der Statusseite werden in dieser Zeitzone angezeigt.",
+    "theme": "Farbschema",
+    "themeInherit": "Standard ({theme})",
+    "delete": "Statusseite löschen",
+    "deleteTitle": "Statusseite löschen?",
+    "deleteMessage": "{site} wird mit allen Panels gelöscht."
   },
   "status": {
     "operational": "Betriebsbereit",
@@ -166,5 +193,148 @@
     },
     "updated": "Aktualisiert {time}",
     "lastFailed": "Letzte Aktualisierung fehlgeschlagen: {error}"
+  },
+  "localized": {
+    "primary": "Primär",
+    "missing": "Fehlt"
+  },
+  "dataSources": {
+    "title": "Datenquellen",
+    "new": "Neue Datenquelle",
+    "edit": "Datenquelle bearbeiten",
+    "empty": "Noch keine Datenquellen.",
+    "name": "Name",
+    "nameHelp": "Wird nur in der Verwaltung angezeigt.",
+    "type": "Typ",
+    "summary": "Adresse",
+    "panels": "Panels",
+    "unusable": "Nicht nutzbar",
+    "test": "Verbindung testen",
+    "testOk": "Verbindung funktioniert ({detail})",
+    "testFailed": "Verbindung fehlgeschlagen: {error}",
+    "secretSet": "Ein Wert ist gespeichert.",
+    "secretCleared": "Der Wert wird beim Speichern entfernt.",
+    "replace": "Ersetzen",
+    "clear": "Entfernen",
+    "keep": "Behalten",
+    "saved": "Datenquelle gespeichert.",
+    "delete": "Datenquelle löschen",
+    "deleteTitle": "Datenquelle löschen?",
+    "deleteMessage": "Die Datenquelle {name} wird gelöscht.",
+    "inUse": "Panels dieser Statusseiten verwenden diese Datenquelle noch:"
+  },
+  "datasource": {
+    "prometheus": {
+      "name": "Prometheus",
+      "url": {
+        "label": "URL",
+        "help": "Basis-URL des Prometheus-Servers, z. B. https://prometheus.example.com. Ein Pfadpräfix ist erlaubt."
+      },
+      "auth": {
+        "label": "Authentifizierung",
+        "options": {
+          "none": "Keine",
+          "basic": "Benutzername und Passwort",
+          "bearer": "Bearer-Token"
+        }
+      },
+      "username": {
+        "label": "Benutzername"
+      },
+      "password": {
+        "label": "Passwort"
+      },
+      "token": {
+        "label": "Token"
+      },
+      "timeout": {
+        "label": "Zeitlimit",
+        "help": "Wie lange eine Anfrage dauern darf, von 1s bis 2m."
+      }
+    }
+  },
+  "route": {
+    "label": "Erreichbar über",
+    "path": "Pfad",
+    "subdomain": "Subdomain",
+    "custom": "Eigene Domain",
+    "slug": "Adresse",
+    "slugHelp": "Kleinbuchstaben, Ziffern und Bindestriche.",
+    "domain": "Domain",
+    "domainHelp": "Richten Sie die Domain auf diesen Server, z. B. mit einem CNAME-Eintrag.",
+    "hint": "Die Statusseite ist unter {url} erreichbar"
+  },
+  "preview": {
+    "public": "Öffentliche Seite",
+    "language": "Vorschausprache",
+    "addPanel": "Panel hinzufügen",
+    "empty": "Diese Statusseite hat noch keine Panels.",
+    "move": "Panel {title} verschieben",
+    "moveHint": "Ziehen oder Pfeiltasten verwenden",
+    "moved": "{title} an Position {position} von {count} verschoben",
+    "edit": "Panel {title} bearbeiten",
+    "editHint": "Bearbeiten",
+    "pollFailed": "Abfrage fehlgeschlagen"
+  },
+  "panelEditor": {
+    "new": "Neues Panel",
+    "edit": "Panel bearbeiten",
+    "dataSource": "Datenquelle",
+    "chooseDataSource": "Datenquelle wählen",
+    "type": "Typ",
+    "chooseType": "Typ wählen",
+    "types": {
+      "stat": "Kennzahl: ein einzelner Wert",
+      "status": "Status: in Betrieb oder gestört nach Schwellwerten",
+      "timeseries": "Diagramm: Werte im Zeitverlauf"
+    },
+    "title": "Titel",
+    "description": "Beschreibung",
+    "query": "Abfrage",
+    "refresh": "Aktualisierungsintervall",
+    "refreshHelp": "Leer verwendet den Standard von {default}.",
+    "reduce": "Zusammenfassen zu",
+    "reduceHelp": "Wie mehrere Werte, sortiert nach ihren Labels, zu einem werden.",
+    "reducers": {
+      "first": "Erster Wert",
+      "last": "Letzter Wert",
+      "sum": "Summe",
+      "avg": "Durchschnitt",
+      "min": "Minimum",
+      "max": "Maximum"
+    },
+    "thresholds": "Regeln",
+    "thresholdsHelp": "Die erste passende Regel bestimmt den Status. Passt keine, ist der Status betriebsbereit.",
+    "thresholdOp": "Vergleich von Regel {n}",
+    "thresholdValue": "Wert von Regel {n}",
+    "thresholdState": "Status von Regel {n}",
+    "thresholdUp": "Regel {n} nach oben",
+    "thresholdDown": "Regel {n} nach unten",
+    "thresholdRemove": "Regel {n} entfernen",
+    "thresholdAdd": "Regel hinzufügen",
+    "range": "Zeitraum",
+    "rangeHelp": "Von 1m bis 90d, z. B. 1h oder 7d.",
+    "step": "Schrittweite",
+    "stepHelp": "Optional. Leer wählt eine Schrittweite für etwa 240 Punkte.",
+    "style": "Darstellung",
+    "styles": {
+      "line": "Linie",
+      "area": "Fläche"
+    },
+    "minZero": "Y-Achse beginnt bei null",
+    "decimals": "Nachkommastellen",
+    "unit": "Einheit",
+    "legend": "Name der Datenreihe",
+    "legendHelp": "Verwenden Sie {example} für den Wert eines Labels. Leer verwendet den Titel.",
+    "dataPreview": "Datenvorschau",
+    "widgetPreview": "Widget-Vorschau",
+    "previewFailed": "Vorschau fehlgeschlagen: {error}",
+    "warnings": {
+      "series_dropped": "{count} weitere Datenreihen werden nicht angezeigt. Diagramme zeigen höchstens 20."
+    },
+    "saved": "Panel gespeichert.",
+    "delete": "Panel löschen",
+    "deleteTitle": "Panel löschen?",
+    "deleteMessage": "Das Panel {title} wird gelöscht."
   }
 }

@@ -65,11 +65,22 @@
     "global": "Global",
     "settings": "Settings",
     "signOut": "Sign out",
-    "signedInAs": "Signed in as"
+    "signedInAs": "Signed in as",
+    "newSite": "New status page",
+    "dataSources": "Data sources",
+    "unusable": "A data source is unusable",
+    "sites": "Status pages",
+    "status": "Status: {status}",
+    "panels": "Panels",
+    "siteSettings": "Settings"
   },
   "home": {
     "title": "Status pages",
-    "empty": "No status pages yet."
+    "empty": "No status pages yet.",
+    "missing": "1 missing translation | {n} missing translations",
+    "noDataSource": "Status pages show data from data sources. Add a data source first.",
+    "panelsOf": "Panels of {site}",
+    "settingsOf": "Settings of {site}"
   },
   "settings": {
     "title": "Settings",
@@ -88,7 +99,8 @@
     "moveDown": "Move {language} down"
   },
   "toast": {
-    "saveFailed": "Saving failed"
+    "saveFailed": "Saving failed",
+    "deleteFailed": "Deleting failed"
   },
   "unsaved": {
     "title": "Discard changes?",
@@ -144,7 +156,22 @@
   },
   "site": {
     "currentStatus": "Current service status",
-    "loadFailed": "The status could not be loaded. This page keeps trying."
+    "loadFailed": "The status could not be loaded. This page keeps trying.",
+    "create": "New status page",
+    "createSubmit": "Create status page",
+    "created": "Status page created.",
+    "name": "Name",
+    "nameIn": "Name ({language})",
+    "nameHelp": "You can add more languages later in the settings.",
+    "settingsOf": "Settings of {site}",
+    "saved": "Status page saved.",
+    "timezone": "Time zone",
+    "timezoneHelp": "Times on the status page are shown in this time zone.",
+    "theme": "Color scheme",
+    "themeInherit": "Default ({theme})",
+    "delete": "Delete status page",
+    "deleteTitle": "Delete status page?",
+    "deleteMessage": "{site} will be deleted with all its panels."
   },
   "status": {
     "operational": "Operational",
@@ -166,5 +193,148 @@
     },
     "updated": "Updated {time}",
     "lastFailed": "Last refresh failed: {error}"
+  },
+  "localized": {
+    "primary": "Primary",
+    "missing": "Missing"
+  },
+  "dataSources": {
+    "title": "Data sources",
+    "new": "New data source",
+    "edit": "Edit data source",
+    "empty": "No data sources yet.",
+    "name": "Name",
+    "nameHelp": "Only shown in the administration.",
+    "type": "Type",
+    "summary": "Address",
+    "panels": "Panels",
+    "unusable": "Unusable",
+    "test": "Test connection",
+    "testOk": "Connection works ({detail})",
+    "testFailed": "Connection failed: {error}",
+    "secretSet": "A value is stored.",
+    "secretCleared": "The value is removed when you save.",
+    "replace": "Replace",
+    "clear": "Remove",
+    "keep": "Keep",
+    "saved": "Data source saved.",
+    "delete": "Delete data source",
+    "deleteTitle": "Delete data source?",
+    "deleteMessage": "The data source {name} will be deleted.",
+    "inUse": "Panels of these status pages still use this data source:"
+  },
+  "datasource": {
+    "prometheus": {
+      "name": "Prometheus",
+      "url": {
+        "label": "URL",
+        "help": "Base URL of the Prometheus server, e.g. https://prometheus.example.com. A path prefix is allowed."
+      },
+      "auth": {
+        "label": "Authentication",
+        "options": {
+          "none": "None",
+          "basic": "Username and password",
+          "bearer": "Bearer token"
+        }
+      },
+      "username": {
+        "label": "Username"
+      },
+      "password": {
+        "label": "Password"
+      },
+      "token": {
+        "label": "Token"
+      },
+      "timeout": {
+        "label": "Timeout",
+        "help": "How long a request may take, from 1s to 2m."
+      }
+    }
+  },
+  "route": {
+    "label": "Reachable via",
+    "path": "Path",
+    "subdomain": "Subdomain",
+    "custom": "Own domain",
+    "slug": "Address",
+    "slugHelp": "Lowercase letters, digits and dashes.",
+    "domain": "Domain",
+    "domainHelp": "Point the domain to this server, e.g. with a CNAME record.",
+    "hint": "The status page will be reachable at {url}"
+  },
+  "preview": {
+    "public": "Public page",
+    "language": "Preview language",
+    "addPanel": "Add panel",
+    "empty": "This status page has no panels yet.",
+    "move": "Move panel {title}",
+    "moveHint": "Drag, or use the arrow keys",
+    "moved": "{title} moved to position {position} of {count}",
+    "edit": "Edit panel {title}",
+    "editHint": "Edit",
+    "pollFailed": "Query failed"
+  },
+  "panelEditor": {
+    "new": "New panel",
+    "edit": "Edit panel",
+    "dataSource": "Data source",
+    "chooseDataSource": "Choose a data source",
+    "type": "Type",
+    "chooseType": "Choose a type",
+    "types": {
+      "stat": "Stat: a single value",
+      "status": "Status: up or down by thresholds",
+      "timeseries": "Chart: values over time"
+    },
+    "title": "Title",
+    "description": "Description",
+    "query": "Query",
+    "refresh": "Refresh interval",
+    "refreshHelp": "Empty uses the default of {default}.",
+    "reduce": "Reduce to",
+    "reduceHelp": "How several values become one, sorted by their labels.",
+    "reducers": {
+      "first": "First value",
+      "last": "Last value",
+      "sum": "Sum",
+      "avg": "Average",
+      "min": "Minimum",
+      "max": "Maximum"
+    },
+    "thresholds": "Rules",
+    "thresholdsHelp": "The first matching rule sets the state. Without a match, the state is operational.",
+    "thresholdOp": "Comparison of rule {n}",
+    "thresholdValue": "Value of rule {n}",
+    "thresholdState": "State of rule {n}",
+    "thresholdUp": "Move rule {n} up",
+    "thresholdDown": "Move rule {n} down",
+    "thresholdRemove": "Remove rule {n}",
+    "thresholdAdd": "Add rule",
+    "range": "Time range",
+    "rangeHelp": "From 1m to 90d, e.g. 1h or 7d.",
+    "step": "Step",
+    "stepHelp": "Optional. Empty picks a step for about 240 points.",
+    "style": "Style",
+    "styles": {
+      "line": "Line",
+      "area": "Area"
+    },
+    "minZero": "Y-axis starts at zero",
+    "decimals": "Decimals",
+    "unit": "Unit",
+    "legend": "Series name",
+    "legendHelp": "Use {example} for the value of a label. Empty uses the title.",
+    "dataPreview": "Data preview",
+    "widgetPreview": "Widget preview",
+    "previewFailed": "Preview failed: {error}",
+    "warnings": {
+      "series_dropped": "{count} more series are not shown. Charts show at most 20."
+    },
+    "saved": "Panel saved.",
+    "delete": "Delete panel",
+    "deleteTitle": "Delete panel?",
+    "deleteMessage": "The panel {title} will be deleted."
   }
 }

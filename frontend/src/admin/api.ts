@@ -10,6 +10,8 @@ export class ApiError extends Error {
       path: string
       code: string
     }[] = [],
+    /** details carry data that explains the error. */
+    readonly details?: unknown,
   ) {
     super(code)
   }
@@ -20,6 +22,7 @@ export async function api<T>(
   method: string,
   path: string,
   body?: unknown,
+  signal?: AbortSignal,
 ): Promise<T> {
   let res: Response
   try {
@@ -30,6 +33,7 @@ export async function api<T>(
         "Accept":       "application/json",
       },
       body: body === undefined ? undefined : JSON.stringify(body),
+      signal,
     })
   } catch {
     throw new ApiError(0, "network")
@@ -44,6 +48,7 @@ export async function api<T>(
       res.status,
       data?.error?.code ?? "internal",
       data?.error?.fields,
+      data?.error?.details,
     )
   }
   return (res.status === 204 ? undefined : await res.json()) as T
@@ -67,4 +72,18 @@ export function fieldErrors(err: unknown): Record<string, string> {
 
 export function isUnauthorized(err: unknown): boolean {
   return err instanceof ApiError && err.status === 401
+}
+
+/**
+ * localizedErrors picks the errors of a localized field, e.g. "name.de",
+ * and translates them, by language.
+ */
+export function localizedErrors(
+  errors: Record<string, string>,
+  field: string,
+  t: (key: string) => string,
+): Record<string, string> {
+  return Object.fromEntries(Object.entries(errors)
+    .filter(([path]) => path.startsWith(`${field}.`))
+    .map(([path, code]) => [path.slice(field.length + 1), t(`error.${code}`)]))
 }

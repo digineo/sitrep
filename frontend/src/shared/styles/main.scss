@@ -95,3 +95,35 @@
   gap: 0.5rem;
   align-items: center;
 }
+
+// Syntax colors of the query editor, legible in both color schemes.
+@mixin code-dark {
+  --sr-code-keyword: #c792ea;
+  --sr-code-function: #82aaff;
+  --sr-code-number: #f78c6c;
+  --sr-code-string: #c3e88d;
+  --sr-code-label: #ff9cac;
+}
+
+:root {
+  --sr-code-keyword: #7c3aad;
+  --sr-code-function: #1d5bd6;
+  --sr-code-number: #a14d00;
+  --sr-code-string: #1a6e45;
+  --sr-code-label: #a3326c;
+}
+
+[data-theme="dark"] {
+  @include code-dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    @include code-dark;
+  }
+}
+
+.textarea.sr-autogrow {
+  field-sizing: content;
+  min-height: 4.5em;
+}

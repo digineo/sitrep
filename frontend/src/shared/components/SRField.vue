@@ -17,12 +17,14 @@ const describedby = computed(() => [
 <template>
   <div class="field">
     <label
+        :id="`${id}-label`"
         class="label"
         :for="id"
     >{{ label }}</label>
     <div class="control">
       <slot
           :id
+          :label-id="`${id}-label`"
           :describedby
           :invalid="error ? true : undefined"
       />
