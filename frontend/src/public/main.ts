@@ -11,14 +11,16 @@ import App from "./App.vue"
 import { pageRoutes } from "./urls"
 import LandingView from "./views/LandingView.vue"
 import NotFoundView from "./views/NotFoundView.vue"
+import SiteOverview from "./views/SiteOverview.vue"
 
 const bootstrap = readBootstrap()
 const router = createRouter({
   history: createWebHistory(bootstrap.basePath),
   routes:  [
-    ...(bootstrap.mode === "landing"
-      ? pageRoutes(bootstrap.languages, { overview: LandingView })
-      : []),
+    ...pageRoutes(
+      bootstrap.languages,
+      { overview: bootstrap.mode === "landing" ? LandingView : SiteOverview },
+    ),
     {
       path:      "/:path(.*)*",
       component: NotFoundView,

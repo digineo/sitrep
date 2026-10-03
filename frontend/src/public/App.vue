@@ -6,6 +6,7 @@ import { type Bootstrap } from "../shared/bootstrap"
 import LanguageSwitcher from "../shared/components/LanguageSwitcher.vue"
 import ThemeSwitcher from "../shared/components/ThemeSwitcher.vue"
 import { useLanguage } from "../shared/composables/useLanguage"
+import SiteFrame from "./components/SiteFrame.vue"
 import { pagePath } from "./urls"
 
 const bootstrap = inject<Bootstrap>("bootstrap")!
@@ -33,17 +34,23 @@ async function switchLanguage(lang: string) {
 </script>
 
 <template>
-  <div class="sr-corner">
-    <ThemeSwitcher right />
-    <LanguageSwitcher
-        v-if="bootstrap.languages.length > 1"
-        :model-value="locale"
-        :languages="bootstrap.languages"
-        right
-        @update:model-value="switchLanguage"
-    />
-  </div>
-  <main class="container px-4">
-    <RouterView />
-  </main>
+  <SiteFrame
+      v-if="bootstrap.mode === 'site'"
+      @switch-language="switchLanguage"
+  />
+  <template v-else>
+    <div class="sr-corner">
+      <ThemeSwitcher right />
+      <LanguageSwitcher
+          v-if="bootstrap.languages.length > 1"
+          :model-value="locale"
+          :languages="bootstrap.languages"
+          right
+          @update:model-value="switchLanguage"
+      />
+    </div>
+    <main class="container px-4">
+      <RouterView />
+    </main>
+  </template>
 </template>
