@@ -17,8 +17,9 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   and login throttling per username and per client address.
 - Admin console frame: login screen, sidebar, theme and language switchers.
 - Instance settings for languages and the default color scheme.
-- Data sources with pluggable types, secrets encrypted at rest, connection
-  tests and a console form generated from each type's fields.
+- Data sources with pluggable types, secrets encrypted at rest and bound to
+  the data source's URL, connection tests and a console form generated from
+  each type's fields.
 - The Prometheus data source type with a read-only discovery proxy, and a
   PromQL editor with autocompletion in the console.
 - Status pages with time zone and color scheme, created and edited in the
@@ -28,3 +29,9 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Public status pages with a status banner, panels and charts, refreshed
   incrementally; the console's preview orders panels by drag and drop or
   keyboard.
+- Incidents with a timeline of Markdown updates, managed in the console and
+  shown on status pages, shaded in charts and listed in an archive.
+- An Atom feed per language and incidents.json, readable cross-origin by
+  each status page's allowed origins.
+- Retention that deletes finished incidents after a status page's number of
+  days.

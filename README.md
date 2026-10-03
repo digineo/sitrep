@@ -16,12 +16,15 @@ ships as one binary with the web frontend and an embedded database file.
 - Panels fed by Prometheus queries: single values, up/down states by
   thresholds, and charts. SitRep polls the data sources and serves
   visitors from memory; visitors never cause queries.
+- Incidents and maintenance with a timeline of updates written in Markdown,
+  shown on the status page, shaded in charts, in an archive, in an Atom
+  feed per language and as JSON for other websites.
 - Status pages refresh themselves and fetch only what changed.
 - Light, dark and system color schemes, remembered per visitor.
 - Admin console with sign-in by username and password (bcrypt or argon2id
-  hashes), login throttling, data sources, status pages with their panels
-  and a live preview, and instance settings for languages and the default
-  color scheme.
+  hashes), login throttling, data sources, status pages with their panels,
+  incidents and a live preview, and instance settings for languages and the
+  default color scheme.
 - No third-party requests, no tracking, no consent banner needed.
 
 ## Quick start
@@ -146,6 +149,38 @@ redirect to the visitor's language: the one chosen in the language switcher
 primary language. Following a link to another language does not change the
 stored choice.
 
+## Incidents
+
+Admins open an incident with a title and a first update that sets the
+status to planned (maintenance) or active, and add updates as things
+change. Each update sets a status, a severity (minor, major or critical) or
+both, and has a Markdown description. Ongoing incidents count in the status
+of the page: a critical one as an outage, any other as degraded.
+
+Visitors see upcoming and ongoing incidents, and finished ones for seven
+days after their last update; the archive at `/incidents` lists all of
+them. Charts shade the time an incident was ongoing in its severity's
+color. Each language has an Atom feed at `/feed.atom` with one entry per
+update.
+
+A status page can delete finished incidents a number of days after their
+last update ("Keep finished incidents" in its settings). Upcoming and
+ongoing incidents are never deleted. Retention runs at startup and hourly.
+
+### incidents.json
+
+`/incidents.json` (with the language prefix on pages with several
+languages, e.g. `/de/incidents.json`) lists the incidents visitors see, in
+the URL's language: ID, title, phase (`upcoming`, `ongoing`, `finished`),
+current status and severity, and every update with its time in UTC, status,
+severity and description as HTML. Responses are cached for 60 seconds. It
+is not linked from any page.
+
+Other websites can read it in the browser when their origin is listed under
+"Allowed origins for incidents.json" in the status page's settings, e.g.
+`https://www.example.com`. SitRep then answers with
+`Access-Control-Allow-Origin` for that origin; it never allows credentials.
+
 ## Cookies
 
 None of these cookies is needed to read public pages, and none tracks
@@ -162,6 +197,12 @@ anyone:
 SitRep stores the subject, display name and, if the identity provider
 sends one, the email address of signed-in admins in their session. Sessions
 expire after `SITREP_SESSION_TTL` and are deleted at startup and hourly.
+
+Incidents and their updates store the subject and display name of the
+admin who created them and of the admin who last edited each update. Only
+the console shows them; status pages, feeds and incidents.json never do.
+They are deleted with their incident, either by an admin or by the status
+page's incident retention.
 Logs contain the usernames of failed sign-ins, but no client addresses at
 level `info` or above.
 
