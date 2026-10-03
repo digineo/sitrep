@@ -150,15 +150,15 @@ func canonicalDuration(s string) string {
 }
 
 // Validate checks a normalized panel against the languages of its site.
-// Whether its data source exists and supports its type is checked by the
-// caller.
-func (p *Panel) Validate(l Languages) error {
+// Previews of unsaved panels need no title. Whether the data source exists
+// and supports the panel type is checked by the caller.
+func (p *Panel) Validate(l Languages, requireTitle bool) error {
 	var f apierr.Fields
 	if !slices.Contains(panelTypes, p.Type) {
 		f.Add("type", apierr.InvalidValue)
 	}
 
-	validateText(&f, "title", p.Title, l, true, maxName)
+	validateText(&f, "title", p.Title, l, requireTitle, maxName)
 	validateText(&f, "description", p.Description, l, false, maxDescription)
 
 	if p.DataSource == "" {

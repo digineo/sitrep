@@ -130,6 +130,7 @@
     "datasource_in_use": "This data source is still used by panels.",
     "datasource_unsupported_type": "This data source does not support this panel type.",
     "bad_gateway": "The data source cannot be reached.",
+    "datasource_unusable": "The secrets of this data source cannot be decrypted. Please enter them again.",
     "network": "The server cannot be reached."
   },
   "panel": {

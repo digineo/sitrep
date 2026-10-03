@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/digineo/sitrep/internal/apierr"
 	"github.com/digineo/sitrep/internal/datasource"
 	"github.com/digineo/sitrep/internal/model"
 	"github.com/digineo/sitrep/internal/process"
@@ -329,9 +330,11 @@ func TestUnusableDataSource(t *testing.T) {
 	assert := assert.New(t)
 
 	f := newFixture(t, time.Hour)
+	var errs apierr.Fields
 	config := map[string]string{"token": "t0ken"}
 	otherKey := bytes.Repeat([]byte{2}, 32)
-	require.NoError(datasource.Apply(f.ds, "x", config, otherKey))
+	require.NoError(datasource.Apply(&errs, f.ds, config, otherKey))
+	require.Empty(errs)
 	require.NoError(f.db.UpdateDataSource(f.ds))
 	f.p.Reconcile()
 	e := f.await(t, func(e Entry) bool { return e.Err != "" })

@@ -1,6 +1,8 @@
 package server
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"html"
 	"net/http"
@@ -18,6 +20,7 @@ import (
 	"github.com/digineo/sitrep/internal/auth"
 	"github.com/digineo/sitrep/internal/config"
 	"github.com/digineo/sitrep/internal/model"
+	"github.com/digineo/sitrep/internal/poller"
 	"github.com/digineo/sitrep/internal/store"
 )
 
@@ -40,19 +43,29 @@ func (testProvider) Routes(mux *http.ServeMux, core *auth.Core) {
 }
 
 type fixture struct {
-	t   *testing.T
-	db  *store.DB
-	srv http.Handler
+	t       *testing.T
+	db      *store.DB
+	dbPath  string
+	poller  *poller.Poller
+	srv     http.Handler
+	session *http.Cookie
 }
 
+var testKey = bytes.Repeat([]byte{42}, 32)
+
+// newFixture serves a database with three sites. Panels without their own
+// refresh are polled every 50ms.
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
-	db, err := store.Open(filepath.Join(t.TempDir(), "sitrep.db"))
+	path := filepath.Join(t.TempDir(), "sitrep.db")
+	db, err := store.Open(path)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
 
 	cfg := config.Config{
-		BaseDomains: []string{"status.example.com", "sitrep.localhost"},
+		BaseDomains:    []string{"status.example.com", "sitrep.localhost"},
+		SecretKey:      testKey,
+		DefaultRefresh: 30 * time.Second,
 	}
 	core := auth.NewCore(
 		xlog.NewDiscard(),
@@ -62,12 +75,25 @@ func newFixture(t *testing.T) *fixture {
 		time.Hour,
 		false,
 	)
-	f := &fixture{
-		t:   t,
-		db:  db,
-		srv: newServer(xlog.NewDiscard(), cfg, db, core, testAssets()),
-	}
+	p := poller.New(xlog.NewDiscard(), db, testKey, 50*time.Millisecond)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		p.Run(ctx)
+		close(done)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		<-done
+	})
 
+	f := &fixture{
+		t:      t,
+		db:     db,
+		dbPath: path,
+		poller: p,
+		srv:    newServer(xlog.NewDiscard(), cfg, db, core, p, testAssets()),
+	}
 	for _, site := range []*model.Site{
 		{
 			Name: model.Text{"de": "Acme </script><script>alert(1)</script>"},
@@ -400,11 +426,13 @@ func TestAdminShell(t *testing.T) {
 	assert.Equal(cspAdmin, w.Header().Get("Content-Security-Policy"))
 	assert.Contains(cspAdmin, "frame-ancestors 'none'")
 	want := bootstrap{
-		Mode:      "admin",
-		BasePath:  "/admin",
-		Lang:      "de",
-		Languages: []string{"de", "en"},
-		Primary:   "en",
+		Mode:           "admin",
+		BasePath:       "/admin",
+		Lang:           "de",
+		Languages:      []string{"de", "en"},
+		Primary:        "en",
+		BaseDomains:    []string{"status.example.com", "sitrep.localhost"},
+		DefaultRefresh: "30s",
 	}
 	assert.Equal(want, parseBootstrap(t, body))
 

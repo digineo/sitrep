@@ -3,7 +3,6 @@ package datasource
 import (
 	"bytes"
 	"context"
-	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -80,14 +79,23 @@ func init() {
 
 var key = bytes.Repeat([]byte{7}, 32)
 
-func fieldErrors(t *testing.T, err error) map[string]string {
+// apply runs Apply and returns its field errors by path.
+func apply(
+	t *testing.T,
+	ds *model.DataSource,
+	in map[string]string,
+	key []byte,
+) map[string]string {
 	t.Helper()
-	e, ok := errors.AsType[*apierr.Error](err)
-	require.True(t, ok, err)
+	var f apierr.Fields
+	require.NoError(t, Apply(&f, ds, in, key))
+	if len(f) == 0 {
+		return nil
+	}
 
 	out := map[string]string{}
-	for _, f := range e.Fields {
-		out[f.Path] = f.Code
+	for _, e := range f {
+		out[e.Path] = e.Code
 	}
 	return out
 }
@@ -95,6 +103,23 @@ func fieldErrors(t *testing.T, err error) map[string]string {
 func TestApply(t *testing.T) {
 	require := require.New(t)
 	assert := assert.New(t)
+
+	var f apierr.Fields
+	assert.Equal("Main", ValidateName(&f, "  Main "))
+	assert.Empty(f)
+	ValidateName(&f, " ")
+	ValidateName(&f, strings.Repeat("ä", 101))
+	errs := apierr.Fields{
+		{
+			Path: "name",
+			Code: "required",
+		},
+		{
+			Path: "name",
+			Code: "too_long",
+		},
+	}
+	assert.Equal(errs, f)
 
 	ds := &model.DataSource{
 		ID:   "a",
@@ -105,8 +130,7 @@ func TestApply(t *testing.T) {
 		"timeout": "90s",
 		"verbose": "true",
 	}
-	require.NoError(Apply(ds, "  Main ", in, nil))
-	assert.Equal("Main", ds.Name)
+	require.Nil(apply(t, ds, in, nil))
 	want := map[string]string{
 		"url":     "https://prom.example.com/prefix",
 		"auth":    "none",
@@ -119,7 +143,7 @@ func TestApply(t *testing.T) {
 		"url":      "http://prom",
 		"username": "ann",
 	}
-	require.NoError(Apply(ds, "Main", in, nil))
+	require.Nil(apply(t, ds, in, nil))
 	assert.NotContains(
 		ds.Config,
 		"username",
@@ -127,19 +151,17 @@ func TestApply(t *testing.T) {
 	)
 
 	want = map[string]string{
-		"name":            "required",
 		"config.url":      "required",
 		"config.username": "required",
 	}
-	in = map[string]string{"auth": "basic"}
-	assert.Equal(want, fieldErrors(t, Apply(ds, " ", in, nil)))
+	assert.Equal(want, apply(t, ds, map[string]string{"auth": "basic"}, nil))
 
 	in = map[string]string{
 		"url":  "http://prom",
 		"auth": "bearer",
 	}
 	want = map[string]string{"config.token": "required"}
-	assert.Equal(want, fieldErrors(t, Apply(ds, "x", in, nil)))
+	assert.Equal(want, apply(t, ds, in, nil))
 
 	for in, want := range map[[2]string]string{
 		{"url", "ftp://prom"}:                                "invalid_url",
@@ -161,7 +183,7 @@ func TestApply(t *testing.T) {
 			ID:   "a",
 			Type: "test",
 		}
-		got := fieldErrors(t, Apply(fresh, "x", cfg, nil))
+		got := apply(t, fresh, cfg, nil)
 		assert.Equal(map[string]string{"config." + in[0]: want}, got, in)
 	}
 }
@@ -181,9 +203,9 @@ func TestSecrets(t *testing.T) {
 		"password": "hunter2",
 	}
 	want := map[string]string{"config.password": "secret_key_missing"}
-	assert.Equal(want, fieldErrors(t, Apply(ds, "x", cfg, nil)))
+	assert.Equal(want, apply(t, ds, cfg, nil))
 
-	require.NoError(Apply(ds, "x", cfg, key))
+	require.Nil(apply(t, ds, cfg, key))
 	assert.NotContains(ds.Config, "password")
 	require.Contains(ds.Secrets, "password")
 	assert.False(bytes.Contains(ds.Secrets["password"], []byte("hunter2")))
@@ -192,8 +214,8 @@ func TestSecrets(t *testing.T) {
 	assert.Equal("hunter2", opened["password"])
 
 	delete(cfg, "password")
-	require.NoError(
-		Apply(ds, "x", cfg, nil),
+	require.Nil(
+		apply(t, ds, cfg, nil),
 		"an omitted secret keeps the stored value, even without key",
 	)
 	opened, err = Open(*ds, key)
@@ -201,7 +223,7 @@ func TestSecrets(t *testing.T) {
 	assert.Equal("hunter2", opened["password"])
 
 	cfg["password"] = "correct horse"
-	require.NoError(Apply(ds, "x", cfg, key))
+	require.Nil(apply(t, ds, cfg, key))
 	opened, err = Open(*ds, key)
 	require.NoError(err)
 	assert.Equal(
@@ -220,13 +242,13 @@ func TestSecrets(t *testing.T) {
 	assert.ErrorIs(err, ErrUnusable, "no key")
 
 	cfg["password"] = ""
-	require.NoError(Apply(ds, "x", cfg, nil))
+	require.Nil(apply(t, ds, cfg, nil))
 	assert.Empty(ds.Secrets, "an empty value clears the secret")
 
 	cfg["password"] = "hunter2"
-	require.NoError(Apply(ds, "x", cfg, key))
+	require.Nil(apply(t, ds, cfg, key))
 	cfg["auth"] = "none"
 	delete(cfg, "password")
-	require.NoError(Apply(ds, "x", cfg, key))
+	require.Nil(apply(t, ds, cfg, key))
 	assert.Empty(ds.Secrets, "hidden secrets are dropped")
 }

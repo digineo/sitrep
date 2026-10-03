@@ -22,6 +22,7 @@ import (
 	"github.com/digineo/sitrep/internal/config"
 	"github.com/digineo/sitrep/internal/i18n"
 	"github.com/digineo/sitrep/internal/model"
+	"github.com/digineo/sitrep/internal/poller"
 	"github.com/digineo/sitrep/internal/server"
 	"github.com/digineo/sitrep/internal/store"
 )
@@ -92,7 +93,8 @@ func serve(args []string, stderr io.Writer) int {
 		cfg.SessionTTL,
 		cfg.TrustProxy,
 	)
-	srv, err := server.New(log, cfg, db, core)
+	polls := poller.New(log, db, cfg.SecretKey, cfg.DefaultRefresh)
+	srv, err := server.New(log, cfg, db, core, polls)
 	if err != nil {
 		log.Error("startup failed",
 			xlog.Error(err))
@@ -116,6 +118,7 @@ func serve(args []string, stderr io.Writer) int {
 	jobsCtx, stopJobs := context.WithCancel(context.Background())
 	var jobs sync.WaitGroup
 	jobs.Go(func() { runJobs(jobsCtx, log, db) })
+	jobs.Go(func() { polls.Run(jobsCtx) })
 
 	hs := &http.Server{
 		Handler:           srv.Handler(),

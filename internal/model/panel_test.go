@@ -118,7 +118,7 @@ func TestPanelValidate(t *testing.T) {
 
 	for _, typ := range []string{PanelStat, PanelStatus, PanelTimeseries} {
 		p := valid(typ)
-		require.NoError(t, p.Validate(langs), typ)
+		require.NoError(t, p.Validate(langs, true), typ)
 	}
 
 	tests := []struct {
@@ -162,6 +162,10 @@ func TestPanelValidate(t *testing.T) {
 	for _, tt := range tests {
 		p := valid(tt.typ)
 		tt.modify(&p)
-		assert.Equal(t, tt.want, fieldCodes(t, p.Validate(langs)), tt.name)
+		assert.Equal(t, tt.want, fieldCodes(t, p.Validate(langs, true)), tt.name)
 	}
+
+	p := valid(PanelStat)
+	p.Title = nil
+	assert.NoError(t, p.Validate(langs, false), "previews need no title")
 }

@@ -34,5 +34,6 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	s.poller.SettingsChanged()
 	httpx.WriteJSON(w, http.StatusOK, settings)
 }

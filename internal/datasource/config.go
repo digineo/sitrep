@@ -56,26 +56,18 @@ var ErrUnusable = errors.New(
 		"the secret key is missing or has changed; enter the secret again",
 )
 
-// Apply validates a submitted name and configuration and writes them to
-// ds, whose ID and Type must be set. For secret fields, an absent key keeps
-// the stored value, an empty value clears it, and new values are sealed with
-// key. Fields hidden by their condition are dropped. Field errors use the
-// paths "name" and "config.<field>".
+// Apply validates a submitted configuration and writes it to ds, whose ID
+// and Type must be set. For secret fields, an absent key keeps the stored
+// value, an empty value clears it, and new values are sealed with key.
+// Fields hidden by their condition are dropped. Field errors are added to f
+// with the path "config.<field>"; ds is only changed without them.
 func Apply(
+	f *apierr.Fields,
 	ds *model.DataSource,
-	name string,
 	in map[string]string,
 	key []byte,
 ) error {
-	var f apierr.Fields
-	name = strings.TrimSpace(name)
-	switch {
-	case name == "":
-		f.Add("name", apierr.Required)
-	case utf8.RuneCountInString(name) > maxName:
-		f.Add("name", apierr.TooLong)
-	}
-
+	errs := len(*f)
 	fields := Get(ds.Type).Fields()
 	for _, k := range slices.Sorted(maps.Keys(in)) {
 		known := func(fd Field) bool { return fd.Name == k }
@@ -131,12 +123,22 @@ func Apply(
 		}
 	}
 
-	if err := f.Err(); err != nil {
-		return err
+	if len(*f) == errs {
+		ds.Config, ds.Secrets = config, secrets
 	}
-
-	ds.Name, ds.Config, ds.Secrets = name, config, secrets
 	return nil
+}
+
+// ValidateName trims a data source name and checks its length.
+func ValidateName(f *apierr.Fields, name string) string {
+	name = strings.TrimSpace(name)
+	switch {
+	case name == "":
+		f.Add("name", apierr.Required)
+	case utf8.RuneCountInString(name) > maxName:
+		f.Add("name", apierr.TooLong)
+	}
+	return name
 }
 
 // normalize returns the canonical form of a non-empty value, or an error

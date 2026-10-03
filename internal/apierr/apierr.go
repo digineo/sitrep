@@ -92,6 +92,7 @@ var (
 	NameTaken            = code("name_taken")
 	SecretKeyMissing     = code("secret_key_missing")
 	DataSourceInUse      = code("datasource_in_use")
+	DataSourceUnusable   = code("datasource_unusable")
 	UnsupportedType      = code("datasource_unsupported_type")
 	BadGateway           = code("bad_gateway")
 )

@@ -69,14 +69,18 @@ type alternate struct {
 	Href string
 }
 
-// bootstrap tells the single-page application what to render.
+// bootstrap tells the single-page application what to render. The admin
+// console also learns the base domains, for route hints, and the default
+// refresh interval of panels.
 type bootstrap struct {
-	Mode      string   `json:"mode"` // site, landing or admin
-	SiteID    string   `json:"siteId,omitempty"`
-	BasePath  string   `json:"basePath"`
-	Lang      string   `json:"lang"`
-	Languages []string `json:"languages"`
-	Primary   string   `json:"primary"`
+	Mode           string   `json:"mode"` // site, landing or admin
+	SiteID         string   `json:"siteId,omitempty"`
+	BasePath       string   `json:"basePath"`
+	Lang           string   `json:"lang"`
+	Languages      []string `json:"languages"`
+	Primary        string   `json:"primary"`
+	BaseDomains    []string `json:"baseDomains,omitempty"`
+	DefaultRefresh string   `json:"defaultRefresh,omitempty"`
 }
 
 const (

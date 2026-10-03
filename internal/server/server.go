@@ -14,17 +14,20 @@ import (
 	"github.com/digineo/sitrep/internal/httpx"
 	"github.com/digineo/sitrep/internal/i18n"
 	"github.com/digineo/sitrep/internal/model"
+	"github.com/digineo/sitrep/internal/poller"
 	"github.com/digineo/sitrep/internal/store"
 )
 
 // Server is the HTTP handler of SitRep.
 type Server struct {
-	log      xlog.Logger
-	cfg      config.Config
-	db       *store.DB
-	assets   *assets
-	authAPI  http.Handler
-	adminAPI http.Handler
+	log       xlog.Logger
+	cfg       config.Config
+	db        *store.DB
+	poller    *poller.Poller
+	assets    *assets
+	authAPI   http.Handler
+	adminAPI  http.Handler
+	publicAPI http.Handler
 }
 
 // New returns a Server. It fails if the frontend build is missing.
@@ -33,12 +36,13 @@ func New(
 	cfg config.Config,
 	db *store.DB,
 	core *auth.Core,
+	p *poller.Poller,
 ) (*Server, error) {
 	a, err := newAssets()
 	if err != nil {
 		return nil, err
 	}
-	return newServer(log, cfg, db, core, a), nil
+	return newServer(log, cfg, db, core, p, a), nil
 }
 
 func newServer(
@@ -46,20 +50,58 @@ func newServer(
 	cfg config.Config,
 	db *store.DB,
 	core *auth.Core,
+	p *poller.Poller,
 	a *assets,
 ) *Server {
 	s := &Server{
 		log:     log,
 		cfg:     cfg,
 		db:      db,
+		poller:  p,
 		assets:  a,
 		authAPI: core.Handler(),
 	}
 
-	api := http.NewServeMux()
-	api.HandleFunc("GET /api/admin/settings", s.getSettings)
-	api.HandleFunc("PUT /api/admin/settings", s.putSettings)
-	s.adminAPI = core.Guard(core.CSRF(api))
+	admin := http.NewServeMux()
+	handle := func(pattern string, h http.HandlerFunc) {
+		admin.Handle(pattern, core.CSRF(h, "application/json"))
+	}
+
+	handle("GET /api/admin/settings", s.getSettings)
+	handle("PUT /api/admin/settings", s.putSettings)
+	handle("GET /api/admin/datasource-types", s.listTypes)
+	handle("GET /api/admin/datasources", s.listDataSources)
+	handle("POST /api/admin/datasources", s.createDataSource)
+	handle("POST /api/admin/datasources/test", s.testUnsaved)
+	handle("GET /api/admin/datasources/{id}", s.getDataSource)
+	handle("PUT /api/admin/datasources/{id}", s.putDataSource)
+	handle("DELETE /api/admin/datasources/{id}", s.deleteDataSource)
+	handle("POST /api/admin/datasources/{id}/test", s.testDataSource)
+	// Routes of data source types, e.g. the Prometheus discovery proxy,
+	// which forwards form-encoded requests.
+	dsRoute := core.CSRF(
+		http.HandlerFunc(s.dataSourceRoute),
+		"application/x-www-form-urlencoded",
+	)
+	admin.Handle("/api/admin/datasources/{id}/{type}/", dsRoute)
+	handle("GET /api/admin/sites", s.listSites)
+	handle("POST /api/admin/sites", s.createSite)
+	handle("GET /api/admin/sites/{site}", s.getSite)
+	handle("PUT /api/admin/sites/{site}", s.putSite)
+	handle("DELETE /api/admin/sites/{site}", s.deleteSite)
+	handle("GET /api/admin/sites/{site}/preview", s.previewSite)
+	handle("GET /api/admin/sites/{site}/panels", s.listPanels)
+	handle("POST /api/admin/sites/{site}/panels", s.createPanel)
+	handle("PUT /api/admin/sites/{site}/panel-order", s.reorderPanels)
+	handle("POST /api/admin/sites/{site}/panel-preview", s.previewPanel)
+	handle("GET /api/admin/sites/{site}/panels/{panel}", s.getPanel)
+	handle("PUT /api/admin/sites/{site}/panels/{panel}", s.putPanel)
+	handle("DELETE /api/admin/sites/{site}/panels/{panel}", s.deletePanel)
+	s.adminAPI = core.Guard(admin)
+
+	public := http.NewServeMux()
+	public.HandleFunc("GET /api/public/sites/{site}", s.publicSite)
+	s.publicAPI = public
 
 	return s
 }
@@ -78,6 +120,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	case strings.HasPrefix(path, "/assets/"):
 		s.assets.ServeHTTP(w, r)
+		return
+	case strings.HasPrefix(path, "/api/public/"):
+		s.publicAPI.ServeHTTP(w, r)
 		return
 	}
 
@@ -291,11 +336,13 @@ func (s *Server) serveAdmin(w http.ResponseWriter, r *http.Request) {
 		Title:  i18n.Get(lang).T("page.admin", nil),
 		Assets: s.assets.entry("admin"),
 		Bootstrap: bootstrap{
-			Mode:      "admin",
-			BasePath:  "/admin",
-			Lang:      lang,
-			Languages: langs.Enabled,
-			Primary:   langs.Primary,
+			Mode:           "admin",
+			BasePath:       "/admin",
+			Lang:           lang,
+			Languages:      langs.Enabled,
+			Primary:        langs.Primary,
+			BaseDomains:    s.cfg.BaseDomains,
+			DefaultRefresh: model.FormatDuration(s.cfg.DefaultRefresh),
 		},
 	})
 }
