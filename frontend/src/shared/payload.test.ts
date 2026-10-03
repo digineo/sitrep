@@ -10,6 +10,7 @@ import {
 const site: SiteSection = {
   name:      "Acme",
   theme:     "system",
+  legal:     {},
   languages: ["en"],
   timezone:  "UTC",
   panels:    [

@@ -17,12 +17,28 @@ export interface PanelInfo {
   range?:       number
 }
 
-export interface SiteSection {
-  name:      string
-  theme:     "light" | "dark" | "system"
-  languages: string[]
-  timezone:  string
-  panels:    PanelInfo[]
+export type LegalKind = "imprint" | "privacy"
+
+/** LegalLinks are the legal pages to link; pages in mode none are left out. */
+export type LegalLinks = Partial<Record<LegalKind, {
+  mode: "url" | "text"
+  url?: string
+}>>
+
+/** SiteBasics are what visitors see of a site, also while it is unavailable. */
+export interface SiteBasics {
+  name:        string
+  theme:       "light" | "dark" | "system"
+  brandColor?: string
+  /** logo is the URL of the site's logo. */
+  logo?:       string
+  legal:       LegalLinks
+  languages:   string[]
+}
+
+export interface SiteSection extends SiteBasics {
+  timezone: string
+  panels:   PanelInfo[]
 }
 
 export interface StatData {

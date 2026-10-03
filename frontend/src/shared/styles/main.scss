@@ -85,8 +85,32 @@
   background: #8892a0;
 }
 
-.sr-muted {
+.sr-muted,
+.sr-band-muted {
   color: var(--bulma-text-weak);
+}
+
+// Header and footer bands in a site's brand color, with black or white
+// text; see bandStyle. Buttons keep their own colors.
+.sr-band.is-branded {
+  color: var(--sr-band-text);
+  background: var(--sr-band);
+
+  .title {
+    color: inherit;
+  }
+
+  .sr-band-muted {
+    color: color-mix(in srgb, var(--sr-band-text) 75%, transparent);
+  }
+
+  a:not(.button) {
+    color: inherit;
+  }
+
+  nav a {
+    text-decoration: underline;
+  }
 }
 
 .sr-panel-head {
