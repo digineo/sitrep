@@ -12,16 +12,23 @@ import { pageRoutes } from "./urls"
 import ArchiveView from "./views/ArchiveView.vue"
 import IncidentView from "./views/IncidentView.vue"
 import LandingView from "./views/LandingView.vue"
+import LegalView from "./views/LegalView.vue"
 import NotFoundView from "./views/NotFoundView.vue"
 import SiteOverview from "./views/SiteOverview.vue"
 
 const bootstrap = readBootstrap()
 const views = bootstrap.mode === "landing"
-  ? { overview: LandingView }
+  ? {
+    overview: LandingView,
+    imprint:  LegalView,
+    privacy:  LegalView,
+  }
   : {
     overview: SiteOverview,
     archive:  ArchiveView,
     incident: IncidentView,
+    imprint:  LegalView,
+    privacy:  LegalView,
   }
 const router = createRouter({
   history: createWebHistory(bootstrap.basePath),

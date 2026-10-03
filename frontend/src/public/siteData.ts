@@ -1,9 +1,17 @@
 import { reactive, shallowRef } from "vue"
 
-import { merge, type Payload, type SiteData } from "../shared/payload"
+import {
+  merge,
+  type Payload,
+  type SiteBasics,
+  type SiteData,
+} from "../shared/payload"
 
 /** siteData is the state of the site page, shared by its frame and views. */
 export const siteData = shallowRef<SiteData | null>(null)
+
+/** unavailable holds what the page shows of an offline or paused site. */
+export const unavailable = shallowRef<SiteBasics | null>(null)
 
 /** live is the state of the latest refresh, for the live indicator. */
 export const live = reactive({
@@ -19,7 +27,11 @@ let dataLang = ""
 
 /** HTTPError is a failed response. */
 export class HTTPError extends Error {
-  constructor(readonly status: number, readonly code: string) {
+  constructor(
+    readonly status: number,
+    readonly code: string,
+    readonly details?: unknown,
+  ) {
     super(`HTTP ${status}`)
   }
 }
@@ -32,7 +44,11 @@ export async function getJSON<T>(path: string, signal: AbortSignal): Promise<T> 
   })
   if (!res.ok) {
     const body = await res.json().catch(() => null)
-    throw new HTTPError(res.status, body?.error?.code ?? "internal")
+    throw new HTTPError(
+      res.status,
+      body?.error?.code ?? "internal",
+      body?.error?.details,
+    )
   }
   return await res.json()
 }
@@ -70,6 +86,7 @@ export function applySite({ lang, payload }: {
   payload: Payload
 }) {
   siteData.value = merge(dataLang === lang ? siteData.value : null, payload)
+  unavailable.value = null
   dataLang = lang
   Object.assign(live, {
     state:     "ok",
@@ -80,8 +97,17 @@ export function applySite({ lang, payload }: {
   })
 }
 
-/** failSite records a failed refresh; the page keeps its last good state. */
+/**
+ * failSite records a failed refresh; the page keeps its last good state.
+ * An unavailable site replaces the state with what the page still shows.
+ */
 export function failSite(err: unknown) {
+  if (err instanceof HTTPError && err.code === "site_unavailable") {
+    siteData.value = null
+    unavailable.value = err.details as SiteBasics
+    return
+  }
+
   live.state = "failed"
   if (err instanceof HTTPError) {
     live.error = `error.${err.code}`

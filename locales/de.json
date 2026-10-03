@@ -11,7 +11,10 @@
     "privacy": {
       "slug": "datenschutz",
       "title": "Datenschutzerklärung"
-    }
+    },
+    "label": "Rechtliche Hinweise",
+    "toLanding": "Startseite",
+    "loadFailed": "Diese Seite konnte nicht geladen werden. Bitte versuchen Sie es später erneut."
   },
   "page": {
     "title": "{view} · {site}",
@@ -216,7 +219,8 @@
     "originAdd": "Ursprung hinzufügen",
     "originRemove": "Ursprung {n} entfernen",
     "retention": "Beendete Vorfälle aufbewahren (Tage)",
-    "retentionHelp": "Beendete Vorfälle werden so viele Tage nach ihrer letzten Meldung gelöscht. Leer lassen, um sie unbegrenzt aufzubewahren."
+    "retentionHelp": "Beendete Vorfälle werden so viele Tage nach ihrer letzten Meldung gelöscht. Leer lassen, um sie unbegrenzt aufzubewahren.",
+    "unavailable": "Diese Statusseite ist derzeit nicht verfügbar."
   },
   "status": {
     "operational": "Betriebsbereit",

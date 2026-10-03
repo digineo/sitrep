@@ -5,13 +5,47 @@ import { useI18n } from "vue-i18n"
 
 import logo from "../../shared/assets/logo.svg"
 import SRButton from "../../shared/components/SRButton.vue"
+import { useLoad } from "../../shared/composables/useLoad"
+import { getJSON } from "../siteData"
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 useHead({ title: computed(() => t("page.landing")) })
+const { value: landing, error } = useLoad(
+  () => locale.value,
+  signal => getJSON<{ html: string }>(
+    `/api/public/landing?lang=${locale.value}`,
+    signal,
+  ),
+)
 </script>
 
 <template>
-  <div class="sr-landing">
+  <div
+      v-if="error"
+      class="notification is-danger mt-5"
+      role="alert"
+  >
+    {{ t("legal.loadFailed") }}
+  </div>
+  <div
+      v-else-if="!landing"
+      aria-busy="true"
+  />
+  <template v-else-if="landing.html">
+    <h1 class="sr-visually-hidden">
+      {{ t("page.landing") }}
+    </h1>
+    <!-- eslint-disable vue/no-v-html -- server-rendered Markdown -->
+    <div
+        class="box content mt-5"
+        v-html="landing.html"
+    />
+    <!-- eslint-enable vue/no-v-html -->
+  </template>
+  <div
+      v-else
+      class="sr-landing"
+  >
     <img
         :src="logo"
         alt=""

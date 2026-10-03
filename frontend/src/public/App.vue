@@ -3,16 +3,15 @@ import { inject, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
 import { type Bootstrap } from "../shared/bootstrap"
-import LanguageSwitcher from "../shared/components/LanguageSwitcher.vue"
-import ThemeSwitcher from "../shared/components/ThemeSwitcher.vue"
 import { useLanguage } from "../shared/composables/useLanguage"
+import LandingFrame from "./components/LandingFrame.vue"
 import SiteFrame from "./components/SiteFrame.vue"
 import { pagePath } from "./urls"
 
 const bootstrap = inject<Bootstrap>("bootstrap")!
 const route = useRoute()
 const router = useRouter()
-const { locale, apply, remember } = useLanguage()
+const { apply, remember } = useLanguage()
 
 // The URL's language is the page's language.
 watch(
@@ -38,19 +37,8 @@ async function switchLanguage(lang: string) {
       v-if="bootstrap.mode === 'site'"
       @switch-language="switchLanguage"
   />
-  <template v-else>
-    <div class="sr-corner">
-      <ThemeSwitcher right />
-      <LanguageSwitcher
-          v-if="bootstrap.languages.length > 1"
-          :model-value="locale"
-          :languages="bootstrap.languages"
-          right
-          @update:model-value="switchLanguage"
-      />
-    </div>
-    <main class="container px-4">
-      <RouterView />
-    </main>
-  </template>
+  <LandingFrame
+      v-else
+      @switch-language="switchLanguage"
+  />
 </template>

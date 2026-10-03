@@ -11,7 +11,10 @@
     "privacy": {
       "slug": "privacy",
       "title": "Privacy statement"
-    }
+    },
+    "label": "Legal information",
+    "toLanding": "Start page",
+    "loadFailed": "This page could not be loaded. Please try again later."
   },
   "page": {
     "title": "{view} · {site}",
@@ -216,7 +219,8 @@
     "originAdd": "Add origin",
     "originRemove": "Remove origin {n}",
     "retention": "Keep finished incidents (days)",
-    "retentionHelp": "Finished incidents are deleted this many days after their last update. Leave empty to keep them forever."
+    "retentionHelp": "Finished incidents are deleted this many days after their last update. Leave empty to keep them forever.",
+    "unavailable": "This status page is currently unavailable."
   },
   "status": {
     "operational": "Operational",
