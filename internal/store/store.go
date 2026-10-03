@@ -3,14 +3,17 @@
 package store
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	bolt "go.etcd.io/bbolt"
 	berrors "go.etcd.io/bbolt/errors"
 
+	"github.com/digineo/sitrep/internal/apierr"
 	"github.com/digineo/sitrep/internal/model"
 )
 
@@ -23,6 +26,8 @@ var (
 	bucketSessions = []byte("sessions")
 	bucketSites    = []byte("sites")
 	bucketRoutes   = []byte("routes")
+	bucketPanels   = []byte("panels")
+	bucketSources  = []byte("datasources")
 
 	keySchema   = []byte("schema")
 	keyInstance = []byte("instance")
@@ -59,6 +64,8 @@ func (db *DB) init(tx *bolt.Tx) error {
 		bucketSessions,
 		bucketSites,
 		bucketRoutes,
+		bucketPanels,
+		bucketSources,
 	}
 	for _, name := range buckets {
 		if _, err := tx.CreateBucketIfNotExists(name); err != nil {
@@ -101,6 +108,37 @@ func (db *DB) Check() error {
 	})
 }
 
+var errNotFound = apierr.New(http.StatusNotFound, apierr.NotFound)
+
+// mustGet reads the value under key, failing with a not-found error if
+// there is none.
+func mustGet(tx *bolt.Tx, bucket, key []byte, v any) error {
+	found, err := get(tx, bucket, key, v)
+	if err == nil && !found {
+		return errNotFound
+	}
+	return err
+}
+
+// list decodes the values of a bucket, or of the keys with prefix.
+func list[T any](tx *bolt.Tx, bucket, prefix []byte) ([]T, error) {
+	var out []T
+	c := tx.Bucket(bucket).Cursor()
+	for k, v := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = c.Next() {
+		var item T
+		if err := json.Unmarshal(v, &item); err != nil {
+			return nil, err
+		}
+		out = append(out, item)
+	}
+	return out, nil
+}
+
+// now returns the current time for timestamps, in UTC.
+func now() time.Time {
+	return time.Now().UTC()
+}
+
 func get(tx *bolt.Tx, bucket, key []byte, v any) (bool, error) {
 	raw := tx.Bucket(bucket).Get(key)
 	if raw == nil {
@@ -115,4 +153,32 @@ func put(tx *bolt.Tx, bucket, key []byte, v any) error {
 		return err
 	}
 	return tx.Bucket(bucket).Put(key, raw)
+}
+
+// Snapshot is the state of all sites, panels and data sources at one point
+// in time.
+type Snapshot struct {
+	Sites       []model.Site
+	Panels      []model.Panel // by site, in display order
+	DataSources []model.DataSource
+}
+
+// Snapshot reads all sites, panels and data sources in one transaction.
+func (db *DB) Snapshot() (Snapshot, error) {
+	var s Snapshot
+	err := db.bolt.View(func(tx *bolt.Tx) (err error) {
+		if s.Sites, err = list[model.Site](tx, bucketSites, nil); err != nil {
+			return err
+		}
+
+		if s.Panels, err = list[model.Panel](tx, bucketPanels, nil); err != nil {
+			return err
+		}
+
+		s.DataSources, err = list[model.DataSource](tx, bucketSources, nil)
+		return err
+	})
+
+	sortPanels(s.Panels)
+	return s, err
 }
