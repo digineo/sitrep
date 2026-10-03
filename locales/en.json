@@ -178,7 +178,9 @@
     "invalid_link": "Enter a full address starting with https:// or http://.",
     "invalid_svg": "This file is not an SVG image.",
     "svg_too_large": "The image is larger than 64 KiB, even after removing unsafe content.",
-    "site_unavailable": "This status page is currently unavailable."
+    "site_unavailable": "This status page is currently unavailable.",
+    "invalid_yaml": "The file is not valid YAML or contains unknown keys.",
+    "unsupported_version": "This file has an unknown format version."
   },
   "panel": {
     "seriesName": "{title} #{n}",

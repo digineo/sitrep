@@ -548,3 +548,112 @@ func TestPurgeIncidents(t *testing.T) {
 		"sites without retention, upcoming and ongoing incidents keep theirs",
 	)
 }
+
+func TestImportSite(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	db, _ := openTemp(t)
+	require.NoError(db.CreateDataSource(&model.DataSource{
+		ID:   "ds",
+		Name: "Main",
+		Type: "fake",
+	}))
+	site := &model.Site{
+		Name: model.Text{"en": "Shop"},
+		Route: model.Route{
+			Mode: model.RoutePath,
+			Slug: "shop",
+		},
+		Availability: model.AvailabilityPaused,
+	}
+	require.NoError(db.CreateSite(site))
+	old := &model.Panel{
+		Site:       site.ID,
+		Type:       model.PanelStat,
+		DataSource: "ds",
+	}
+	require.NoError(db.CreatePanel(old))
+	inc := &model.Incident{
+		Site:    site.ID,
+		Title:   model.Text{"en": "Outage"},
+		Updates: []model.Update{{Status: model.StatusActive}},
+	}
+	require.NoError(db.CreateIncident(inc))
+
+	replaced := &model.Site{
+		ID:   site.ID,
+		Name: model.Text{"en": "Replaced"},
+		Route: model.Route{
+			Mode: model.RoutePath,
+			Slug: "replaced",
+		},
+	}
+	panels := []model.Panel{
+		{
+			Type:       model.PanelStat,
+			DataSource: "ds",
+		},
+		{
+			Type:       model.PanelStat,
+			DataSource: "gone",
+		},
+	}
+	err := db.ImportSite(replaced, panels)
+	var e *apierr.Error
+	require.ErrorAs(err, &e)
+	want := []apierr.Field{{
+		Path: "panels[1].datasource",
+		Code: apierr.NotFound,
+	}}
+	assert.Equal(want, e.Fields)
+	stored, err := db.Site(site.ID)
+	require.NoError(err)
+	assert.Equal(
+		model.Text{"en": "Shop"},
+		stored.Name,
+		"a failed import writes nothing",
+	)
+	got, err := db.Panels(site.ID)
+	require.NoError(err)
+	assert.Equal([]model.Panel{*old}, got)
+
+	require.NoError(db.ImportSite(replaced, panels[:1]))
+	stored, err = db.Site(site.ID)
+	require.NoError(err)
+	assert.Equal(model.Text{"en": "Replaced"}, stored.Name)
+	assert.Equal(
+		model.AvailabilityPaused,
+		stored.Availability,
+		"the availability stays",
+	)
+	assert.Equal(site.CreatedAt, stored.CreatedAt)
+	got, err = db.Panels(site.ID)
+	require.NoError(err)
+	require.Len(got, 1)
+	assert.NotEqual(old.ID, got[0].ID)
+	assert.Equal(int64(1), got[0].Revision)
+	_, err = db.Incident(site.ID, inc.ID)
+	assert.NoError(err, "incidents stay")
+	found, err := db.SiteByRoute(model.Route{
+		Mode: model.RoutePath,
+		Slug: "replaced",
+	})
+	require.NoError(err)
+	assert.Equal(site.ID, found.ID)
+
+	created := &model.Site{
+		Name: model.Text{"en": "New"},
+		Route: model.Route{
+			Mode: model.RoutePath,
+			Slug: "replaced",
+		},
+	}
+	err = db.ImportSite(created, nil)
+	require.ErrorAs(err, &e)
+	assert.Equal(apierr.RouteConflict, e.Code)
+	created.Route.Slug = "new"
+	require.NoError(db.ImportSite(created, panels[:1]))
+	assert.NotEmpty(created.ID)
+	assert.Equal(model.AvailabilityOnline, created.Availability)
+}

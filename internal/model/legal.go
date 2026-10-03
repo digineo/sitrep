@@ -34,8 +34,8 @@ type Legal struct {
 // Markdown text.
 type LegalPage struct {
 	Mode string `json:"mode"`
-	URL  Text   `json:"url,omitempty"`
-	Text Text   `json:"text,omitempty"`
+	URL  Text   `json:"url,omitempty" yaml:"url,omitempty"`
+	Text Text   `json:"text,omitempty" yaml:"text,omitempty"`
 }
 
 // Inherits reports whether a site shows the instance's page instead.

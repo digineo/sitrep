@@ -43,33 +43,34 @@ const (
 )
 
 // Panel is one query against a data source plus its presentation. A stored
-// panel only carries the options of its type.
+// panel only carries the options of its type. Exports leave out what the
+// server manages and name the data source instead.
 type Panel struct {
-	ID          string `json:"id"`
-	Site        string `json:"site"`
-	Type        string `json:"type"`
-	Title       Text   `json:"title"`
-	Description Text   `json:"description,omitempty"`
-	DataSource  string `json:"datasource"`
-	Query       string `json:"query"`
-	Order       int    `json:"order"`
+	ID          string `json:"id" yaml:"-"`
+	Site        string `json:"site" yaml:"-"`
+	Type        string `json:"type" yaml:"type"`
+	Title       Text   `json:"title" yaml:"title"`
+	Description Text   `json:"description,omitempty" yaml:"description,omitempty"`
+	DataSource  string `json:"datasource" yaml:"-"`
+	Query       string `json:"query" yaml:"query"`
+	Order       int    `json:"order" yaml:"-"`
 	// duration; empty means the instance default
-	Refresh  string `json:"refresh,omitempty"`
-	Revision int64  `json:"revision"`
+	Refresh  string `json:"refresh,omitempty" yaml:"refresh,omitempty"`
+	Revision int64  `json:"revision" yaml:"-"`
 
 	// stat and status
-	Reduce string `json:"reduce,omitempty"`
+	Reduce string `json:"reduce,omitempty" yaml:"reduce,omitempty"`
 	// stat and timeseries
-	Decimals *int `json:"decimals,omitempty"`
-	Unit     Text `json:"unit,omitempty"`
+	Decimals *int `json:"decimals,omitempty" yaml:"decimals,omitempty"`
+	Unit     Text `json:"unit,omitempty" yaml:"unit,omitempty"`
 	// status
-	Thresholds []Threshold `json:"thresholds,omitempty"`
+	Thresholds []Threshold `json:"thresholds,omitempty" yaml:"thresholds,omitempty"`
 	// timeseries
-	Range   string `json:"range,omitempty"`
-	Step    string `json:"step,omitempty"`
-	Style   string `json:"style,omitempty"`
-	MinZero bool   `json:"minZero,omitempty"`
-	Legend  Text   `json:"legend,omitempty"`
+	Range   string `json:"range,omitempty" yaml:"range,omitempty"`
+	Step    string `json:"step,omitempty" yaml:"step,omitempty"`
+	Style   string `json:"style,omitempty" yaml:"style,omitempty"`
+	MinZero bool   `json:"minZero,omitempty" yaml:"minZero,omitempty"`
+	Legend  Text   `json:"legend,omitempty" yaml:"legend,omitempty"`
 }
 
 // Threshold maps values matching "value <op> Value" to State.

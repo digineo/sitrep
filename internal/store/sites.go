@@ -2,6 +2,7 @@ package store
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 	"uuid"
 
@@ -40,21 +41,23 @@ func routeConflict(r model.Route) error {
 // CreateSite stores a new site and sets its ID and timestamps. A route that
 // another site already uses is a conflict.
 func (db *DB) CreateSite(s *model.Site) error {
-	return db.bolt.Update(func(tx *bolt.Tx) error {
-		routes := tx.Bucket(bucketRoutes)
-		key := routeKey(s.Route)
-		if routes.Get(key) != nil {
-			return routeConflict(s.Route)
-		}
+	return db.bolt.Update(func(tx *bolt.Tx) error { return createSite(tx, s) })
+}
 
-		s.ID = uuid.NewV7().String()
-		s.CreatedAt = now()
-		s.UpdatedAt = s.CreatedAt
-		if err := routes.Put(key, []byte(s.ID)); err != nil {
-			return err
-		}
-		return put(tx, bucketSites, []byte(s.ID), s)
-	})
+func createSite(tx *bolt.Tx, s *model.Site) error {
+	routes := tx.Bucket(bucketRoutes)
+	key := routeKey(s.Route)
+	if routes.Get(key) != nil {
+		return routeConflict(s.Route)
+	}
+
+	s.ID = uuid.NewV7().String()
+	s.CreatedAt = now()
+	s.UpdatedAt = s.CreatedAt
+	if err := routes.Put(key, []byte(s.ID)); err != nil {
+		return err
+	}
+	return put(tx, bucketSites, []byte(s.ID), s)
 }
 
 // Site returns the site with the ID.
@@ -69,31 +72,82 @@ func (db *DB) Site(id string) (*model.Site, error) {
 // UpdateSite replaces a site's editable fields and sets its update time. A
 // new route that another site already uses is a conflict.
 func (db *DB) UpdateSite(s *model.Site) error {
-	return db.bolt.Update(func(tx *bolt.Tx) error {
-		var old model.Site
-		if err := mustGet(tx, bucketSites, []byte(s.ID), &old); err != nil {
+	return db.bolt.Update(func(tx *bolt.Tx) error { return updateSite(tx, s) })
+}
+
+func updateSite(tx *bolt.Tx, s *model.Site) error {
+	var old model.Site
+	if err := mustGet(tx, bucketSites, []byte(s.ID), &old); err != nil {
+		return err
+	}
+
+	oldKey, key := routeKey(old.Route), routeKey(s.Route)
+	if string(oldKey) != string(key) {
+		routes := tx.Bucket(bucketRoutes)
+		if routes.Get(key) != nil {
+			return routeConflict(s.Route)
+		}
+
+		if err := routes.Delete(oldKey); err != nil {
 			return err
 		}
 
-		oldKey, key := routeKey(old.Route), routeKey(s.Route)
-		if string(oldKey) != string(key) {
-			routes := tx.Bucket(bucketRoutes)
-			if routes.Get(key) != nil {
-				return routeConflict(s.Route)
-			}
+		if err := routes.Put(key, []byte(s.ID)); err != nil {
+			return err
+		}
+	}
 
-			if err := routes.Delete(oldKey); err != nil {
+	s.CreatedAt = old.CreatedAt
+	s.UpdatedAt = now()
+	return put(tx, bucketSites, []byte(s.ID), s)
+}
+
+// ImportSite stores an imported site with its panels, in display order,
+// in one transaction. A site with an ID replaces that site's settings,
+// except its availability, and all its panels; its incidents remain. A
+// site without ID is created online. The panels get new IDs.
+func (db *DB) ImportSite(s *model.Site, panels []model.Panel) error {
+	return db.bolt.Update(func(tx *bolt.Tx) error {
+		if s.ID == "" {
+			s.Availability = model.AvailabilityOnline
+			if err := createSite(tx, s); err != nil {
+				return err
+			}
+		} else {
+			var old model.Site
+			if err := mustGet(tx, bucketSites, []byte(s.ID), &old); err != nil {
 				return err
 			}
 
-			if err := routes.Put(key, []byte(s.ID)); err != nil {
+			s.Availability = old.Availability
+			if err := updateSite(tx, s); err != nil {
+				return err
+			}
+
+			err := deletePrefix(tx.Bucket(bucketPanels), []byte(s.ID+"/"))
+			if err != nil {
 				return err
 			}
 		}
 
-		s.CreatedAt = old.CreatedAt
-		s.UpdatedAt = now()
-		return put(tx, bucketSites, []byte(s.ID), s)
+		for i := range panels {
+			p := &panels[i]
+			if tx.Bucket(bucketSources).Get([]byte(p.DataSource)) == nil {
+				return apierr.Fields{{
+					Path: fmt.Sprintf("panels[%d].datasource", i),
+					Code: apierr.NotFound,
+				}}.Err()
+			}
+
+			p.ID = uuid.NewV7().String()
+			p.Site = s.ID
+			p.Order = i
+			p.Revision = 1
+			if err := put(tx, bucketPanels, panelKey(s.ID, p.ID), p); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 }
 

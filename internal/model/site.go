@@ -57,33 +57,33 @@ var reservedSlugs = []string{"admin", "api", "auth", "assets", "healthz", "tls"}
 
 // Site is a public status page.
 type Site struct {
-	ID        string    `json:"id"`
-	Name      Text      `json:"name"`
-	Languages Languages `json:"languages"`
-	Timezone  string    `json:"timezone"`
-	Route     Route     `json:"route"`
-	Theme     string    `json:"theme"`
+	ID        string    `json:"id" yaml:"-"`
+	Name      Text      `json:"name" yaml:"name"`
+	Languages Languages `json:"languages" yaml:"languages"`
+	Timezone  string    `json:"timezone" yaml:"timezone"`
+	Route     Route     `json:"route" yaml:"route"`
+	Theme     string    `json:"theme" yaml:"theme"`
 	// BrandColor colors the header and footer of the site, as "#rrggbb".
-	BrandColor string `json:"brandColor,omitempty"`
+	BrandColor string `json:"brandColor,omitempty" yaml:"brandColor,omitempty"`
 	// Logo is the sanitized SVG source of the site's logo.
-	Logo  string `json:"logo,omitempty"`
-	Legal Legal  `json:"legal"`
+	Logo  string `json:"logo,omitempty" yaml:"logo,omitempty"`
+	Legal Legal  `json:"legal" yaml:"legal"`
 	// AllowedOrigins may read incidents.json from other sites (CORS).
-	AllowedOrigins []string `json:"allowedOrigins"`
+	AllowedOrigins []string `json:"allowedOrigins" yaml:"allowedOrigins"`
 	// IncidentRetentionDays deletes finished incidents that long after
 	// their last activity; 0 keeps them forever.
-	IncidentRetentionDays int       `json:"incidentRetentionDays"`
-	Availability          string    `json:"availability"`
-	CreatedAt             time.Time `json:"createdAt"`
-	UpdatedAt             time.Time `json:"updatedAt"`
+	IncidentRetentionDays int       `json:"incidentRetentionDays" yaml:"incidentRetentionDays"`
+	Availability          string    `json:"availability" yaml:"-"`
+	CreatedAt             time.Time `json:"createdAt" yaml:"-"`
+	UpdatedAt             time.Time `json:"updatedAt" yaml:"-"`
 }
 
 // Route says how a site is reached: below a base domain path, as subdomain
 // of every base domain, or on its own domain.
 type Route struct {
 	Mode   string `json:"mode"`
-	Slug   string `json:"slug,omitempty"`
-	Domain string `json:"domain,omitempty"`
+	Slug   string `json:"slug,omitempty" yaml:"slug,omitempty"`
+	Domain string `json:"domain,omitempty" yaml:"domain,omitempty"`
 }
 
 // Online reports whether visitors can see the site.

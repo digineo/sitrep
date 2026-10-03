@@ -102,4 +102,6 @@ var (
 	InvalidSVG           = code("invalid_svg")
 	SVGTooLarge          = code("svg_too_large")
 	SiteUnavailable      = code("site_unavailable")
+	InvalidYAML          = code("invalid_yaml")
+	UnsupportedVersion   = code("unsupported_version")
 )
