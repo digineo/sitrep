@@ -122,7 +122,9 @@ func TestGuard(t *testing.T) {
 	assert := assert.New(t)
 
 	core, db := newCore(t, false)
-	next := func(w http.ResponseWriter, _ *http.Request) {
+	var session model.Session
+	next := func(w http.ResponseWriter, r *http.Request) {
+		session = Session(r.Context())
 		w.WriteHeader(http.StatusTeapot)
 	}
 
@@ -145,6 +147,7 @@ func TestGuard(t *testing.T) {
 
 	c := login(t, core)
 	assert.Equal(http.StatusTeapot, request(c).Code)
+	assert.NotEmpty(session.Subject, "the session reaches the handler")
 
 	forged := &http.Cookie{
 		Name:  c.Name,

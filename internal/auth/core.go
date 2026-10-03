@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
@@ -121,10 +122,13 @@ func (c *Core) User(r *http.Request) (model.Session, bool, error) {
 	return s, true, nil
 }
 
-// Guard answers requests without a valid session with 401.
+type sessionKey struct{}
+
+// Guard answers requests without a valid session with 401. Others reach
+// next with the session in their context.
 func (c *Core) Guard(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, ok, err := c.User(r)
+		s, ok, err := c.User(r)
 		switch {
 		case err != nil:
 			httpx.WriteError(w, r, c.Log, err)
@@ -132,9 +136,16 @@ func (c *Core) Guard(next http.Handler) http.Handler {
 			e := apierr.New(http.StatusUnauthorized, apierr.Unauthorized)
 			httpx.WriteError(w, r, c.Log, e)
 		default:
-			next.ServeHTTP(w, r)
+			ctx := context.WithValue(r.Context(), sessionKey{}, s)
+			next.ServeHTTP(w, r.WithContext(ctx))
 		}
 	})
+}
+
+// Session returns the session of a request that passed the guard.
+func Session(ctx context.Context) model.Session {
+	s, _ := ctx.Value(sessionKey{}).(model.Session)
+	return s
 }
 
 // CSRF rejects requests with unsafe methods unless their Origin is the
