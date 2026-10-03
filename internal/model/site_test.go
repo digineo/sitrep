@@ -1,0 +1,148 @@
+package model
+
+import (
+	"errors"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/digineo/sitrep/internal/apierr"
+)
+
+func fieldCodes(t *testing.T, err error) map[string]string {
+	t.Helper()
+	if err == nil {
+		return nil
+	}
+
+	e, ok := errors.AsType[*apierr.Error](err)
+	require.True(t, ok, err)
+	out := map[string]string{}
+	for _, f := range e.Fields {
+		out[f.Path] = f.Code
+	}
+	return out
+}
+
+var bases = []string{"status.example.com", "sitrep.localhost"}
+
+func validSite() Site {
+	return Site{
+		Name: Text{"en": " Acme "},
+		Languages: Languages{
+			Enabled: []string{"en"},
+			Primary: "en",
+		},
+		Route: Route{
+			Mode:   RoutePath,
+			Slug:   "acme",
+			Domain: "dropped.example.com",
+		},
+	}
+}
+
+func TestSiteNormalize(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	s := validSite()
+	s.Normalize()
+	require.NoError(s.Validate(bases))
+	assert.Equal(Text{"en": "Acme"}, s.Name)
+	assert.Equal("UTC", s.Timezone)
+	assert.Equal("inherit", s.Theme)
+	route := Route{
+		Mode: RoutePath,
+		Slug: "acme",
+	}
+	assert.Equal(route, s.Route)
+
+	s.Route = Route{
+		Mode:   RouteCustom,
+		Slug:   "dropped",
+		Domain: "status.acme.com",
+	}
+	s.Normalize()
+	route = Route{
+		Mode:   RouteCustom,
+		Domain: "status.acme.com",
+	}
+	assert.Equal(route, s.Route)
+}
+
+func TestSiteValidate(t *testing.T) {
+	tests := []struct {
+		name   string
+		modify func(*Site)
+		want   map[string]string
+	}{
+		{"name required in primary", func(s *Site) { s.Name = Text{"de": "Acme"} }, map[string]string{"name.en": "required"}},
+		{"name too long", func(s *Site) { s.Name["de"] = strings.Repeat("ä", 201) }, map[string]string{"name.de": "too_long"}},
+		{"name at the limit", func(s *Site) { s.Name["de"] = strings.Repeat("ä", 200) }, nil},
+		{"name in a malformed language", func(s *Site) { s.Name["EN"] = "x" }, map[string]string{"name.EN": "unsupported_language"}},
+		{"name in a disabled language", func(s *Site) { s.Name["fr"] = "x" }, nil},
+		{"time zone", func(s *Site) { s.Timezone = "Europe/Berlin" }, nil},
+		{"unknown time zone", func(s *Site) { s.Timezone = "Mars/Olympus" }, map[string]string{"timezone": "invalid_timezone"}},
+		{"local time zone", func(s *Site) { s.Timezone = "Local" }, map[string]string{"timezone": "invalid_timezone"}},
+		{"theme", func(s *Site) { s.Theme = "dark" }, nil},
+		{"unknown theme", func(s *Site) { s.Theme = "blue" }, map[string]string{"theme": "invalid_value"}},
+		{"mode", func(s *Site) { s.Route.Mode = "port" }, map[string]string{"route.mode": "invalid_value"}},
+		{"slug", func(s *Site) { s.Route.Slug = "Acme" }, map[string]string{"route.slug": "invalid_slug"}},
+		{"reserved slug", func(s *Site) { s.Route.Slug = "admin" }, map[string]string{"route.slug": "slug_reserved"}},
+		{"language slug", func(s *Site) { s.Route.Slug = "fr" }, map[string]string{"route.slug": "slug_reserved"}},
+		{"region slug", func(s *Site) { s.Route.Slug = "pt-br" }, map[string]string{"route.slug": "slug_reserved"}},
+		{"legal slug", func(s *Site) { s.Route.Slug = "impressum" }, map[string]string{"route.slug": "slug_reserved"}},
+		{"reserved slug as subdomain", func(s *Site) { s.Route = Route{Mode: RouteSubdomain, Slug: "admin"} }, nil},
+		{"domain", func(s *Site) { s.Route = Route{Mode: RouteCustom, Domain: "Status.acme.com"} }, map[string]string{"route.domain": "invalid_domain"}},
+		{"base domain", func(s *Site) { s.Route = Route{Mode: RouteCustom, Domain: "status.example.com"} },
+			map[string]string{"route.domain": "domain_reserved"}},
+		{"subdomain of a base domain", func(s *Site) { s.Route = Route{Mode: RouteCustom, Domain: "acme.sitrep.localhost"} },
+			map[string]string{"route.domain": "domain_reserved"}},
+		{"deeper below a base domain", func(s *Site) { s.Route = Route{Mode: RouteCustom, Domain: "a.acme.sitrep.localhost"} }, nil},
+		{"languages", func(s *Site) { s.Languages.Enabled = []string{"de", "en"} }, nil},
+		{"primary not enabled", func(s *Site) { s.Languages.Primary = "de" },
+			map[string]string{"languages.primary": "primary_not_enabled", "name.de": "required"}},
+	}
+	for _, tt := range tests {
+		s := validSite()
+		s.Normalize()
+		tt.modify(&s)
+		assert.Equal(t, tt.want, fieldCodes(t, s.Validate(bases)), tt.name)
+	}
+}
+
+func TestTextMissing(t *testing.T) {
+	assert := assert.New(t)
+
+	langs := Languages{
+		Enabled: []string{"en", "de"},
+		Primary: "en",
+	}
+	text := Text{
+		"en": "a",
+		"de": "b",
+	}
+	assert.False(text.Missing(langs))
+	assert.True(Text{"en": "a"}.Missing(langs))
+	assert.True(Text{"de": "b"}.Missing(langs))
+	assert.False(Text(nil).Missing(langs), "an empty optional text misses nothing")
+
+	text = Text{
+		"en": "a",
+		"fr": "c",
+	}
+	enOnly := Languages{
+		Enabled: []string{"en"},
+		Primary: "en",
+	}
+	assert.False(text.Missing(enOnly))
+
+	text = Text{
+		"en": " a ",
+		"de": "  ",
+	}
+	assert.Equal(Text{"en": "a"}, text.Normalize())
+	assert.Nil(Text{"en": " "}.Normalize())
+}

@@ -2,7 +2,10 @@ package model
 
 import (
 	"fmt"
+	"maps"
 	"slices"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/digineo/sitrep/internal/apierr"
 	"github.com/digineo/sitrep/internal/i18n"
@@ -83,4 +86,56 @@ func (t Text) Resolve(lang string, l Languages) string {
 		}
 	}
 	return ""
+}
+
+// Normalize trims the values and drops blank ones.
+func (t Text) Normalize() Text {
+	out := Text{}
+	for lang, v := range t {
+		if v = strings.TrimSpace(v); v != "" {
+			out[lang] = v
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+// Missing reports whether t has a value in one enabled language but not in
+// another, i.e. a translation is missing.
+func (t Text) Missing(l Languages) bool {
+	var set, blank bool
+	for _, lang := range l.Enabled {
+		if t[lang] != "" {
+			set = true
+		} else {
+			blank = true
+		}
+	}
+	return set && blank
+}
+
+// validateText checks a normalized localized text: language codes, the
+// length of each value in characters and, if required, a value in the
+// primary language.
+func validateText(
+	f *apierr.Fields,
+	path string,
+	t Text,
+	l Languages,
+	required bool,
+	maxLen int,
+) {
+	for _, lang := range slices.Sorted(maps.Keys(t)) {
+		switch {
+		case !i18n.ValidCode(lang):
+			f.Add(path+"."+lang, apierr.UnsupportedLanguage)
+		case utf8.RuneCountInString(t[lang]) > maxLen:
+			f.Add(path+"."+lang, apierr.TooLong)
+		}
+	}
+	if required && t[l.Primary] == "" {
+		f.Add(path+"."+l.Primary, apierr.Required)
+	}
 }

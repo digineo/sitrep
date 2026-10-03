@@ -115,6 +115,21 @@
     "duplicate": "Dieser Wert kommt mehrfach vor.",
     "primary_not_enabled": "Die Hauptsprache muss aktiviert sein.",
     "route_conflict": "Diese Adresse wird bereits von einer anderen Statusseite verwendet.",
+    "method_not_allowed": "Diese Methode ist hier nicht erlaubt.",
+    "too_long": "Dieser Wert ist zu lang.",
+    "invalid_slug": "Verwenden Sie 1 bis 63 Kleinbuchstaben, Ziffern und einzelne Bindestriche, nicht am Anfang oder Ende.",
+    "slug_reserved": "Diese Adresse ist reserviert. Bitte wählen Sie eine andere.",
+    "invalid_domain": "Geben Sie einen Domainnamen in Kleinbuchstaben wie status.example.com ein, ohne Port.",
+    "domain_reserved": "Diese Domain gehört zu dieser Instanz. Verwenden Sie stattdessen eine Subdomain.",
+    "invalid_timezone": "Diese Zeitzone ist unbekannt.",
+    "invalid_duration": "Geben Sie eine Dauer wie 30s, 5m, 1h30m oder 7d ein.",
+    "invalid_url": "Geben Sie eine http- oder https-URL ohne Benutzernamen, Query oder Fragment ein.",
+    "out_of_range": "Dieser Wert liegt außerhalb des erlaubten Bereichs.",
+    "name_taken": "Dieser Name wird bereits verwendet.",
+    "secret_key_missing": "Geheimnisse können nicht gespeichert werden, weil SITREP_SECRET_KEY nicht gesetzt ist.",
+    "datasource_in_use": "Diese Datenquelle wird noch von Panels verwendet.",
+    "datasource_unsupported_type": "Diese Datenquelle unterstützt diesen Paneltyp nicht.",
+    "bad_gateway": "Die Datenquelle ist nicht erreichbar.",
     "network": "Der Server ist nicht erreichbar."
   }
 }

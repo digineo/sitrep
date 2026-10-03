@@ -44,6 +44,7 @@ type errorBody struct {
 	Code    string         `json:"code"`
 	Message string         `json:"message"`
 	Fields  []apierr.Field `json:"fields,omitempty"`
+	Details any            `json:"details,omitempty"`
 }
 
 // WriteError answers with err if it is an *apierr.Error. Any other error is
@@ -65,5 +66,6 @@ func WriteError(
 		Code:    e.Code,
 		Message: i18n.Get(i18n.Reference).T("error."+e.Code, nil),
 		Fields:  e.Fields,
+		Details: e.Details,
 	}})
 }

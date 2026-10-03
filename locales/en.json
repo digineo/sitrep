@@ -115,6 +115,21 @@
     "duplicate": "This value appears more than once.",
     "primary_not_enabled": "The primary language must be enabled.",
     "route_conflict": "This address is already used by another status page.",
+    "method_not_allowed": "This method is not allowed here.",
+    "too_long": "This value is too long.",
+    "invalid_slug": "Use 1 to 63 lowercase letters, digits and single dashes, not at the start or end.",
+    "slug_reserved": "This address is reserved. Please choose another one.",
+    "invalid_domain": "Enter a lowercase domain name such as status.example.com, without port.",
+    "domain_reserved": "This domain belongs to this instance. Use the subdomain mode instead.",
+    "invalid_timezone": "This time zone is unknown.",
+    "invalid_duration": "Enter a duration such as 30s, 5m, 1h30m or 7d.",
+    "invalid_url": "Enter an http or https URL without user name, query or fragment.",
+    "out_of_range": "This value is out of the allowed range.",
+    "name_taken": "This name is already in use.",
+    "secret_key_missing": "Secrets cannot be stored because SITREP_SECRET_KEY is not set.",
+    "datasource_in_use": "This data source is still used by panels.",
+    "datasource_unsupported_type": "This data source does not support this panel type.",
+    "bad_gateway": "The data source cannot be reached.",
     "network": "The server cannot be reached."
   }
 }

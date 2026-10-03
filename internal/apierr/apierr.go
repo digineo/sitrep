@@ -4,11 +4,12 @@ package apierr
 import "net/http"
 
 // Error is an API error with a stable code. Validation errors list each
-// failing field.
+// failing field. Details carry data a client needs to explain the error.
 type Error struct {
-	Status int     `json:"-"`
-	Code   string  `json:"code"`
-	Fields []Field `json:"fields,omitempty"`
+	Status  int     `json:"-"`
+	Code    string  `json:"code"`
+	Fields  []Field `json:"fields,omitempty"`
+	Details any     `json:"details,omitempty"`
 }
 
 // Field names a failing field by its path, e.g. "languages.primary".
@@ -67,6 +68,7 @@ var (
 	InvalidJSON          = code("invalid_json")
 	TooLarge             = code("too_large")
 	NotFound             = code("not_found")
+	MethodNotAllowed     = code("method_not_allowed")
 	Unauthorized         = code("unauthorized")
 	Forbidden            = code("forbidden")
 	UnsupportedMediaType = code("unsupported_media_type")
@@ -78,4 +80,18 @@ var (
 	Duplicate            = code("duplicate")
 	PrimaryNotEnabled    = code("primary_not_enabled")
 	RouteConflict        = code("route_conflict")
+	TooLong              = code("too_long")
+	InvalidSlug          = code("invalid_slug")
+	SlugReserved         = code("slug_reserved")
+	InvalidDomain        = code("invalid_domain")
+	DomainReserved       = code("domain_reserved")
+	InvalidTimezone      = code("invalid_timezone")
+	InvalidDuration      = code("invalid_duration")
+	InvalidURL           = code("invalid_url")
+	OutOfRange           = code("out_of_range")
+	NameTaken            = code("name_taken")
+	SecretKeyMissing     = code("secret_key_missing")
+	DataSourceInUse      = code("datasource_in_use")
+	UnsupportedType      = code("datasource_unsupported_type")
+	BadGateway           = code("bad_gateway")
 )
