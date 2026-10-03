@@ -42,12 +42,22 @@ export interface SeriesData {
   }[]
 }
 
+/** Warning is a hint about a panel's data, e.g. dropped series. */
+export interface Warning {
+  code:   "series_dropped" | "response_large"
+  count?: number
+  /** size is the size of the data source's response in bytes. */
+  size?:  number
+}
+
 export interface PanelData {
   state:      "pending" | "fresh" | "stale"
   fetchedAt?: string
   data?:      StatData | StatusData | SeriesData
   /** error is the latest poll's error, in admin previews only. */
   error?:     string
+  /** warnings are hints about the data, in admin previews only. */
+  warnings?:  Warning[]
 }
 
 /** Payload is one response of a site payload request. */

@@ -275,7 +275,8 @@
     "moved": "{title} an Position {position} von {count} verschoben",
     "edit": "Panel {title} bearbeiten",
     "editHint": "Bearbeiten",
-    "pollFailed": "Abfrage fehlgeschlagen"
+    "pollFailed": "Abfrage fehlgeschlagen",
+    "warning": "Warnung"
   },
   "panelEditor": {
     "new": "Neues Panel",
@@ -330,12 +331,13 @@
     "dataPreview": "Datenvorschau",
     "widgetPreview": "Widget-Vorschau",
     "previewFailed": "Vorschau fehlgeschlagen: {error}",
-    "warnings": {
-      "series_dropped": "{count} weitere Datenreihen werden nicht angezeigt. Diagramme zeigen höchstens 20."
-    },
     "saved": "Panel gespeichert.",
     "delete": "Panel löschen",
     "deleteTitle": "Panel löschen?",
     "deleteMessage": "Das Panel {title} wird gelöscht."
+  },
+  "warnings": {
+    "series_dropped": "{count} weitere Datenreihen werden nicht angezeigt. Diagramme zeigen höchstens 20.",
+    "response_large": "Die Datenquelle hat mit {size} MiB geantwortet. Große Antworten belasten die Datenquelle und verlangsamen die öffentliche Seite."
   }
 }

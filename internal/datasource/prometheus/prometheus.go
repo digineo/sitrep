@@ -91,7 +91,7 @@ func (Type) Summary(cfg datasource.Config) string { return cfg["url"] }
 // Test runs the query "1" and reports the round-trip time.
 func (Type) Test(ctx context.Context, cfg datasource.Config) (string, error) {
 	start := time.Now()
-	_, err := call(ctx, cfg, "/api/v1/query", url.Values{"query": {"1"}})
+	_, _, err := call(ctx, cfg, "/api/v1/query", url.Values{"query": {"1"}})
 	if err != nil {
 		return "", err
 	}
@@ -162,13 +162,14 @@ func send(
 }
 
 // call posts a form to an API endpoint and returns the "data" of a
-// successful answer, or the error Prometheus reports.
+// successful answer and the size of the response, or the error Prometheus
+// reports.
 func call(
 	ctx context.Context,
 	cfg datasource.Config,
 	path string,
 	form url.Values,
-) (json.RawMessage, error) {
+) (json.RawMessage, int, error) {
 	ctx, cancel := context.WithTimeout(ctx, model.Duration(cfg["timeout"]))
 	defer cancel()
 
@@ -181,7 +182,7 @@ func call(
 		strings.NewReader(form.Encode()),
 	)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	var r struct {
@@ -193,13 +194,13 @@ func call(
 	err = json.Unmarshal(body, &r)
 	switch {
 	case err == nil && r.Status == "error":
-		return nil, fmt.Errorf("%s: %s", r.ErrorType, r.Error)
+		return nil, 0, fmt.Errorf("%s: %s", r.ErrorType, r.Error)
 	case res.StatusCode != http.StatusOK:
-		return nil, fmt.Errorf("HTTP %s", res.Status)
+		return nil, 0, fmt.Errorf("HTTP %s", res.Status)
 	case err != nil || r.Status != "success":
-		return nil, errors.New("invalid response")
+		return nil, 0, errors.New("invalid response")
 	}
-	return r.Data, nil
+	return r.Data, len(body), nil
 }
 
 // point is a sample as Prometheus encodes it: [<unix time>, "<value>"].
@@ -245,7 +246,7 @@ func (Type) Evaluate(
 		return queryRange(ctx, cfg, p, now)
 	}
 
-	raw, err := call(ctx, cfg, "/api/v1/query", url.Values{
+	raw, size, err := call(ctx, cfg, "/api/v1/query", url.Values{
 		"query": {p.Query},
 		"time":  {unix(now)},
 	})
@@ -258,7 +259,7 @@ func (Type) Evaluate(
 		return datasource.Result{}, errors.New("invalid response")
 	}
 
-	var r datasource.Result
+	r := datasource.Result{Bytes: size}
 	switch d.ResultType {
 	case "scalar":
 		var pt point
@@ -312,7 +313,7 @@ func queryRange(
 	now time.Time,
 ) (datasource.Result, error) {
 	start, end, step := window(p, now)
-	raw, err := call(ctx, cfg, "/api/v1/query_range", url.Values{
+	raw, size, err := call(ctx, cfg, "/api/v1/query_range", url.Values{
 		"query": {p.Query},
 		"start": {strconv.FormatInt(start, 10)},
 		"end":   {strconv.FormatInt(end, 10)},
@@ -343,6 +344,7 @@ func queryRange(
 	r := datasource.Result{
 		Times:  make([]time.Time, n),
 		Series: make([]datasource.Series, len(matrix)),
+		Bytes:  size,
 	}
 	for i := range n {
 		r.Times[i] = time.Unix(start+i*step, 0).UTC()

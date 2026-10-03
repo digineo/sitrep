@@ -113,7 +113,9 @@ Panels query data sources, which you configure in the console under "Data
 sources". SitRep ships the Prometheus type: a base URL (a path prefix is
 allowed), optional basic or bearer authentication, and a request timeout
 of 1s to 2m (default 10s). Requests never follow redirects, and responses
-over 1 MiB are refused.
+over 10 MiB are refused. Panels whose responses exceed 1 MiB still work,
+but the console warns about them: they load the backend and enlarge the
+public page.
 
 Passwords and tokens are stored encrypted with `SITREP_SECRET_KEY` and are
 never shown again. They are bound to the URL they were entered for: saving

@@ -70,8 +70,10 @@ The core applies CSRF checks to all routes below `/auth/`.
    `datasource.Type`: its configuration fields, the panel types it feeds,
    evaluation of a panel's query into a normalized result (a scalar,
    labeled samples, or labeled series on a shared time axis), a connection
-   test and a summary for lists. Reduce, thresholds, series handling,
-   caching and polling are shared and need no code.
+   test and a summary for lists. Read at most `datasource.MaxResponse`
+   bytes per response and report the size read in `Result.Bytes`; large
+   responses get a warning in the console. Reduce, thresholds, series
+   handling, caching and polling are shared and need no code.
 2. Optionally implement `datasource.Router` for admin-only routes below
    `/api/admin/datasources/{id}/<id>/`, and `datasource.Editor` to pick a
    query editor in the console. Without an editor hint, queries get a plain

@@ -51,14 +51,15 @@ func TestEvaluateInstant(t *testing.T) {
 	assert := assert.New(t)
 
 	var form url.Values
+	body := `{"status":"success","data":{"resultType":"vector","result":[
+		{"metric":{"job":"a"},"value":[1790942407.5,"1.5"]},
+		{"metric":{"job":"b"},"value":[1790942407.5,"NaN"]}]}}`
 	cfg := stub(t, func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal("/api/v1/query", r.URL.Path)
 		assert.Equal(http.MethodPost, r.Method)
 		require.NoError(r.ParseForm())
 		form = r.PostForm
-		reply(`{"status":"success","data":{"resultType":"vector","result":[
-			{"metric":{"job":"a"},"value":[1790942407.5,"1.5"]},
-			{"metric":{"job":"b"},"value":[1790942407.5,"NaN"]}]}}`)(w, r)
+		reply(body)(w, r)
 	})
 
 	p := model.Panel{
@@ -72,6 +73,7 @@ func TestEvaluateInstant(t *testing.T) {
 		"time":  {"1790942407.5"},
 	}
 	assert.Equal(want, form)
+	assert.Equal(len(body), r.Bytes, "the size of the response")
 	require.Len(r.Samples, 2)
 	sample := datasource.Sample{
 		Labels: map[string]string{"job": "a"},
@@ -131,6 +133,7 @@ func TestEvaluateRange(t *testing.T) {
 		"step":  {"15"},
 	}
 	assert.Equal(want, form, "1h/240 = 15s, the end aligned to the step")
+	assert.Positive(r.Bytes)
 	require.Len(r.Times, 241)
 	assert.Equal(time.Unix(1790938800, 0).UTC(), r.Times[0])
 	assert.Equal(time.Unix(1790942400, 0).UTC(), r.Times[240])

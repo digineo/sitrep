@@ -9,11 +9,12 @@ import SRField from "../../shared/components/SRField.vue"
 import SRLocalizedInput from "../../shared/components/SRLocalizedInput.vue"
 import { useConfirm } from "../../shared/composables/useConfirm"
 import { watchDebounced } from "../../shared/composables/watchDebounced"
+import { formatMiB } from "../../shared/format"
 import { endonym } from "../../shared/i18n"
 import StatPanel from "../../shared/panels/StatPanel.vue"
 import StatusTable from "../../shared/panels/StatusTable.vue"
 import TimeseriesPanel from "../../shared/panels/TimeseriesPanel.vue"
-import type { PanelData, PanelInfo } from "../../shared/payload"
+import type { PanelData, PanelInfo, Warning } from "../../shared/payload"
 import { api, errorCode, fieldErrors, localizedErrors } from "../api"
 import JsonTree from "../components/JsonTree.vue"
 import QueryEditor from "../components/QueryEditor.vue"
@@ -200,11 +201,8 @@ const showWidget = ref(false)
 const previewLang = ref(bootstrap.primary)
 const preview = ref<{
   data?:    PanelData["data"]
-  warnings: {
-    code:   string
-    count?: number
-  }[]
-  error?: string
+  warnings: Warning[]
+  error?:   string
 } | null>(null)
 const previewError = ref("")
 let previewSeq = 0
@@ -586,7 +584,7 @@ const widgetData = computed<PanelData>(() => ({
         :key="w.code"
         class="notification is-warning"
     >
-      {{ t(`panelEditor.warnings.${w.code}`, { count: w.count }) }}
+      {{ t(`warnings.${w.code}`, { count: w.count, size: formatMiB(w.size ?? 0, locale) }) }}
     </p>
     <JsonTree
         :value="preview.data"

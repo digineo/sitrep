@@ -275,7 +275,8 @@
     "moved": "{title} moved to position {position} of {count}",
     "edit": "Edit panel {title}",
     "editHint": "Edit",
-    "pollFailed": "Query failed"
+    "pollFailed": "Query failed",
+    "warning": "Warning"
   },
   "panelEditor": {
     "new": "New panel",
@@ -330,12 +331,13 @@
     "dataPreview": "Data preview",
     "widgetPreview": "Widget preview",
     "previewFailed": "Preview failed: {error}",
-    "warnings": {
-      "series_dropped": "{count} more series are not shown. Charts show at most 20."
-    },
     "saved": "Panel saved.",
     "delete": "Delete panel",
     "deleteTitle": "Delete panel?",
     "deleteMessage": "The panel {title} will be deleted."
+  },
+  "warnings": {
+    "series_dropped": "{count} more series are not shown. Charts show at most 20.",
+    "response_large": "The data source answered with {size} MiB. Large responses load the data source and make the public page slower."
   }
 }

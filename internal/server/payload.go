@@ -8,6 +8,7 @@ import (
 	"github.com/digineo/sitrep/internal/apierr"
 	"github.com/digineo/sitrep/internal/httpx"
 	"github.com/digineo/sitrep/internal/model"
+	"github.com/digineo/sitrep/internal/process"
 )
 
 // payload is a site's data for its page. Responses to requests with a
@@ -45,7 +46,9 @@ type panelPayload struct {
 	State     string     `json:"state"` // pending, fresh or stale
 	FetchedAt *time.Time `json:"fetchedAt,omitempty"`
 	Data      any        `json:"data,omitempty"`
-	Error     string     `json:"error,omitempty"` // for admins only
+	// For admins only: the latest poll's error and the data's warnings.
+	Error    string            `json:"error,omitempty"`
+	Warnings []process.Warning `json:"warnings,omitempty"`
 }
 
 // sitePayload builds the payload of site in lang with the sections changed
@@ -123,6 +126,7 @@ func (s *Server) sitePayload(
 
 		if admin {
 			pp.Error = e.Err
+			pp.Warnings = e.Data.Warnings()
 		}
 
 		p.Panels[panel.ID] = pp

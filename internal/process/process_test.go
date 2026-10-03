@@ -189,6 +189,38 @@ func TestSeries(t *testing.T) {
 	assert.Equal(values, d.Series[0].Values, "non-finite values are gaps")
 }
 
+func TestWarnings(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	p := model.Panel{Type: model.PanelStat}
+	d, err := Process(p, datasource.Result{Bytes: LargeResponse})
+	require.NoError(err)
+	assert.Empty(d.Warnings(), "up to the limit, no warning")
+
+	r := datasource.Result{
+		Times: []time.Time{},
+		Bytes: LargeResponse + 1,
+	}
+	for range MaxSeries + 1 {
+		r.Series = append(r.Series, datasource.Series{})
+	}
+
+	d, err = Process(model.Panel{Type: model.PanelTimeseries}, r)
+	require.NoError(err)
+	want := []Warning{
+		{
+			Code:  "series_dropped",
+			Count: 1,
+		},
+		{
+			Code: "response_large",
+			Size: LargeResponse + 1,
+		},
+	}
+	assert.Equal(want, d.Warnings())
+}
+
 func TestCompareLabels(t *testing.T) {
 	sets := []map[string]string{
 		{"a": "1"},

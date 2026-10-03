@@ -21,13 +21,15 @@ import (
 	"github.com/digineo/sitrep/internal/apierr"
 	"github.com/digineo/sitrep/internal/datasource"
 	"github.com/digineo/sitrep/internal/model"
+	"github.com/digineo/sitrep/internal/process"
 )
 
 // fakeType is a data source type that exists only in tests: it proves that
 // polling, previews, status and caching work for any type. Its queries are
 // numbers separated by spaces, other words are ignored. Each number becomes
 // a labeled sample of an instant, or a series with that value at three
-// times. A query containing "fail" fails.
+// times. A query containing "fail" fails, one containing "large" reports a
+// response just over the size that gets a warning.
 type fakeType struct {
 	panelTypes []string
 }
@@ -70,6 +72,10 @@ func (fakeType) Evaluate(
 	}
 
 	var r datasource.Result
+	if strings.Contains(p.Query, "large") {
+		r.Bytes = process.LargeResponse + 1
+	}
+
 	if p.Type == model.PanelTimeseries {
 		end := now.Truncate(time.Minute)
 		r.Times = []time.Time{end.Add(-2 * time.Minute), end.Add(-time.Minute), end}
@@ -757,11 +763,11 @@ func TestPanelPreview(t *testing.T) {
 	res := preview(panel, "en")
 	want := previewResult{
 		Data:     obj{"value": 5.0},
-		Warnings: []warning{},
+		Warnings: []process.Warning{},
 	}
 	assert.Equal(want, res, "previews need no title")
 
-	query := strings.Repeat("1 ", 23)
+	query := strings.Repeat("1 ", 23) + "large"
 	panel = obj{
 		"type": "timeseries",
 		"title": obj{
@@ -773,10 +779,16 @@ func TestPanelPreview(t *testing.T) {
 		"range":      "1h",
 	}
 	res = preview(panel, "de")
-	warnings := []warning{{
-		Code:  "series_dropped",
-		Count: 3,
-	}}
+	warnings := []process.Warning{
+		{
+			Code:  "series_dropped",
+			Count: 3,
+		},
+		{
+			Code: "response_large",
+			Size: process.LargeResponse + 1,
+		},
+	}
 	assert.Equal(warnings, res.Warnings)
 	series := res.Data.(obj)["series"].([]any)
 	require.Len(series, 20)
@@ -798,6 +810,31 @@ func TestPanelPreview(t *testing.T) {
 	}})
 	codes := map[string]string{"query": "required"}
 	assert.Equal(codes, fieldCodes(t, w, http.StatusBadRequest))
+}
+
+func TestSitePreviewWarnings(t *testing.T) {
+	f := newFixture(t)
+	ds := f.createDataSource("Main", "fake", map[string]string{"endpoint": "x"})
+	site := f.createSite("shop", "en")
+	panel := f.createPanel(site, obj{
+		"type":       "stat",
+		"title":      obj{"en": "Big"},
+		"datasource": ds,
+		"query":      "1 large",
+		"refresh":    "1d",
+	})
+	f.awaitFresh(site)
+
+	w := f.admin(http.MethodGet, "/api/admin/sites/"+site+"/preview", nil)
+	p := decode[payload](t, w, http.StatusOK)
+	want := []process.Warning{{
+		Code: "response_large",
+		Size: process.LargeResponse + 1,
+	}}
+	assert.Equal(t, want, p.Panels[panel].Warnings)
+	w = f.get("status.example.com", "/api/public/sites/"+site)
+	body := w.Body.String()
+	assert.NotContains(t, body, "warnings", "warnings are for admins only")
 }
 
 // publicPayload fetches a site's public payload.

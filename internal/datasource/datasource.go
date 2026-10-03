@@ -14,7 +14,7 @@ import (
 )
 
 // MaxResponse is the size limit of responses read from a data source.
-const MaxResponse = 1 << 20
+const MaxResponse = 10 << 20
 
 // Type is a kind of data source, e.g. Prometheus.
 type Type interface {
@@ -60,12 +60,14 @@ type Editor interface {
 type Config map[string]string
 
 // Result is the normalized outcome of an evaluation: a scalar, labeled
-// samples of an instant, or labeled series over a shared time axis.
+// samples of an instant, or labeled series over a shared time axis. Bytes
+// is the size of the responses read for it.
 type Result struct {
 	Scalar  *float64
 	Samples []Sample
 	Times   []time.Time
 	Series  []Series
+	Bytes   int
 }
 
 // Sample is a labeled value.

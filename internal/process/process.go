@@ -22,6 +22,10 @@ import (
 // MaxSeries is the number of series a timeseries panel keeps.
 const MaxSeries = 20
 
+// LargeResponse is the response size above which a result gets a warning:
+// such responses load the backend and enlarge the public payload.
+const LargeResponse = 1 << 20
+
 // Data is a panel's processed result.
 type Data struct {
 	// Value is the reduced value of stat and status panels, or nil for "no
@@ -34,6 +38,34 @@ type Data struct {
 	Series []Series
 	// Dropped counts the series beyond MaxSeries.
 	Dropped int
+	// Bytes is the size of the data source's responses.
+	Bytes int
+}
+
+// Warning is an admin-only hint about a result.
+type Warning struct {
+	Code  string `json:"code"`
+	Count int    `json:"count,omitempty"` // dropped series
+	Size  int    `json:"size,omitempty"`  // response size in bytes
+}
+
+// Warnings returns the hints about d: dropped series and large responses.
+func (d Data) Warnings() []Warning {
+	w := []Warning{}
+	if d.Dropped > 0 {
+		w = append(w, Warning{
+			Code:  "series_dropped",
+			Count: d.Dropped,
+		})
+	}
+
+	if d.Bytes > LargeResponse {
+		w = append(w, Warning{
+			Code: "response_large",
+			Size: d.Bytes,
+		})
+	}
+	return w
 }
 
 // Series is one line of a chart. Its labels never reach public clients;
@@ -63,7 +95,10 @@ func Process(p model.Panel, r datasource.Result) (Data, error) {
 		return Data{}, errScalarOrSamples
 	}
 
-	d := Data{Value: reduce(p.Reduce, r)}
+	d := Data{
+		Value: reduce(p.Reduce, r),
+		Bytes: r.Bytes,
+	}
 	if p.Type == model.PanelStatus {
 		d.State = state(p.Thresholds, d.Value)
 	}
@@ -143,6 +178,7 @@ func series(r datasource.Result) Data {
 	d := Data{
 		Times:   r.Times,
 		Dropped: max(0, len(all)-MaxSeries),
+		Bytes:   r.Bytes,
 	}
 	for _, s := range all[:min(len(all), MaxSeries)] {
 		values := make([]*float64, len(s.Values))

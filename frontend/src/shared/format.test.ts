@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   formatClock,
   formatDateTime,
+  formatMiB,
   formatNumber,
   formatRange,
   formatTick,
@@ -16,6 +17,11 @@ describe("formatNumber", () => {
     expect(formatNumber(1234.5, "de", 2)).toBe("1.234,50")
     expect(formatNumber(1234.5, "de", 0)).toBe("1.235")
     expect(formatNumber(0.1234567, "en", 6)).toBe("0.123457")
+  })
+
+  it("formats sizes in mebibytes", () => {
+    expect(formatMiB(1.5 * 2 ** 20, "de")).toBe("1,5")
+    expect(formatMiB(10 * 2 ** 20, "en")).toBe("10.0")
   })
 })
 

@@ -144,16 +144,10 @@ func (s *Server) reorderPanels(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// warning is a hint about a preview's result, e.g. dropped series.
-type warning struct {
-	Code  string `json:"code"`
-	Count int    `json:"count,omitempty"`
-}
-
 type previewResult struct {
-	Data     any       `json:"data,omitempty"`
-	Warnings []warning `json:"warnings"`
-	Error    string    `json:"error,omitempty"`
+	Data     any               `json:"data,omitempty"`
+	Warnings []process.Warning `json:"warnings"`
+	Error    string            `json:"error,omitempty"`
 }
 
 // previewPanel evaluates an unsaved panel like a poll, without touching the
@@ -181,19 +175,14 @@ func (s *Server) previewPanel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	langs := site.Languages.Effective()
-	res := previewResult{Warnings: []warning{}}
+	res := previewResult{Warnings: []process.Warning{}}
 	ctx := r.Context()
 	d, err := poller.Evaluate(ctx, s.cfg.SecretKey, in.Panel, *ds, time.Now())
 	if err != nil {
 		res.Error = err.Error()
 	} else {
 		res.Data = panelData(in.Panel, d, contentLang(in.Lang, langs), langs, true)
-		if d.Dropped > 0 {
-			res.Warnings = append(res.Warnings, warning{
-				Code:  "series_dropped",
-				Count: d.Dropped,
-			})
-		}
+		res.Warnings = d.Warnings()
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, res)

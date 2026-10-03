@@ -13,6 +13,14 @@ export function formatNumber(
   }).format(value)
 }
 
+/**
+ * formatMiB formats a size in bytes as mebibytes with one fraction digit,
+ * without the unit.
+ */
+export function formatMiB(bytes: number, lang: string): string {
+  return formatNumber(bytes / 2 ** 20, lang, 1)
+}
+
 /** formatClock returns the time of day with the zone, e.g. "14:05 MESZ". */
 export function formatClock(time: Date, lang: string, timeZone: string): string {
   return new Intl.DateTimeFormat(lang, {

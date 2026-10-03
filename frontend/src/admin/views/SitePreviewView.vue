@@ -18,6 +18,7 @@ import LiveIndicator from "../../shared/components/LiveIndicator.vue"
 import SRField from "../../shared/components/SRField.vue"
 import StatusBanner from "../../shared/components/StatusBanner.vue"
 import { usePolling } from "../../shared/composables/usePolling"
+import { formatMiB } from "../../shared/format"
 import { endonym } from "../../shared/i18n"
 import PanelGroups from "../../shared/panels/PanelGroups.vue"
 import type { PanelInfo, Payload } from "../../shared/payload"
@@ -151,6 +152,16 @@ async function onGripKey(event: KeyboardEvent, panel: PanelInfo) {
 
 // Dragging a grip moves its panel live onto other panels of its group.
 // Moving elements loses pointer capture, so the window follows the pointer.
+/** warningText joins the texts of a panel's warnings. */
+function warningText(panel: string): string {
+  return (payload.value?.panels?.[panel]?.warnings ?? [])
+    .map(w => t(`warnings.${w.code}`, {
+      count: w.count,
+      size:  formatMiB(w.size ?? 0, locale.value),
+    }))
+    .join(" ")
+}
+
 function onGripDown(event: PointerEvent, panel: PanelInfo) {
   if (event.button !== 0) {
     return
@@ -273,6 +284,14 @@ onBeforeUnmount(stopListening)
           >
             {{ t("preview.pollFailed") }}
             <span class="sr-visually-hidden">: {{ payload.panels[panel.id]!.error }}</span>
+          </span>
+          <span
+              v-if="payload.panels?.[panel.id]?.warnings?.length"
+              class="tag is-warning"
+              :title="warningText(panel.id)"
+          >
+            {{ t("preview.warning") }}
+            <span class="sr-visually-hidden">: {{ warningText(panel.id) }}</span>
           </span>
           <button
               type="button"
