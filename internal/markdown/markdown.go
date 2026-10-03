@@ -1,13 +1,12 @@
 // Package markdown renders Markdown to HTML that is safe to insert into
 // pages: GitHub Flavored Markdown without raw HTML, with links only to
-// http, https and mailto targets, and with images replaced by their alt
-// text, so that no page loads third-party content.
+// absolute http, https and mailto targets, and with images replaced by
+// their alt text, so that no page loads third-party content.
 package markdown
 
 import (
 	"bytes"
 	"net/url"
-	"slices"
 	"strings"
 
 	"github.com/yuin/goldmark"
@@ -72,11 +71,21 @@ func (safe) RegisterFuncs(r renderer.NodeRendererFuncRegisterer) {
 	r.Register(ast.KindHTMLBlock, skip)
 }
 
-// allowed reports whether a link may point to dest.
+// allowed reports whether a link may point to dest: an absolute http or
+// https URL with a host, or a mailto URL. Browsers resolve "http:path"
+// against the page, like relative links.
 func allowed(dest []byte) bool {
 	u, err := url.Parse(string(dest))
-	schemes := []string{"http", "https", "mailto"}
-	return err == nil && slices.Contains(schemes, strings.ToLower(u.Scheme))
+	if err != nil {
+		return false
+	}
+	switch strings.ToLower(u.Scheme) {
+	case "http", "https":
+		return u.Host != ""
+	case "mailto":
+		return u.Opaque != ""
+	}
+	return false
 }
 
 // renderLink renders a link with an allowed target, else only its text.

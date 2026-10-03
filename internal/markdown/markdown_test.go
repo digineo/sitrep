@@ -11,6 +11,7 @@ func TestHTML(t *testing.T) {
 	for src, want := range map[string]string{
 		"**bold** and ~~gone~~":             "<p><strong>bold</strong> and <del>gone</del></p>\n",
 		"[docs](https://example.com/a?b=c)": `<p><a href="https://example.com/a?b=c">docs</a></p>` + "\n",
+		"[faq](https://example.com/#faq)":   `<p><a href="https://example.com/#faq">faq</a></p>` + "\n",
 		"[mail](mailto:ops@example.com)":    `<p><a href="mailto:ops@example.com">mail</a></p>` + "\n",
 		"see www.example.com":               `<p>see <a href="http://www.example.com">www.example.com</a></p>` + "\n",
 		"ops@example.com":                   `<p><a href="mailto:ops@example.com">ops@example.com</a></p>` + "\n",
@@ -38,6 +39,10 @@ func TestHTMLAttacks(t *testing.T) {
 		"[x](data:text/html;base64,PHNjcj4)": "<p>x</p>\n",
 		"[x](/relative)":                     "<p>x</p>\n",
 		"[x](#fragment)":                     "<p>x</p>\n",
+		"[x](http:relative)":                 "<p>x</p>\n",
+		"[x](https:/relative)":               "<p>x</p>\n",
+		"[x](//example.com)":                 "<p>x</p>\n",
+		"[x](mailto:)":                       "<p>x</p>\n",
 		"<javascript:alert(1)>":              "<p>javascript:alert(1)</p>\n",
 		"<ftp://example.com>":                "<p>ftp://example.com</p>\n",
 		// Attributes cannot be broken out of.
