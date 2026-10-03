@@ -18,7 +18,7 @@ require (
 )
 
 require (
-	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.5 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	gitlab.com/greyxor/slogor v1.7.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
