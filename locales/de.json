@@ -102,7 +102,8 @@
     "status": "Status: {status}",
     "panels": "Panels",
     "siteSettings": "Einstellungen",
-    "incidents": "Vorfälle"
+    "incidents": "Vorfälle",
+    "import": "Statusseite importieren"
   },
   "home": {
     "title": "Statusseiten",
@@ -136,7 +137,9 @@
   },
   "toast": {
     "saveFailed": "Speichern fehlgeschlagen",
-    "deleteFailed": "Löschen fehlgeschlagen"
+    "deleteFailed": "Löschen fehlgeschlagen",
+    "importFailed": "Import fehlgeschlagen",
+    "exportFailed": "Export fehlgeschlagen"
   },
   "unsaved": {
     "title": "Änderungen verwerfen?",
@@ -227,7 +230,13 @@
     "retentionHelp": "Beendete Vorfälle werden so viele Tage nach ihrer letzten Meldung gelöscht. Leer lassen, um sie unbegrenzt aufzubewahren.",
     "unavailable": "Diese Statusseite ist derzeit nicht verfügbar.",
     "availability": "Verfügbarkeit",
-    "availabilityHelp": "Besucher einer Statusseite, die offline oder pausiert ist, sehen nur einen Hinweis, dass sie nicht verfügbar ist, und die rechtlichen Seiten."
+    "availabilityHelp": "Besucher einer Statusseite, die offline oder pausiert ist, sehen nur einen Hinweis, dass sie nicht verfügbar ist, und die rechtlichen Seiten.",
+    "export": "Exportieren",
+    "import": "Importieren",
+    "importTitle": "Statusseite ersetzen?",
+    "importMessage": "Die Einstellungen und Panels von {site} werden durch die aus {file} ersetzt. Vorfälle und die Verfügbarkeit bleiben erhalten.",
+    "importConfirm": "Statusseite ersetzen",
+    "imported": "Statusseite importiert."
   },
   "status": {
     "operational": "Betriebsbereit",
@@ -460,6 +469,9 @@
     "edit": "Bearbeiten",
     "preview": "Vorschau",
     "previewFailed": "Die Vorschau ist gerade nicht verfügbar."
+  },
+  "import": {
+    "line": "Zeile {line}"
   },
   "availability": {
     "online": "Online",

@@ -9,10 +9,11 @@ import {
   Plus,
   Settings,
   Siren,
+  Upload,
 } from "@lucide/vue"
 import { computed, inject, ref, watch } from "vue"
 import { useI18n } from "vue-i18n"
-import { useRoute } from "vue-router"
+import { useRoute, useRouter } from "vue-router"
 
 import logo from "../../shared/assets/logo.svg"
 import { type Bootstrap } from "../../shared/bootstrap"
@@ -24,14 +25,18 @@ import { useLanguage } from "../../shared/composables/useLanguage"
 import { usePolling } from "../../shared/composables/usePolling"
 import { supported } from "../../shared/i18n"
 import { resolveText, routeLabel } from "../rules"
+import { useNotices } from "../stores/notices"
 import { useOverview } from "../stores/overview"
 import { useSession } from "../stores/session"
+import { importDetail, importSite } from "../transfer"
 
 const { t, locale } = useI18n()
 const { choose } = useLanguage()
 const session = useSession()
 const overview = useOverview()
 const route = useRoute()
+const router = useRouter()
+const notices = useNotices()
 const bootstrap = inject<Bootstrap>("bootstrap")!
 
 // Site statuses refresh every 15 seconds and after each navigation.
@@ -64,6 +69,24 @@ watch(() => route.params.site, (site) => {
 const availabilityIcons = {
   offline: EyeOff,
   paused:  Pause,
+}
+
+/** importFile creates a site from the chosen file and opens its preview. */
+async function importFile(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ""
+  if (!file) {
+    return
+  }
+
+  try {
+    const site = await importSite(file)
+    notices.success(t("site.imported"))
+    await router.push(`/sites/${site.id}`)
+  } catch(err) {
+    notices.failure(t("toast.importFailed"), err, importDetail(err, t))
+  }
 }
 
 function onToggle(site: string, event: Event) {
@@ -120,6 +143,20 @@ function onToggle(site: string, event: Event) {
             <span>{{ t("nav.newSite") }}</span>
           </span>
         </RouterLink>
+      </li>
+      <li>
+        <label class="menu-item sr-file">
+          <span class="icon-text">
+            <span class="icon"><Upload aria-hidden="true" /></span>
+            <span>{{ t("nav.import") }}</span>
+          </span>
+          <input
+              type="file"
+              accept=".yaml,.yml"
+              class="sr-visually-hidden"
+              @change="importFile"
+          >
+        </label>
       </li>
       <li>
         <RouterLink
@@ -264,7 +301,8 @@ function onToggle(site: string, event: Event) {
   color: var(--bulma-text-strong);
 }
 
-.menu-list a {
+.menu-list a,
+.menu-list .menu-item {
   display: flex;
   align-items: center;
 }

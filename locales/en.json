@@ -102,7 +102,8 @@
     "status": "Status: {status}",
     "panels": "Panels",
     "siteSettings": "Settings",
-    "incidents": "Incidents"
+    "incidents": "Incidents",
+    "import": "Import status page"
   },
   "home": {
     "title": "Status pages",
@@ -136,7 +137,9 @@
   },
   "toast": {
     "saveFailed": "Saving failed",
-    "deleteFailed": "Deleting failed"
+    "deleteFailed": "Deleting failed",
+    "importFailed": "Import failed",
+    "exportFailed": "Export failed"
   },
   "unsaved": {
     "title": "Discard changes?",
@@ -227,7 +230,13 @@
     "retentionHelp": "Finished incidents are deleted this many days after their last update. Leave empty to keep them forever.",
     "unavailable": "This status page is currently unavailable.",
     "availability": "Availability",
-    "availabilityHelp": "Visitors of an offline or paused status page see only a notice that it is unavailable, and the legal pages."
+    "availabilityHelp": "Visitors of an offline or paused status page see only a notice that it is unavailable, and the legal pages.",
+    "export": "Export",
+    "import": "Import",
+    "importTitle": "Replace status page?",
+    "importMessage": "The settings and panels of {site} will be replaced with those from {file}. Incidents and the availability are kept.",
+    "importConfirm": "Replace status page",
+    "imported": "Status page imported."
   },
   "status": {
     "operational": "Operational",
@@ -460,6 +469,9 @@
     "edit": "Edit",
     "preview": "Preview",
     "previewFailed": "The preview is not available right now."
+  },
+  "import": {
+    "line": "Line {line}"
   },
   "availability": {
     "online": "Online",

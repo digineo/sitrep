@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Download, Upload } from "@lucide/vue"
 import { computed, onMounted, ref } from "vue"
 import { useI18n } from "vue-i18n"
 import { useRoute, useRouter } from "vue-router"
@@ -18,6 +19,7 @@ import { usePageTitle } from "../composables/usePageTitle"
 import { useUnsavedChanges } from "../composables/useUnsavedChanges"
 import { resolveText } from "../rules"
 import { useNotices } from "../stores/notices"
+import { exportSite, importDetail, importSite } from "../transfer"
 import type { Settings, Site } from "../types"
 
 const { t, locale } = useI18n()
@@ -28,6 +30,8 @@ const { confirm } = useConfirm()
 
 const id = route.params.site as string
 const form = ref<Site | null>(null)
+/** stored is the site as last saved. */
+const stored = ref<Site | null>(null)
 const defaultTheme = ref<Settings["defaultTheme"]>("system")
 const saved = ref("")
 const errors = ref<Record<string, string>>({})
@@ -52,6 +56,7 @@ useUnsavedChanges(
 
 function apply(site: Site) {
   form.value = site
+  stored.value = structuredClone(site)
   saved.value = JSON.stringify(site)
 }
 
@@ -83,6 +88,43 @@ async function save() {
     notices.failure(t("toast.saveFailed"), err)
   } finally {
     saving.value = false
+  }
+}
+
+async function download() {
+  try {
+    await exportSite(id, stored.value!.route.slug ?? stored.value!.route.domain!)
+  } catch(err) {
+    notices.failure(t("toast.exportFailed"), err)
+  }
+}
+
+/**
+ * replace replaces the site's settings and panels from a file, after a
+ * confirmation.
+ */
+async function replace(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ""
+  if (!file || !await confirm({
+    title:   t("site.importTitle"),
+    message: t("site.importMessage", {
+      site: title.value,
+      file: file.name,
+    }),
+    confirm: t("site.importConfirm"),
+    danger:  true,
+  })) {
+    return
+  }
+
+  try {
+    apply(await importSite(file, id))
+    notices.success(t("site.imported"))
+    await router.push(`/sites/${id}`)
+  } catch(err) {
+    notices.failure(t("toast.importFailed"), err, importDetail(err, t))
   }
 }
 
@@ -245,8 +287,24 @@ async function remove() {
         {{ t("common.cancel") }}
       </RouterLink>
       <SRButton
-          variant="danger"
           class="ml-auto"
+          @click="download"
+      >
+        <span class="icon"><Download aria-hidden="true" /></span>
+        <span>{{ t("site.export") }}</span>
+      </SRButton>
+      <label class="button sr-file">
+        <span class="icon"><Upload aria-hidden="true" /></span>
+        <span>{{ t("site.import") }}</span>
+        <input
+            class="sr-visually-hidden"
+            type="file"
+            accept=".yaml,.yml"
+            @change="replace"
+        >
+      </label>
+      <SRButton
+          variant="danger"
           @click="remove"
       >
         {{ t("site.delete") }}

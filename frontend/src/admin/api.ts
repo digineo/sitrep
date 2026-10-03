@@ -17,22 +17,26 @@ export class ApiError extends Error {
   }
 }
 
-/** api calls the admin API. A 401 ends the session in the console. */
-export async function api<T>(
+/**
+ * request calls the admin API with a raw body. It fails with an ApiError
+ * on error answers; a 401 ends the session in the console.
+ */
+export async function request(
   method: string,
   path: string,
-  body?: unknown,
+  body?: string,
+  contentType = "application/json",
   signal?: AbortSignal,
-): Promise<T> {
+): Promise<Response> {
   let res: Response
   try {
     res = await fetch(path, {
       method,
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": contentType,
         "Accept":       "application/json",
       },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body,
       signal,
     })
   } catch {
@@ -51,6 +55,18 @@ export async function api<T>(
       data?.error?.details,
     )
   }
+  return res
+}
+
+/** api calls the admin API with JSON. */
+export async function api<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+  signal?: AbortSignal,
+): Promise<T> {
+  const json = body === undefined ? undefined : JSON.stringify(body)
+  const res = await request(method, path, json, "application/json", signal)
   return (res.status === 204 ? undefined : await res.json()) as T
 }
 

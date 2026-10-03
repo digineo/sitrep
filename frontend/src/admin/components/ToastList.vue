@@ -29,6 +29,12 @@ const notices = useNotices()
       </template>
       <template v-else>
         <strong>{{ toast.text }}:</strong> {{ t(`error.${toast.code}`) }}
+        <p
+            v-if="toast.detail"
+            class="sr-detail"
+        >
+          {{ toast.detail }}
+        </p>
       </template>
     </div>
   </div>
@@ -48,5 +54,11 @@ const notices = useNotices()
 
 .notification {
   margin: 0;
+}
+
+.sr-detail {
+  margin-top: 0.25rem;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 </style>

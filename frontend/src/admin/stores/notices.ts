@@ -4,12 +4,14 @@ import { ref } from "vue"
 import { errorCode, isUnauthorized } from "../api"
 
 export interface Toast {
-  id:    number
-  kind:  "success" | "failure"
+  id:      number
+  kind:    "success" | "failure"
   /** text is the message of a success, or the prefix of a failure. */
-  text:  string
+  text:    string
   /** code is the error code of a failure. */
-  code?: string
+  code?:   string
+  /** detail explains a failure further, e.g. where an import failed. */
+  detail?: string
 }
 
 /** useNotices holds toasts and the load error banner. */
@@ -38,13 +40,14 @@ export const useNotices = defineStore("notices", () => {
    * failure shows a toast until it is closed. A 401 shows none, it opens
    * the login screen.
    */
-  function failure(prefix: string, err: unknown) {
+  function failure(prefix: string, err: unknown, detail?: string) {
     if (!isUnauthorized(err)) {
       toasts.value.push({
         id:   ++lastId,
         kind: "failure",
         text: prefix,
         code: errorCode(err),
+        detail,
       })
     }
   }
