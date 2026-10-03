@@ -780,12 +780,14 @@ func (f *fixture) publicPayload(
 	return p, raw
 }
 
-// awaitFresh waits until all of the site's panels have been polled.
+// awaitFresh waits until all of the site's panels have been polled and
+// returns a payload fetched afterwards. Its cursor covers all polls so far,
+// while the payload that first saw them fresh may have read the cursor
+// before the last poll finished.
 func (f *fixture) awaitFresh(site string) payload {
 	f.t.Helper()
-	var p payload
 	fresh := func() bool {
-		p, _ = f.publicPayload(site, "")
+		p, _ := f.publicPayload(site, "")
 		for _, pp := range p.Panels {
 			if pp.State != "fresh" {
 				return false
@@ -795,6 +797,7 @@ func (f *fixture) awaitFresh(site string) payload {
 	}
 
 	require.Eventually(f.t, fresh, 5*time.Second, 10*time.Millisecond)
+	p, _ := f.publicPayload(site, "")
 	return p
 }
 
