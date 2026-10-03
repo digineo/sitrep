@@ -20,11 +20,17 @@ ships as one binary with the web frontend and an embedded database file.
   shown on the status page, shaded in charts, in an archive, in an Atom
   feed per language and as JSON for other websites.
 - Status pages refresh themselves and fetch only what changed.
+- Imprint and privacy statement per status page or for the whole instance,
+  as Markdown text or link, and a landing page text.
+- A brand color and an SVG logo per status page; the favicon shows the
+  status.
+- Status pages can be taken offline or paused, and exported to and
+  imported from YAML files.
 - Light, dark and system color schemes, remembered per visitor.
 - Admin console with sign-in by username and password (bcrypt or argon2id
   hashes), login throttling, data sources, status pages with their panels,
-  incidents and a live preview, and instance settings for languages and the
-  default color scheme.
+  incidents and a live preview, and instance settings for languages, the
+  default color scheme, legal pages and the landing text.
 - No third-party requests, no tracking, no consent banner needed.
 
 ## Quick start
@@ -180,6 +186,49 @@ Other websites can read it in the browser when their origin is listed under
 "Allowed origins for incidents.json" in the status page's settings, e.g.
 `https://www.example.com`. SitRep then answers with
 `Access-Control-Allow-Origin` for that origin; it never allows credentials.
+
+## Legal pages and the landing page
+
+The global settings set an imprint and a privacy statement, each either
+none, a link to a page elsewhere, or a Markdown text that SitRep shows at
+`/imprint` and `/privacy` (in German `/impressum` and `/datenschutz`). Each
+status page uses them unless it sets its own. The footer links them.
+
+The landing page on the base domains shows the landing text from the
+global settings, or without one a neutral page with a link to the console.
+
+## Branding
+
+A status page can have a brand color, which colors its header and footer
+with black or white text, whichever contrasts more, and an SVG logo of at
+most 64 KiB. SitRep sanitizes logos when they are saved: it keeps only
+plain SVG shapes, text, gradients, masks and filters, and removes scripts,
+event handlers, links to other documents and anything that loads other
+resources. Logos are served with a content security policy that sandboxes
+them.
+
+## Availability
+
+A status page is online, offline or paused. Visitors of an offline or
+paused page see its name, logo and legal pages and a notice that it is
+unavailable; everything else answers 503, including the feed and
+incidents.json. SitRep keeps polling offline pages, so their data is
+current when they come back, but stops polling paused ones. The console
+previews every page regardless of its availability.
+
+## Import and export
+
+The settings of a status page export it as a YAML file: its settings and
+panels in display order, with localized texts by language. Panels name
+their data source, so a file can be imported on another instance with data
+sources of the same names and types. Exports leave out IDs, timestamps,
+availability, incidents and the data sources themselves.
+
+Importing a file creates a new status page ("Import status page" in the
+sidebar), or replaces the settings and panels of an existing one, keeping
+its incidents and availability. Files must start with `version: 1`, may
+not contain unknown keys and are validated completely before anything is
+saved.
 
 ## Cookies
 

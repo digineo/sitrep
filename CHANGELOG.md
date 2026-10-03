@@ -35,3 +35,9 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   each status page's allowed origins.
 - Retention that deletes finished incidents after a status page's number of
   days.
+- Imprint and privacy statement for the instance and per status page, as
+  Markdown text or link, with localized URLs, and a landing page text.
+- Brand colors and sanitized SVG logos for status pages, and a favicon in
+  the color of the status.
+- Offline and paused status pages; paused pages are not polled.
+- Export and import of status pages as YAML files.
