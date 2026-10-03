@@ -146,3 +146,53 @@ func TestTextMissing(t *testing.T) {
 	assert.Equal(Text{"en": "a"}, text.Normalize())
 	assert.Nil(Text{"en": " "}.Normalize())
 }
+
+func TestSiteOrigins(t *testing.T) {
+	s := validSite()
+	s.AllowedOrigins = []string{
+		" HTTPS://Shop.Example.com:443/ ",
+		"",
+		"https://shop.example.com",
+		"http://localhost:8080",
+		"ftp://x",
+		"https://*.example.com",
+	}
+	s.Normalize()
+	want := []string{
+		"https://shop.example.com",
+		"http://localhost:8080",
+		"ftp://x",
+		"https://*.example.com",
+	}
+	assert.Equal(
+		t,
+		want,
+		s.AllowedOrigins,
+		"normalized, without blanks and duplicates",
+	)
+	codes := map[string]string{
+		"allowedOrigins[2]": "invalid_origin",
+		"allowedOrigins[3]": "invalid_origin",
+	}
+	assert.Equal(t, codes, fieldCodes(t, s.Validate(bases)))
+}
+
+func TestSiteRetention(t *testing.T) {
+	for days, valid := range map[int]bool{
+		0:     true,
+		1:     true,
+		36500: true,
+		-1:    false,
+		36501: false,
+	} {
+		s := validSite()
+		s.IncidentRetentionDays = days
+		s.Normalize()
+		if valid {
+			assert.NoError(t, s.Validate(bases), days)
+		} else {
+			want := map[string]string{"incidentRetentionDays": "out_of_range"}
+			assert.Equal(t, want, fieldCodes(t, s.Validate(bases)), days)
+		}
+	}
+}

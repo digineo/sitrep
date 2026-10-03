@@ -143,6 +143,9 @@
     "datasource_unsupported_type": "This data source does not support this panel type.",
     "bad_gateway": "The data source cannot be reached.",
     "datasource_unusable": "The secrets of this data source cannot be decrypted. Please enter them again.",
+    "first_update_must_open": "The first update of an incident must set the status to planned or active.",
+    "status_or_severity_required": "Choose a status, a severity or both.",
+    "invalid_origin": "Enter an origin like https://www.example.com, without a path.",
     "network": "The server cannot be reached."
   },
   "panel": {

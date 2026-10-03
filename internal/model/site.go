@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"time"
@@ -17,6 +18,8 @@ const (
 	maxUnit        = 32
 	maxLegend      = 200
 )
+
+const maxRetentionDays = 36500
 
 // Route modes of a site.
 const (
@@ -40,8 +43,13 @@ type Site struct {
 	Timezone  string    `json:"timezone"`
 	Route     Route     `json:"route"`
 	Theme     string    `json:"theme"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	// AllowedOrigins may read incidents.json from other sites (CORS).
+	AllowedOrigins []string `json:"allowedOrigins"`
+	// IncidentRetentionDays deletes finished incidents that long after
+	// their last activity; 0 keeps them forever.
+	IncidentRetentionDays int       `json:"incidentRetentionDays"`
+	CreatedAt             time.Time `json:"createdAt"`
+	UpdatedAt             time.Time `json:"updatedAt"`
 }
 
 // Route says how a site is reached: below a base domain path, as subdomain
@@ -52,10 +60,27 @@ type Route struct {
 	Domain string `json:"domain,omitempty"`
 }
 
-// Normalize trims the texts, fills defaults and drops the route field the
-// mode does not use.
+// Normalize trims the texts, fills defaults, drops the route field the
+// mode does not use and writes allowed origins in canonical form, without
+// blank entries and duplicates.
 func (s *Site) Normalize() {
 	s.Name = s.Name.Normalize()
+
+	origins := []string{}
+	for _, o := range s.AllowedOrigins {
+		if o = strings.TrimSpace(o); o == "" {
+			continue
+		}
+
+		if n, ok := NormalizeOrigin(o); ok {
+			o = n
+		}
+		if !slices.Contains(origins, o) {
+			origins = append(origins, o)
+		}
+	}
+
+	s.AllowedOrigins = origins
 
 	if s.Timezone == "" {
 		s.Timezone = "UTC"
@@ -104,6 +129,16 @@ func (s *Site) Validate(baseDomains []string) error {
 
 	if !slices.Contains(SiteThemes, s.Theme) {
 		f.Add("theme", apierr.InvalidValue)
+	}
+
+	for i, o := range s.AllowedOrigins {
+		if _, ok := NormalizeOrigin(o); !ok {
+			f.Add(fmt.Sprintf("allowedOrigins[%d]", i), apierr.InvalidOrigin)
+		}
+	}
+
+	if s.IncidentRetentionDays < 0 || s.IncidentRetentionDays > maxRetentionDays {
+		f.Add("incidentRetentionDays", apierr.OutOfRange)
 	}
 	return f.Err()
 }

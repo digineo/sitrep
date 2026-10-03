@@ -95,4 +95,7 @@ var (
 	DataSourceUnusable   = code("datasource_unusable")
 	UnsupportedType      = code("datasource_unsupported_type")
 	BadGateway           = code("bad_gateway")
+	FirstUpdateMustOpen  = code("first_update_must_open")
+	StatusOrSeverity     = code("status_or_severity_required")
+	InvalidOrigin        = code("invalid_origin")
 )
