@@ -40,7 +40,9 @@ type Provider interface {
 	Method() Method
 	// Available reports whether logins currently work.
 	Available() bool
-	// Routes registers the provider's handlers below /auth/{id}/.
+	// Routes registers the provider's handlers below /auth/{id}/. It is
+	// called once at startup, and may start background work such as
+	// discovering an identity provider.
 	Routes(mux *http.ServeMux, core *Core)
 }
 
