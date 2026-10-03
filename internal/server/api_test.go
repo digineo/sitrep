@@ -40,6 +40,10 @@ func (fakeType) Fields() []datasource.Field {
 			Required: true,
 		},
 		{
+			Name: "url",
+			Kind: datasource.KindURL,
+		},
+		{
 			Name: "token",
 			Kind: datasource.KindSecret,
 		},
@@ -348,6 +352,40 @@ func TestDataSourceAPI(t *testing.T) {
 		"name": "Main",
 		"config": obj{
 			"endpoint": "x",
+			"url":      "https://a.example.com",
+		},
+	})
+	ds = decode[dataSourceView](t, w, http.StatusOK)
+	assert.Empty(ds.Secrets, "a changed URL discards the stored secrets")
+
+	w = f.admin(http.MethodPut, "/api/admin/datasources/"+ds.ID, obj{
+		"name": "Main",
+		"config": obj{
+			"endpoint": "x",
+			"url":      "https://a.example.com",
+			"token":    "t",
+		},
+	})
+	ds = decode[dataSourceView](t, w, http.StatusOK)
+	w = f.admin(http.MethodPost, "/api/admin/datasources/test", obj{
+		"id":   ds.ID,
+		"type": "fake",
+		"config": obj{
+			"endpoint": "x",
+			"url":      "https://b.example.com",
+		},
+	})
+	assert.Equal(
+		noToken,
+		decode[testResult](t, w, http.StatusOK),
+		"unsaved tests against another URL don't use the stored secrets",
+	)
+
+	w = f.admin(http.MethodPut, "/api/admin/datasources/"+ds.ID, obj{
+		"name": "Main",
+		"config": obj{
+			"endpoint": "x",
+			"url":      "https://a.example.com",
 			"token":    "",
 		},
 	})

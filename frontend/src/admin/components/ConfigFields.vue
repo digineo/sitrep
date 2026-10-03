@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { computed } from "vue"
 import { useI18n } from "vue-i18n"
 
 import SRField from "../../shared/components/SRField.vue"
-import type { DataSourceType, Field } from "../types"
+import type { DataSource, DataSourceType, Field } from "../types"
 
 /** SecretState says what happens to a secret on save. */
 export interface SecretState {
@@ -11,11 +12,11 @@ export interface SecretState {
 }
 
 const props = defineProps<{
-  type:   DataSourceType
-  /** stored lists the secrets that have a stored value. */
-  stored: string[]
+  type:    DataSourceType
+  /** stored is the saved data source, when editing one. */
+  stored?: Pick<DataSource, "config" | "secrets">
   /** errors maps field names to error codes. */
-  errors: Record<string, string | undefined>
+  errors:  Record<string, string | undefined>
 }>()
 
 const values = defineModel<Record<string, string>>("values", { required: true })
@@ -32,6 +33,27 @@ const visible = (field: Field) =>
   !field.when || values.value[field.when.field] === field.when.value
 const help = (field: Field) =>
   te(key(field, "help")) ? t(key(field, "help")) : undefined
+
+const isStored = (field: Field) => !!props.stored?.secrets.includes(field.name)
+
+/**
+ * urlChanged reports whether a URL differs from its saved value: saving then
+ * discards the stored secrets.
+ */
+const urlChanged = computed(() => !!props.stored
+  && props.type.fields.some(f => f.kind === "url"
+    && (values.value[f.name] ?? "").trim().replace(/\/+$/, "")
+    !== (props.stored!.config[f.name] ?? "")))
+
+/** secretNote says what saving does to a stored secret. */
+function secretNote(field: Field): string {
+  if (urlChanged.value) {
+    return t("dataSources.secretDiscarded")
+  }
+  return secrets.value[field.name]?.action === "clear"
+    ? t("dataSources.secretCleared")
+    : t("dataSources.secretSet")
+}
 
 function setSecret(name: string, state: SecretState) {
   secrets.value = {
@@ -86,14 +108,14 @@ function setSecret(name: string, state: SecretState) {
       </label>
       <template v-else-if="field.kind === 'secret'">
         <div
-            v-if="stored.includes(field.name) && secrets[field.name]?.action !== 'replace'"
+            v-if="isStored(field) && secrets[field.name]?.action !== 'replace'"
             class="sr-secret"
         >
           <span
               :id
               class="sr-muted"
               tabindex="-1"
-          >{{ secrets[field.name]?.action === "clear" ? t("dataSources.secretCleared") : t("dataSources.secretSet") }}</span>
+          >{{ secretNote(field) }}</span>
           <span class="buttons are-small mb-0">
             <button
                 type="button"
@@ -102,22 +124,24 @@ function setSecret(name: string, state: SecretState) {
             >
               {{ t("dataSources.replace") }}
             </button>
-            <button
-                v-if="secrets[field.name]?.action !== 'clear'"
-                type="button"
-                class="button"
-                @click="setSecret(field.name, { action: 'clear', value: '' })"
-            >
-              {{ t("dataSources.clear") }}
-            </button>
-            <button
-                v-else
-                type="button"
-                class="button"
-                @click="setSecret(field.name, { action: 'keep', value: '' })"
-            >
-              {{ t("dataSources.keep") }}
-            </button>
+            <template v-if="!urlChanged">
+              <button
+                  v-if="secrets[field.name]?.action !== 'clear'"
+                  type="button"
+                  class="button"
+                  @click="setSecret(field.name, { action: 'clear', value: '' })"
+              >
+                {{ t("dataSources.clear") }}
+              </button>
+              <button
+                  v-else
+                  type="button"
+                  class="button"
+                  @click="setSecret(field.name, { action: 'keep', value: '' })"
+              >
+                {{ t("dataSources.keep") }}
+              </button>
+            </template>
           </span>
         </div>
         <input
@@ -127,7 +151,7 @@ function setSecret(name: string, state: SecretState) {
             type="password"
             autocomplete="new-password"
             :value="secrets[field.name]?.value ?? ''"
-            :required="field.required && !stored.includes(field.name)"
+            :required="field.required && (!isStored(field) || urlChanged)"
             :aria-describedby="describedby"
             :aria-invalid="invalid"
             @input="setSecret(field.name, { action: 'replace', value: ($event.target as HTMLInputElement).value })"

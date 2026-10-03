@@ -84,4 +84,6 @@ The core applies CSRF checks to all routes below `/auth/`.
    configuration form from the field description.
 
 Secret fields are encrypted by the core; the type receives them in plain
-text when it evaluates or tests.
+text when it evaluates or tests. A change of any `url` field discards the
+stored secrets, so the type can rely on a secret only ever going to the URL
+it was entered for.

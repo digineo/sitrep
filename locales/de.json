@@ -214,6 +214,7 @@
     "testFailed": "Verbindung fehlgeschlagen: {error}",
     "secretSet": "Ein Wert ist gespeichert.",
     "secretCleared": "Der Wert wird beim Speichern entfernt.",
+    "secretDiscarded": "Die URL wurde geändert: Der gespeicherte Wert wird beim Speichern entfernt, sofern Sie ihn nicht ersetzen.",
     "replace": "Ersetzen",
     "clear": "Entfernen",
     "keep": "Behalten",

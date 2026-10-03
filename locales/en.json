@@ -214,6 +214,7 @@
     "testFailed": "Connection failed: {error}",
     "secretSet": "A value is stored.",
     "secretCleared": "The value is removed when you save.",
+    "secretDiscarded": "The URL has changed: the stored value is removed when you save, unless you replace it.",
     "replace": "Replace",
     "clear": "Remove",
     "keep": "Keep",

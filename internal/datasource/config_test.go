@@ -245,6 +245,49 @@ func TestSecrets(t *testing.T) {
 	require.Nil(apply(t, ds, cfg, nil))
 	assert.Empty(ds.Secrets, "an empty value clears the secret")
 
+	cfg = map[string]string{
+		"url":   "http://prom",
+		"auth":  "bearer",
+		"token": "t0ken",
+	}
+	require.Nil(apply(t, ds, cfg, key))
+	delete(cfg, "token")
+	cfg["url"] = "http://prom/"
+	require.Nil(
+		apply(t, ds, cfg, nil),
+		"the same URL after normalization keeps the secret",
+	)
+	require.Contains(ds.Secrets, "token")
+	cfg["url"] = "http://other"
+	want = map[string]string{"config.token": "required"}
+	assert.Equal(
+		want,
+		apply(t, ds, cfg, nil),
+		"another URL discards the stored secret, "+
+			"so a required one must be entered again",
+	)
+	require.Contains(ds.Secrets, "token", "a failed validation changes nothing")
+	cfg["token"] = "n3w"
+	require.Nil(
+		apply(t, ds, cfg, key),
+		"secrets submitted with the new URL are stored",
+	)
+	opened, err = Open(*ds, key)
+	require.NoError(err)
+	assert.Equal("n3w", opened["token"])
+
+	cfg = map[string]string{
+		"url":      "http://prom",
+		"auth":     "basic",
+		"username": "ann",
+		"password": "hunter2",
+	}
+	require.Nil(apply(t, ds, cfg, key))
+	delete(cfg, "password")
+	cfg["url"] = "http://other"
+	require.Nil(apply(t, ds, cfg, nil))
+	assert.Empty(ds.Secrets, "an optional secret is discarded with the URL change")
+
 	cfg["password"] = "hunter2"
 	require.Nil(apply(t, ds, cfg, key))
 	cfg["auth"] = "none"

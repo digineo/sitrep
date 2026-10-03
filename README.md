@@ -116,10 +116,12 @@ of 1s to 2m (default 10s). Requests never follow redirects, and responses
 over 1 MiB are refused.
 
 Passwords and tokens are stored encrypted with `SITREP_SECRET_KEY` and are
-never shown again. Without the key, data sources cannot store secrets. If
-the key is lost or changed, data sources with secrets become unusable: their
-panels show no new data and the console marks them until you enter the
-secrets again. Public pages keep working.
+never shown again. They are bound to the URL they were entered for: saving
+another URL removes them unless you enter them again, so credentials are
+never sent to another host. Without the key, data sources cannot store
+secrets. If the key is lost or changed, data sources with secrets become
+unusable: their panels show no new data and the console marks them until
+you enter the secrets again. Public pages keep working.
 
 Admins can point a data source at any URL the server reaches. That is fine
 because admins are trusted anyway: they also run arbitrary queries.

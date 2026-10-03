@@ -221,7 +221,7 @@ async function remove() {
         v-model:values="values"
         v-model:secrets="secrets"
         :type
-        :stored="stored?.secrets ?? []"
+        :stored="stored ?? undefined"
         :errors="configErrors"
     />
     <div

@@ -58,9 +58,11 @@ var ErrUnusable = errors.New(
 
 // Apply validates a submitted configuration and writes it to ds, whose ID
 // and Type must be set. For secret fields, an absent key keeps the stored
-// value, an empty value clears it, and new values are sealed with key.
-// Fields hidden by their condition are dropped. Field errors are added to f
-// with the path "config.<field>"; ds is only changed without them.
+// value, an empty value clears it, and new values are sealed with key. A
+// stored secret is only kept while every URL field keeps its value, so that
+// it is never sent to another URL than the one it was entered for. Fields
+// hidden by their condition are dropped. Field errors are added to f with
+// the path "config.<field>"; ds is only changed without them.
 func Apply(
 	f *apierr.Fields,
 	ds *model.DataSource,
@@ -77,36 +79,18 @@ func Apply(
 	}
 
 	config := map[string]string{}
-	secrets := map[string][]byte{}
+	visible := func(fd Field) bool {
+		return fd.When == nil || config[fd.When.Field] == fd.When.Value
+	}
+
 	for _, fd := range fields {
-		if fd.When != nil && config[fd.When.Field] != fd.When.Value {
+		if fd.Kind == KindSecret || !visible(fd) {
 			continue
 		}
 
 		path := "config." + fd.Name
-		v, submitted := in[fd.Name]
-		if fd.Kind == KindSecret {
-			switch {
-			case !submitted && ds.Secrets[fd.Name] != nil:
-				secrets[fd.Name] = ds.Secrets[fd.Name]
-			case !submitted || v == "":
-				if fd.Required {
-					f.Add(path, apierr.Required)
-				}
-			case key == nil:
-				f.Add(path, apierr.SecretKeyMissing)
-			default:
-				sealed, err := seal(key, ds.ID, v)
-				if err != nil {
-					return err
-				}
-
-				secrets[fd.Name] = sealed
-			}
-			continue
-		}
-
-		if v = strings.TrimSpace(v); v == "" {
+		v := strings.TrimSpace(in[fd.Name])
+		if v == "" {
 			v = fd.Default
 		}
 		if v == "" {
@@ -120,6 +104,40 @@ func Apply(
 			f.Add(path, code)
 		} else {
 			config[fd.Name] = v
+		}
+	}
+
+	stored := ds.Secrets
+	for _, fd := range fields {
+		if fd.Kind == KindURL && config[fd.Name] != ds.Config[fd.Name] {
+			stored = nil
+		}
+	}
+
+	secrets := map[string][]byte{}
+	for _, fd := range fields {
+		if fd.Kind != KindSecret || !visible(fd) {
+			continue
+		}
+
+		path := "config." + fd.Name
+		v, submitted := in[fd.Name]
+		switch {
+		case !submitted && stored[fd.Name] != nil:
+			secrets[fd.Name] = stored[fd.Name]
+		case !submitted || v == "":
+			if fd.Required {
+				f.Add(path, apierr.Required)
+			}
+		case key == nil:
+			f.Add(path, apierr.SecretKeyMissing)
+		default:
+			sealed, err := seal(key, ds.ID, v)
+			if err != nil {
+				return err
+			}
+
+			secrets[fd.Name] = sealed
 		}
 	}
 
