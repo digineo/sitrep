@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { History, Rss } from "@lucide/vue"
 import { computed, inject, watch } from "vue"
 import { useI18n } from "vue-i18n"
 
@@ -29,6 +30,10 @@ watch(locale, () => void refresh())
 const site = computed(() => siteData.value?.site)
 const multi = bootstrap.languages.length > 1
 const overview = computed(() => pagePath({ kind: "overview" }, locale.value, multi))
+const archive = computed(() => pagePath({ kind: "archive" }, locale.value, multi))
+const feed = computed(
+  () => `${bootstrap.basePath}${multi ? `/${locale.value}` : ""}/feed.atom`,
+)
 const errorText = computed(() => t(te(live.error) ? live.error : "error.internal"))
 </script>
 
@@ -57,6 +62,23 @@ const errorText = computed(() => t(te(live.error) ? live.error : "error.internal
         </p>
       </div>
       <div class="buttons sr-header-actions">
+        <RouterLink
+            :to="archive"
+            class="button"
+            :aria-label="t('incidents.history')"
+            :title="t('incidents.history')"
+        >
+          <span class="icon"><History aria-hidden="true" /></span>
+        </RouterLink>
+        <a
+            :href="feed"
+            class="button"
+            type="application/atom+xml"
+            :aria-label="t('incidents.feed')"
+            :title="t('incidents.feedHint')"
+        >
+          <span class="icon"><Rss aria-hidden="true" /></span>
+        </a>
         <LanguageSwitcher
             v-if="bootstrap.languages.length > 1"
             :model-value="locale"

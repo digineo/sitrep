@@ -24,6 +24,24 @@ export class HTTPError extends Error {
   }
 }
 
+/** getJSON fetches a path of the public API. */
+export async function getJSON<T>(path: string, signal: AbortSignal): Promise<T> {
+  const res = await fetch(path, {
+    signal,
+    headers: { Accept: "application/json" },
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)
+    throw new HTTPError(res.status, body?.error?.code ?? "internal")
+  }
+  return await res.json()
+}
+
+/** isNotFound reports whether a load failed because the object does not exist. */
+export function isNotFound(err: unknown): boolean {
+  return err instanceof HTTPError && (err.status === 400 || err.status === 404)
+}
+
 /**
  * loadSite fetches the site payload in lang. With data in the same
  * language, only the changes since its cursor are requested.
@@ -39,17 +57,10 @@ export async function loadSite(
   const since = siteData.value && dataLang === lang
     ? `&since=${encodeURIComponent(siteData.value.cursor)}`
     : ""
-  const res = await fetch(`/api/public/sites/${siteId}?lang=${lang}${since}`, {
-    signal,
-    headers: { Accept: "application/json" },
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => null)
-    throw new HTTPError(res.status, body?.error?.code ?? "internal")
-  }
+  const path = `/api/public/sites/${siteId}?lang=${lang}${since}`
   return {
     lang,
-    payload: await res.json(),
+    payload: await getJSON<Payload>(path, signal),
   }
 }
 

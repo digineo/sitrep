@@ -21,7 +21,10 @@ const overview = computed(
 </script>
 
 <template>
-  <h1 class="title">
+  <h1
+      class="title"
+      data-main-heading
+  >
     {{ t("page.notFound") }}
   </h1>
   <p class="block">

@@ -9,18 +9,24 @@ import { createAppI18n } from "../shared/i18n"
 import { focusHeadingOnNavigation } from "../shared/routeFocus"
 import App from "./App.vue"
 import { pageRoutes } from "./urls"
+import ArchiveView from "./views/ArchiveView.vue"
+import IncidentView from "./views/IncidentView.vue"
 import LandingView from "./views/LandingView.vue"
 import NotFoundView from "./views/NotFoundView.vue"
 import SiteOverview from "./views/SiteOverview.vue"
 
 const bootstrap = readBootstrap()
+const views = bootstrap.mode === "landing"
+  ? { overview: LandingView }
+  : {
+    overview: SiteOverview,
+    archive:  ArchiveView,
+    incident: IncidentView,
+  }
 const router = createRouter({
   history: createWebHistory(bootstrap.basePath),
   routes:  [
-    ...pageRoutes(
-      bootstrap.languages,
-      { overview: bootstrap.mode === "landing" ? LandingView : SiteOverview },
-    ),
+    ...pageRoutes(bootstrap.languages, views),
     {
       path:      "/:path(.*)*",
       component: NotFoundView,
