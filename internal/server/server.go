@@ -114,6 +114,7 @@ func newServer(
 		s.deleteUpdate,
 	)
 	handle("POST /api/admin/markdown", s.previewMarkdown)
+	handle("POST /api/admin/svg", s.sanitizeSVG)
 	s.adminAPI = core.Guard(admin)
 
 	public := http.NewServeMux()
@@ -124,6 +125,7 @@ func newServer(
 		s.publicIncident,
 	)
 	public.HandleFunc("GET /api/public/sites/{site}/legal/{kind}", s.publicLegal)
+	public.HandleFunc("GET /api/public/sites/{site}/logo/{file}", s.publicLogo)
 	public.HandleFunc("GET /api/public/legal", s.publicLegalLinks)
 	public.HandleFunc("GET /api/public/legal/{kind}", s.publicLegal)
 	public.HandleFunc("GET /api/public/landing", s.publicLanding)

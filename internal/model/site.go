@@ -100,7 +100,7 @@ func (s *Site) Normalize() {
 	s.Name = s.Name.Normalize()
 	s.BrandColor = strings.ToLower(strings.TrimSpace(s.BrandColor))
 	s.Logo = strings.TrimSpace(s.Logo)
-	if logo, err := svg.Sanitize(s.Logo); err == nil {
+	if logo, code := SanitizeLogo(s.Logo); code == "" {
 		s.Logo = logo
 	}
 
@@ -179,13 +179,8 @@ func (s *Site) Validate(baseDomains []string) error {
 		f.Add("brandColor", apierr.InvalidValue)
 	}
 
-	if s.Logo != "" {
-		switch _, err := svg.Sanitize(s.Logo); {
-		case errors.Is(err, svg.ErrTooLarge):
-			f.Add("logo", apierr.SVGTooLarge)
-		case err != nil:
-			f.Add("logo", apierr.InvalidSVG)
-		}
+	if _, code := SanitizeLogo(s.Logo); s.Logo != "" && code != "" {
+		f.Add("logo", code)
 	}
 
 	s.Legal.validate(&f, "legal", s.Languages, siteLegalModes)
@@ -204,6 +199,19 @@ func (s *Site) Validate(baseDomains []string) error {
 		f.Add("availability", apierr.InvalidValue)
 	}
 	return f.Err()
+}
+
+// SanitizeLogo returns the sanitized SVG source of a logo, or the error
+// code if it cannot be used.
+func SanitizeLogo(src string) (string, string) {
+	logo, err := svg.Sanitize(src)
+	switch {
+	case errors.Is(err, svg.ErrTooLarge):
+		return "", apierr.SVGTooLarge
+	case err != nil:
+		return "", apierr.InvalidSVG
+	}
+	return logo, ""
 }
 
 // ValidTimezone reports whether tz names a zone of the tz database.

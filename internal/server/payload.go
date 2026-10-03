@@ -24,12 +24,14 @@ type payload struct {
 }
 
 type sitePayload struct {
-	Name      string      `json:"name"`
-	Theme     string      `json:"theme"`
-	Legal     legalLinks  `json:"legal"`
-	Languages []string    `json:"languages"`
-	Timezone  string      `json:"timezone"`
-	Panels    []panelInfo `json:"panels"`
+	Name       string      `json:"name"`
+	Theme      string      `json:"theme"`
+	BrandColor string      `json:"brandColor,omitempty"`
+	Logo       string      `json:"logo,omitempty"` // URL
+	Legal      legalLinks  `json:"legal"`
+	Languages  []string    `json:"languages"`
+	Timezone   string      `json:"timezone"`
+	Panels     []panelInfo `json:"panels"`
 }
 
 // panelInfo is a panel's presentation, in display order.
@@ -238,12 +240,14 @@ func (s *Server) sitePayload(
 
 	if !incremental || s.poller.SiteSeq(site.ID) > after {
 		p.Site = &sitePayload{
-			Name:      site.Name.Resolve(lang, langs),
-			Theme:     site.Theme,
-			Legal:     newLegalLinks(site, settings, lang),
-			Languages: langs.Enabled,
-			Timezone:  site.Timezone,
-			Panels:    []panelInfo{},
+			Name:       site.Name.Resolve(lang, langs),
+			Theme:      site.Theme,
+			BrandColor: site.BrandColor,
+			Logo:       logoURL(site),
+			Legal:      newLegalLinks(site, settings, lang),
+			Languages:  langs.Enabled,
+			Timezone:   site.Timezone,
+			Panels:     []panelInfo{},
 		}
 		if site.Theme == "inherit" {
 			p.Site.Theme = settings.DefaultTheme
