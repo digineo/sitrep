@@ -526,6 +526,63 @@ func TestAdminShell(t *testing.T) {
 	assert.Equal("en", parseBootstrap(t, w.Body.String()).Lang)
 }
 
+// TestSecurityHeaders checks every kind of response: all are nosniff, and
+// every HTML shell has the content security and referrer policies. Only
+// the console's shell forbids framing.
+func TestSecurityHeaders(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	assert.Equal("default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'self'", cspPublic)
+	assert.Equal(cspPublic+"; frame-ancestors 'none'", cspAdmin)
+
+	f := newFixture(t)
+	gamma, err := f.db.SiteByRoute(model.Route{
+		Mode:   model.RouteCustom,
+		Domain: "status.gamma.org",
+	})
+	require.NoError(err)
+	gamma.Availability = model.AvailabilityOffline
+	require.NoError(f.db.UpdateSite(gamma))
+
+	tests := []struct {
+		host, path string
+		status     int
+		csp        string // "" for responses that are not shells
+	}{
+		{"status.example.com", "/en/", http.StatusOK, cspPublic},
+		{"status.example.com", "/nope", http.StatusNotFound, cspPublic},
+		{"status.example.com", "/acme/", http.StatusOK, cspPublic},
+		{"beta.status.example.com", "/en/nope", http.StatusNotFound, cspPublic},
+		{"status.gamma.org", "/", http.StatusServiceUnavailable, cspPublic},
+		{"status.example.com", "/admin/", http.StatusOK, cspAdmin},
+		{"status.example.com", "/acme", http.StatusFound, ""},
+		{"status.example.com", "/healthz", http.StatusOK, ""},
+		{"unknown.example", "/tls/authorize?domain=example.com", http.StatusNotFound, ""},
+		{"status.example.com", "/assets/admin-abc.js", http.StatusOK, ""},
+		{"status.example.com", "/assets/missing.js", http.StatusNotFound, ""},
+		{"status.example.com", "/api/public/sites/x", http.StatusBadRequest, ""},
+		{"status.example.com", "/api/admin/settings", http.StatusUnauthorized, ""},
+		{"status.example.com", "/auth/session", http.StatusOK, ""},
+		{"beta.status.example.com", "/en/feed.atom", http.StatusOK, ""},
+		{"status.gamma.org", "/incidents.json", http.StatusServiceUnavailable, ""},
+		{"unknown.example", "/", http.StatusNotFound, ""},
+	}
+	for _, tt := range tests {
+		w := f.get(tt.host, tt.path)
+		name := tt.host + tt.path
+		h := w.Header()
+		assert.Equal(tt.status, w.Code, name)
+		assert.Equal("nosniff", h.Get("X-Content-Type-Options"), name)
+		if tt.csp != "" {
+			assert.Equal("text/html; charset=utf-8", h.Get("Content-Type"), name)
+			assert.Equal(tt.csp, h.Get("Content-Security-Policy"), name)
+			referrer := h.Get("Referrer-Policy")
+			assert.Equal("strict-origin-when-cross-origin", referrer, name)
+		}
+	}
+}
+
 func TestSettingsAPI(t *testing.T) {
 	require := require.New(t)
 	assert := assert.New(t)
