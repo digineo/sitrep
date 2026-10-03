@@ -65,21 +65,14 @@ func TestLegalValidate(t *testing.T) {
 	assert.Equal(t, want, fieldCodes(t, s.Validate()))
 }
 
-func TestLegalEffective(t *testing.T) {
-	instance := LegalPage{
-		Mode: LegalText,
-		Text: Text{"en": "Instance"},
-	}
-	own := LegalPage{
-		Mode: LegalURL,
-		URL:  Text{"en": "https://acme.example"},
-	}
-	assert.Equal(t, instance, LegalPage{Mode: LegalInherit}.Effective(instance))
-	assert.Equal(t, own, own.Effective(instance))
-	assert.Equal(
+func TestLegalInherits(t *testing.T) {
+	assert.True(t, LegalPage{Mode: LegalInherit}.Inherits())
+	assert.True(
 		t,
-		LegalPage{Mode: LegalNone},
-		LegalPage{Mode: LegalNone}.Effective(instance),
-		"none does not inherit",
+		LegalPage{}.Inherits(),
+		"sites stored before they had legal pages inherit",
 	)
+	for _, mode := range []string{LegalNone, LegalURL, LegalText} {
+		assert.False(t, LegalPage{Mode: mode}.Inherits(), mode)
+	}
 }

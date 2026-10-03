@@ -116,7 +116,7 @@ func (s *Server) listSites(w http.ResponseWriter, r *http.Request) {
 			Route:     site.Route,
 			Status:    s.status(panels[site.ID], incidents[site.ID]),
 		}
-		if site.Name.Missing(langs) {
+		if missing(langs, append(site.Legal.Texts(), site.Name)...) {
 			sum.Missing++
 		}
 

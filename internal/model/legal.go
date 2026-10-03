@@ -38,13 +38,9 @@ type LegalPage struct {
 	Text Text   `json:"text,omitempty"`
 }
 
-// Effective returns the page a site shows: its own, or instance if the
-// site inherits it.
-func (p LegalPage) Effective(instance LegalPage) LegalPage {
-	if p.Mode == LegalNone || p.Mode == LegalURL || p.Mode == LegalText {
-		return p
-	}
-	return instance
+// Inherits reports whether a site shows the instance's page instead.
+func (p LegalPage) Inherits() bool {
+	return p.Mode != LegalNone && p.Mode != LegalURL && p.Mode != LegalText
 }
 
 func (l Legal) normalize(mode string) Legal {
@@ -98,8 +94,8 @@ func (p LegalPage) validate(
 	validateText(f, path+".text", p.Text, l, p.Mode == LegalText, maxMarkdown)
 }
 
-// texts returns the localized texts of the pages.
-func (l Legal) texts() []Text {
+// Texts returns the localized texts of the pages.
+func (l Legal) Texts() []Text {
 	return []Text{l.Imprint.URL, l.Imprint.Text, l.Privacy.URL, l.Privacy.Text}
 }
 

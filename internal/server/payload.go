@@ -26,6 +26,7 @@ type payload struct {
 type sitePayload struct {
 	Name      string      `json:"name"`
 	Theme     string      `json:"theme"`
+	Legal     legalLinks  `json:"legal"`
 	Languages []string    `json:"languages"`
 	Timezone  string      `json:"timezone"`
 	Panels    []panelInfo `json:"panels"`
@@ -239,6 +240,7 @@ func (s *Server) sitePayload(
 		p.Site = &sitePayload{
 			Name:      site.Name.Resolve(lang, langs),
 			Theme:     site.Theme,
+			Legal:     newLegalLinks(site, settings, lang),
 			Languages: langs.Enabled,
 			Timezone:  site.Timezone,
 			Panels:    []panelInfo{},

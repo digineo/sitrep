@@ -123,6 +123,10 @@ func newServer(
 		"GET /api/public/sites/{site}/incidents/{incident}",
 		s.publicIncident,
 	)
+	public.HandleFunc("GET /api/public/sites/{site}/legal/{kind}", s.publicLegal)
+	public.HandleFunc("GET /api/public/legal", s.publicLegalLinks)
+	public.HandleFunc("GET /api/public/legal/{kind}", s.publicLegal)
+	public.HandleFunc("GET /api/public/landing", s.publicLanding)
 	s.publicAPI = public
 
 	return s
@@ -326,7 +330,13 @@ func (s *Server) serveSite(
 		}
 
 		title = inc.Title.Resolve(res.lang, langs)
-	default:
+	case pageImprint, pagePrivacy:
+		var handled bool
+		if title, handled = legalShell(w, r, res, site, settings); handled {
+			return
+		}
+	}
+	if title == "" && res.page.kind != pageOverview {
 		res.page.kind = pageNotFound
 		status = http.StatusNotFound
 		title = c.T("page.notFound", nil)
@@ -369,7 +379,13 @@ func (s *Server) serveLanding(
 	c := i18n.Get(res.lang)
 	status := http.StatusOK
 	title := ""
-	if res.page.kind != pageOverview {
+	if res.page.kind == pageImprint || res.page.kind == pagePrivacy {
+		var handled bool
+		if title, handled = legalShell(w, r, res, nil, settings); handled {
+			return
+		}
+	}
+	if title == "" && res.page.kind != pageOverview {
 		res.page.kind = pageNotFound
 		status = http.StatusNotFound
 		title = c.T("page.notFound", nil)
