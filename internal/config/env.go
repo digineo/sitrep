@@ -72,13 +72,6 @@ func (e *Env) Required(name string) string {
 	return v
 }
 
-// Optional returns the variable's value, or "" if it is unset.
-func (e *Env) Optional(name string) string {
-	v, _ := e.lookup(name)
-	e.log(name, v)
-	return v
-}
-
 // Secret returns the variable's value, or "" if it is unset. The startup
 // log only says whether it is set.
 func (e *Env) Secret(name string) string {
