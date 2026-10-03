@@ -102,8 +102,12 @@ test("opens the sidebar as drawer on small screens", async({ page }) => {
   })
   await signIn(page)
   const menu = page.getByRole("button", { name: "Menu" })
+  const settings = page.locator("#sr-sidebar").getByRole("link", {
+    name:  "Settings",
+    exact: true,
+  })
   await expect(menu).toHaveAttribute("aria-expanded", "false")
-  await expect(page.getByRole("link", { name: "Settings" })).toBeHidden()
+  await expect(settings).toBeHidden()
 
   await menu.click()
   await expect(menu).toHaveAttribute("aria-expanded", "true")
@@ -120,7 +124,7 @@ test("opens the sidebar as drawer on small screens", async({ page }) => {
   await expect(menu).toBeFocused()
 
   await menu.click()
-  await page.getByRole("link", { name: "Settings" }).click()
+  await settings.click()
   await expect(page.getByRole("heading", {
     level: 1,
     name:  "Settings",
