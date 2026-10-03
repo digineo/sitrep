@@ -98,7 +98,8 @@
     "sites": "Statusseiten",
     "status": "Status: {status}",
     "panels": "Panels",
-    "siteSettings": "Einstellungen"
+    "siteSettings": "Einstellungen",
+    "incidents": "Vorfälle"
   },
   "home": {
     "title": "Statusseiten",
@@ -106,7 +107,8 @@
     "missing": "1 fehlende Übersetzung | {n} fehlende Übersetzungen",
     "noDataSource": "Statusseiten zeigen Daten aus Datenquellen. Legen Sie zuerst eine Datenquelle an.",
     "panelsOf": "Panels von {site}",
-    "settingsOf": "Einstellungen von {site}"
+    "settingsOf": "Einstellungen von {site}",
+    "incidentsOf": "Vorfälle von {site}"
   },
   "settings": {
     "title": "Einstellungen",
@@ -201,7 +203,7 @@
     "themeInherit": "Standard ({theme})",
     "delete": "Statusseite löschen",
     "deleteTitle": "Statusseite löschen?",
-    "deleteMessage": "{site} wird mit allen Panels gelöscht.",
+    "deleteMessage": "{site} wird mit allen Panels und Vorfällen gelöscht.",
     "origins": "Erlaubte Ursprünge für incidents.json",
     "originsHelp": "Andere Websites unter diesen Ursprüngen dürfen die Vorfälle im Browser lesen (CORS), z. B. https://www.example.com.",
     "origin": "Ursprung {n}",
@@ -383,5 +385,63 @@
   },
   "format": {
     "dateTime": "{day}.{month}.{year}, {hour}:{minute} {zone}"
+  },
+  "incidentList": {
+    "title": "Vorfälle von {site}",
+    "new": "Neuer Vorfall",
+    "empty": "Noch keine Vorfälle."
+  },
+  "incidentEditor": {
+    "new": "Neuer Vorfall",
+    "title": "Titel",
+    "create": "Vorfall anlegen",
+    "created": "Vorfall angelegt.",
+    "author": "Von {name}",
+    "editedBy": "bearbeitet von {name}",
+    "allIncidents": "Alle Vorfälle",
+    "public": "Öffentliche Seite",
+    "delete": "Vorfall löschen",
+    "deleteTitle": "Vorfall löschen?",
+    "deleteMessage": "Der Vorfall {title} wird mit allen Meldungen gelöscht.",
+    "deleted": "Vorfall gelöscht.",
+    "saveTitle": "Titel speichern",
+    "titleSaved": "Titel gespeichert.",
+    "addUpdate": "Meldung hinzufügen",
+    "newUpdate": "Neue Meldung",
+    "postUpdate": "Meldung veröffentlichen",
+    "updatePosted": "Meldung veröffentlicht.",
+    "history": "Verlauf",
+    "editUpdate": "Meldung vom {time} bearbeiten",
+    "deleteUpdate": "Meldung vom {time} löschen",
+    "updateSaved": "Meldung gespeichert.",
+    "updateDeleted": "Meldung gelöscht.",
+    "deleteUpdateTitle": "Meldung löschen?",
+    "deleteUpdateMessage": "Die Meldung vom {time} wird gelöscht.",
+    "deleteLastTitle": "Vorfall löschen?",
+    "deleteLastMessage": "Dies ist die einzige Meldung. Wenn Sie sie löschen, wird auch der Vorfall {title} gelöscht.",
+    "openingLocked": "Die erste Meldung kann nur gelöscht werden, wenn die nächste Meldung den Status geplant oder aktiv setzt.",
+    "confirmDeleteUpdate": "Meldung löschen"
+  },
+  "updateForm": {
+    "time": "Zeitpunkt ({zone})",
+    "timeHelpNew": "Leer lassen für jetzt.",
+    "timeHelpEdit": "Leer lassen, um den Zeitpunkt beizubehalten.",
+    "now": "Jetzt",
+    "hourAgo": "Vor 1 Stunde",
+    "twoHoursAgo": "Vor 2 Stunden",
+    "status": "Status",
+    "severity": "Schweregrad",
+    "unchanged": "Unverändert",
+    "none": "Keiner",
+    "description": "Beschreibung",
+    "plannedHelp": "Geben Sie das erwartete Zeitfenster an.",
+    "optionalHelp": "Optional, wenn sich nur der Schweregrad ändert.",
+    "nothingChanged": "Wählen Sie einen neuen Status, einen neuen Schweregrad oder beides."
+  },
+  "markdown": {
+    "view": "Ansicht",
+    "edit": "Bearbeiten",
+    "preview": "Vorschau",
+    "previewFailed": "Die Vorschau ist gerade nicht verfügbar."
   }
 }

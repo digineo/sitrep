@@ -14,6 +14,7 @@ import { useI18n } from "vue-i18n"
 import { useRoute } from "vue-router"
 
 import { type Bootstrap } from "../../shared/bootstrap"
+import IncidentList from "../../shared/components/IncidentList.vue"
 import LiveIndicator from "../../shared/components/LiveIndicator.vue"
 import SRField from "../../shared/components/SRField.vue"
 import StatusBanner from "../../shared/components/StatusBanner.vue"
@@ -58,6 +59,8 @@ watch(summary, (s) => {
 }, { immediate: true })
 
 usePageTitle(() => payload.value?.site?.name ?? "")
+
+const incidentLink = (incident: string) => `/sites/${id}/incidents/${incident}`
 
 /** order holds the panel order while it differs from the stored one. */
 const order = ref<string[] | null>(null)
@@ -263,6 +266,22 @@ onBeforeUnmount(stopListening)
   </div>
   <template v-if="payload?.site">
     <StatusBanner :status="payload.status" />
+    <template v-if="payload.incidents">
+      <IncidentList
+          v-if="payload.incidents.ongoing.length"
+          :title="t('incidents.current')"
+          :incidents="payload.incidents.ongoing"
+          :timezone="payload.site.timezone"
+          :to="incidentLink"
+      />
+      <IncidentList
+          v-if="payload.incidents.upcoming.length"
+          :title="t('incidents.upcoming')"
+          :incidents="payload.incidents.upcoming"
+          :timezone="payload.site.timezone"
+          :to="incidentLink"
+      />
+    </template>
     <p
         v-if="!panels.length"
         class="box"
@@ -273,6 +292,8 @@ onBeforeUnmount(stopListening)
         :panels
         :data="payload.panels ?? {}"
         :timezone="payload.site.timezone"
+        :spans="payload.incidents?.spans"
+        :incident-link
         :class="{ 'sr-dragging': dragging }"
     >
       <template #actions="{ panel }">
@@ -315,6 +336,13 @@ onBeforeUnmount(stopListening)
         </span>
       </template>
     </PanelGroups>
+    <IncidentList
+        v-if="payload.incidents?.finished.length"
+        :title="t('incidents.recent')"
+        :incidents="payload.incidents.finished.slice(0, 5)"
+        :timezone="payload.site.timezone"
+        :to="incidentLink"
+    />
   </template>
   <p
       class="sr-visually-hidden"

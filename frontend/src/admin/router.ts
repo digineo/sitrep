@@ -3,6 +3,9 @@ import { createRouter, createWebHistory } from "vue-router"
 import DataSourceFormView from "./views/DataSourceFormView.vue"
 import DataSourcesView from "./views/DataSourcesView.vue"
 import HomeView from "./views/HomeView.vue"
+import IncidentCreateView from "./views/IncidentCreateView.vue"
+import IncidentEditView from "./views/IncidentEditView.vue"
+import IncidentsView from "./views/IncidentsView.vue"
 import NotFoundView from "./views/NotFoundView.vue"
 import PanelEditorView from "./views/PanelEditorView.vue"
 import SettingsView from "./views/SettingsView.vue"
@@ -52,6 +55,18 @@ export const router = createRouter({
     {
       path:      "/sites/:site/panels/:panel",
       component: PanelEditorView,
+    },
+    {
+      path:      "/sites/:site/incidents",
+      component: IncidentsView,
+    },
+    {
+      path:      "/sites/:site/incidents/new",
+      component: IncidentCreateView,
+    },
+    {
+      path:      "/sites/:site/incidents/:incident",
+      component: IncidentEditView,
     },
     {
       path:      "/:path(.*)*",

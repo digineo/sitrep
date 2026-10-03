@@ -1,3 +1,5 @@
+import type { IncidentStatus, Severity } from "../shared/payload"
+
 export interface Languages {
   enabled: string[]
   primary: string
@@ -31,6 +33,40 @@ export interface Site {
    * forever.
    */
   incidentRetentionDays: number
+}
+
+/** Person is the admin who created or edited something. */
+export interface Person {
+  subject:     string
+  displayName: string
+}
+
+export interface IncidentUpdate {
+  id:           string
+  at:           string
+  status?:      IncidentStatus
+  severity?:    Severity
+  /** description is Markdown; html holds it rendered, per language. */
+  description?: Text
+  html?:        Text
+  author:       Person
+  editedBy?:    Person
+  editedAt?:    string
+}
+
+/**
+ * Incident is an incident as the console sees it; its updates are ordered
+ * by time.
+ */
+export interface Incident {
+  id:           string
+  title:        Text
+  updates:      IncidentUpdate[]
+  author:       Person
+  status:       IncidentStatus
+  severity?:    Severity
+  phase:        "upcoming" | "ongoing" | "finished"
+  lastActivity: string
 }
 
 export interface SiteSummary {

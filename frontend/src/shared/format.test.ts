@@ -7,6 +7,8 @@ import {
   formatNumber,
   formatRange,
   formatTick,
+  fromZonedInput,
+  toZonedInput,
 } from "./format"
 
 const noon = new Date(Date.UTC(2026, 9, 2, 12, 5))
@@ -47,5 +49,40 @@ describe("formatRange", () => {
     expect(formatRange(86400 * 7, "de")).toBe("7 Tage")
     expect(formatRange(5400, "en")).toBe("90 minutes")
     expect(formatRange(61, "de")).toBe("61 Sekunden")
+  })
+})
+
+describe("zoned inputs", () => {
+  it("shows a time in the zone, to the minute", () => {
+    expect(toZonedInput(new Date(Date.UTC(2026, 9, 2, 12, 5, 42)), "Europe/Berlin"))
+      .toBe("2026-10-02T14:05")
+    expect(toZonedInput(new Date(Date.UTC(2026, 9, 2, 23, 30)), "UTC"))
+      .toBe("2026-10-02T23:30")
+    expect(toZonedInput(new Date(Date.UTC(2026, 9, 2, 0, 0)), "America/New_York"))
+      .toBe("2026-10-01T20:00")
+  })
+
+  it("reads a value in the zone", () => {
+    expect(fromZonedInput("2026-10-02T14:05", "Europe/Berlin").toISOString())
+      .toBe("2026-10-02T12:05:00.000Z")
+    expect(fromZonedInput("2026-01-15T14:05", "Europe/Berlin").toISOString())
+      .toBe("2026-01-15T13:05:00.000Z")
+    expect(fromZonedInput("2026-10-01T20:00", "America/New_York").toISOString())
+      .toBe("2026-10-02T00:00:00.000Z")
+    expect(fromZonedInput("2026-10-02T14:05", "Asia/Kolkata").toISOString())
+      .toBe("2026-10-02T08:35:00.000Z")
+  })
+
+  it("handles daylight saving changes", () => {
+    // Berlin skips 02:00 to 03:00 on 2026-03-29 and repeats
+    // 02:00 to 03:00 on 2026-10-25.
+    expect(fromZonedInput("2026-03-29T01:30", "Europe/Berlin").toISOString())
+      .toBe("2026-03-29T00:30:00.000Z")
+    expect(fromZonedInput("2026-03-29T03:30", "Europe/Berlin").toISOString())
+      .toBe("2026-03-29T01:30:00.000Z")
+    expect(fromZonedInput("2026-03-29T02:30", "Europe/Berlin").toISOString())
+      .toBe("2026-03-29T01:30:00.000Z")
+    expect(fromZonedInput("2026-10-25T02:30", "Europe/Berlin").toISOString())
+      .toBe("2026-10-25T00:30:00.000Z")
   })
 })

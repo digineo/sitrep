@@ -1,9 +1,10 @@
 <script setup lang="ts">
 defineProps<{
-  variant?: "primary" | "danger"
-  type?:    "button" | "submit"
-  loading?: boolean
-  href?:    string
+  variant?:  "primary" | "danger"
+  type?:     "button" | "submit"
+  loading?:  boolean
+  disabled?: boolean
+  href?:     string
 }>()
 </script>
 
@@ -19,7 +20,7 @@ defineProps<{
       :type="type ?? 'button'"
       class="button"
       :class="[variant && `is-${variant}`, { 'is-loading': loading }]"
-      :disabled="loading || undefined"
+      :disabled="loading || disabled || undefined"
   >
     <slot />
   </button>

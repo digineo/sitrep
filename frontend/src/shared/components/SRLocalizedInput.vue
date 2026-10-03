@@ -24,11 +24,19 @@ const props = defineProps<{
  */
 const model = defineModel<Record<string, string> | undefined>({ required: true })
 
+defineSlots<{
+  /** default replaces the input of a language; attrs belong on its form control. */
+  default?: (props: {
+    value:  string
+    update: (value: string) => void
+    attrs:  Record<string, unknown>
+  }) => unknown
+}>()
+
 const { t } = useI18n()
 const id = useId()
 const active = ref(props.languages.primary)
 const tabs = ref<HTMLButtonElement[]>([])
-const inputs = ref<HTMLInputElement[]>([])
 
 const value = (lang: string) => model.value?.[lang] ?? ""
 const anySet = computed(
@@ -57,9 +65,10 @@ function update(lang: string, v: string) {
 async function select(lang: string, focus: "tab" | "input" | false = false) {
   active.value = lang
   await nextTick()
-  const i = props.languages.enabled.indexOf(lang)
-  if (focus) {
-    (focus === "tab" ? tabs.value[i] : inputs.value[i])?.focus()
+  if (focus === "tab") {
+    tabs.value[props.languages.enabled.indexOf(lang)]?.focus()
+  } else if (focus) {
+    document.getElementById(`${id}-${lang}`)?.focus()
   }
 }
 
@@ -82,6 +91,25 @@ function onTabKey(event: KeyboardEvent, i: number) {
 function onInvalid(lang: string) {
   if (active.value !== lang) {
     void select(lang, "input")
+  }
+}
+
+/** attrs returns the attributes of a language's form control. */
+function attrs(lang: string): Record<string, unknown> {
+  const multi = props.languages.enabled.length > 1
+  const describedby = [
+    props.help && `${id}-help`,
+    props.errors?.[lang] && `${id}-error-${lang}`,
+  ].filter(Boolean).join(" ") || undefined
+  return {
+    "id":               `${id}-${lang}`,
+    lang,
+    "required":         props.required && lang === props.languages.primary,
+    "maxlength":        props.maxlength,
+    "aria-labelledby":  multi ? `${id}-label ${id}-tab-${lang}` : `${id}-label`,
+    "aria-describedby": describedby,
+    "aria-invalid":     props.errors?.[lang] ? true : undefined,
+    "onInvalid":        () => onInvalid(lang),
   }
 }
 </script>
@@ -143,20 +171,19 @@ function onInvalid(lang: string) {
         :role="languages.enabled.length > 1 ? 'tabpanel' : undefined"
         :aria-labelledby="languages.enabled.length > 1 ? `${id}-tab-${lang}` : undefined"
     >
+      <slot
+          v-if="$slots.default"
+          :value="value(lang)"
+          :update="(v: string) => update(lang, v)"
+          :attrs="attrs(lang)"
+      />
       <component
           :is="multiline ? 'textarea' : 'input'"
-          :id="`${id}-${lang}`"
-          ref="inputs"
+          v-else
+          v-bind="attrs(lang)"
           :class="multiline ? 'textarea sr-autogrow' : 'input'"
-          :lang
           :value="value(lang)"
-          :required="required && lang === languages.primary"
-          :maxlength
-          :aria-labelledby="languages.enabled.length > 1 ? `${id}-label ${id}-tab-${lang}` : `${id}-label`"
-          :aria-describedby="[help && `${id}-help`, errors?.[lang] && `${id}-error-${lang}`].filter(Boolean).join(' ') || undefined"
-          :aria-invalid="errors?.[lang] ? true : undefined"
           @input="update(lang, ($event.target as HTMLInputElement).value)"
-          @invalid="onInvalid(lang)"
       />
       <p
           v-if="errors?.[lang]"

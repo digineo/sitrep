@@ -84,3 +84,45 @@ export function formatRange(seconds: number, lang: string): string {
     unitDisplay: "long",
   }).format(seconds / size)
 }
+
+/** zonedParts returns the numeric date and time parts of a time in the zone. */
+function zonedParts(time: Date, timeZone: string): Record<string, string> {
+  // The parts are numbers, so the locale only picks digits and padding.
+  const format = new Intl.DateTimeFormat("en", {
+    year:      "numeric",
+    month:     "2-digit",
+    day:       "2-digit",
+    hour:      "2-digit",
+    minute:    "2-digit",
+    hourCycle: "h23",
+    timeZone,
+  })
+  return Object.fromEntries(format.formatToParts(time).map(p => [p.type, p.value]))
+}
+
+/**
+ * toZonedInput returns the value of a datetime-local input that shows time in
+ * the zone, to the minute.
+ */
+export function toZonedInput(time: Date, timeZone: string): string {
+  const p = zonedParts(time, timeZone)
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`
+}
+
+/**
+ * fromZonedInput returns the time that a datetime-local value means in the
+ * zone. A wall time skipped by a daylight saving change resolves to the
+ * time after the change; a repeated one to its first occurrence.
+ */
+export function fromZonedInput(value: string, timeZone: string): Date {
+  const wall = Date.parse(`${value}Z`)
+  const day = 86_400_000
+  const offset = (t: number) =>
+    Date.parse(`${toZonedInput(new Date(t), timeZone)}Z`)
+    - Math.floor(t / 60_000) * 60_000
+  const before = wall - offset(wall - day)
+  const after = wall - offset(wall + day)
+  const valid = [before, after]
+    .filter(t => toZonedInput(new Date(t), timeZone) === value)
+  return new Date(valid.length ? Math.min(...valid) : before)
+}

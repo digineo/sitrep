@@ -113,16 +113,11 @@
   --sr-code-label: #a3326c;
 }
 
-// Light tags keep a dark background in the dark color scheme.
+// Light tags get a dark background and light text in the dark color scheme.
 @mixin light-tags-dark {
-  .tag.is-light.is-warning {
-    color: #f0c46a;
-    background: rgb(224 165 43 / 20%);
-  }
-
-  .tag.is-light.is-danger {
-    color: #f28b8e;
-    background: rgb(229 72 77 / 20%);
+  .tag.is-light {
+    --bulma-tag-background-l: 20%;
+    --bulma-tag-color-l: 78%;
   }
 }
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { LayoutDashboard, Plus, Settings } from "@lucide/vue"
+import { LayoutDashboard, Plus, Settings, Siren } from "@lucide/vue"
 import { computed, inject } from "vue"
 import { useI18n } from "vue-i18n"
 
@@ -67,6 +67,14 @@ const sites = computed(() => {
         </SRTag>
         <StatusBanner :status="site.status.overall" />
         <div class="buttons">
+          <RouterLink
+              :to="`/sites/${site.id}/incidents`"
+              class="button is-small"
+              :aria-label="t('home.incidentsOf', { site: site.label })"
+              :title="t('nav.incidents')"
+          >
+            <span class="icon"><Siren aria-hidden="true" /></span>
+          </RouterLink>
           <RouterLink
               :to="`/sites/${site.id}`"
               class="button is-small"

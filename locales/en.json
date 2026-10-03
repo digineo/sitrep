@@ -98,7 +98,8 @@
     "sites": "Status pages",
     "status": "Status: {status}",
     "panels": "Panels",
-    "siteSettings": "Settings"
+    "siteSettings": "Settings",
+    "incidents": "Incidents"
   },
   "home": {
     "title": "Status pages",
@@ -106,7 +107,8 @@
     "missing": "1 missing translation | {n} missing translations",
     "noDataSource": "Status pages show data from data sources. Add a data source first.",
     "panelsOf": "Panels of {site}",
-    "settingsOf": "Settings of {site}"
+    "settingsOf": "Settings of {site}",
+    "incidentsOf": "Incidents of {site}"
   },
   "settings": {
     "title": "Settings",
@@ -201,7 +203,7 @@
     "themeInherit": "Default ({theme})",
     "delete": "Delete status page",
     "deleteTitle": "Delete status page?",
-    "deleteMessage": "{site} will be deleted with all its panels.",
+    "deleteMessage": "{site} will be deleted with all its panels and incidents.",
     "origins": "Allowed origins for incidents.json",
     "originsHelp": "Other websites at these origins may read the incidents in the browser (CORS), e.g. https://www.example.com.",
     "origin": "Origin {n}",
@@ -383,5 +385,63 @@
   },
   "format": {
     "dateTime": "{year}-{month}-{day} {hour}:{minute} {zone}"
+  },
+  "incidentList": {
+    "title": "Incidents of {site}",
+    "new": "New incident",
+    "empty": "No incidents yet."
+  },
+  "incidentEditor": {
+    "new": "New incident",
+    "title": "Title",
+    "create": "Create incident",
+    "created": "Incident created.",
+    "author": "By {name}",
+    "editedBy": "edited by {name}",
+    "allIncidents": "All incidents",
+    "public": "Public page",
+    "delete": "Delete incident",
+    "deleteTitle": "Delete incident?",
+    "deleteMessage": "The incident {title} will be deleted with all its updates.",
+    "deleted": "Incident deleted.",
+    "saveTitle": "Save title",
+    "titleSaved": "Title saved.",
+    "addUpdate": "Add update",
+    "newUpdate": "New update",
+    "postUpdate": "Post update",
+    "updatePosted": "Update posted.",
+    "history": "History",
+    "editUpdate": "Edit update from {time}",
+    "deleteUpdate": "Delete update from {time}",
+    "updateSaved": "Update saved.",
+    "updateDeleted": "Update deleted.",
+    "deleteUpdateTitle": "Delete update?",
+    "deleteUpdateMessage": "The update from {time} will be deleted.",
+    "deleteLastTitle": "Delete incident?",
+    "deleteLastMessage": "This is the only update. Deleting it also deletes the incident {title}.",
+    "openingLocked": "The opening update can only be deleted while the next update sets the status to planned or active.",
+    "confirmDeleteUpdate": "Delete update"
+  },
+  "updateForm": {
+    "time": "Time ({zone})",
+    "timeHelpNew": "Leave empty for now.",
+    "timeHelpEdit": "Leave empty to keep the time.",
+    "now": "Now",
+    "hourAgo": "1 hour ago",
+    "twoHoursAgo": "2 hours ago",
+    "status": "Status",
+    "severity": "Severity",
+    "unchanged": "Unchanged",
+    "none": "None",
+    "description": "Description",
+    "plannedHelp": "State the expected time window.",
+    "optionalHelp": "Optional when only the severity changes.",
+    "nothingChanged": "Choose a new status, a new severity or both."
+  },
+  "markdown": {
+    "view": "View",
+    "edit": "Edit",
+    "preview": "Preview",
+    "previewFailed": "The preview is not available right now."
   }
 }

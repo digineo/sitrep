@@ -6,6 +6,7 @@ import {
   LogOut,
   Plus,
   Settings,
+  Siren,
 } from "@lucide/vue"
 import { computed, inject, ref, watch } from "vue"
 import { useI18n } from "vue-i18n"
@@ -155,6 +156,22 @@ function onToggle(site: string, event: Event) {
           <span class="icon sr-chevron"><ChevronRight aria-hidden="true" /></span>
         </summary>
         <ul class="menu-list">
+          <li>
+            <RouterLink
+                :to="`/sites/${site.id}/incidents`"
+                active-class="is-active"
+            >
+              <span class="icon-text">
+                <span class="icon"><Siren aria-hidden="true" /></span>
+                <span>{{ t("nav.incidents") }}</span>
+              </span>
+              <SRStatusDot
+                  :state="site.status.incidents"
+                  :label="t('nav.status', { status: t(`status.${site.status.incidents}`) })"
+                  class="ml-2"
+              />
+            </RouterLink>
+          </li>
           <li>
             <RouterLink
                 :to="`/sites/${site.id}`"
