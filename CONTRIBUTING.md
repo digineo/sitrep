@@ -37,7 +37,7 @@ password; release builds never do.
 |---|---|
 | `make test-backend` | Go tests, also with the `testauth` build tag |
 | `make test-frontend` | Vitest component and unit tests |
-| `make test-e2e` | Playwright tests against a `testauth` build; install the browser once with `cd frontend && npx playwright install chromium` |
+| `make test-e2e` | Playwright tests against a `testauth` build and a stub of the Prometheus API (`frontend/e2e/prometheus.ts`); install the browser once with `cd frontend && npx playwright install chromium` |
 | `make test` | all of the above |
 
 ## Adding a language
@@ -63,3 +63,25 @@ placeholders differ from English or the slugs are invalid.
 4. Add one blank import to `cmd/sitrep/providers.go`.
 
 The core applies CSRF checks to all routes below `/auth/`.
+
+## Adding a data source type
+
+1. Create a package `internal/datasource/<id>` that implements
+   `datasource.Type`: its configuration fields, the panel types it feeds,
+   evaluation of a panel's query into a normalized result (a scalar,
+   labeled samples, or labeled series on a shared time axis), a connection
+   test and a summary for lists. Reduce, thresholds, series handling,
+   caching and polling are shared and need no code.
+2. Optionally implement `datasource.Router` for admin-only routes below
+   `/api/admin/datasources/{id}/<id>/`, and `datasource.Editor` to pick a
+   query editor in the console. Without an editor hint, queries get a plain
+   text area.
+3. Register it in an `init` function with `datasource.Register("<id>", Type{})`.
+4. Add one blank import to `cmd/sitrep/datasources.go`.
+5. Add the type's texts to every catalog: `datasource.<id>.name`, and per
+   field `datasource.<id>.<field>.label`, an optional `.help`, and
+   `.options.<value>` for select fields. The console renders the
+   configuration form from the field description.
+
+Secret fields are encrypted by the core; the type receives them in plain
+text when it evaluates or tests.

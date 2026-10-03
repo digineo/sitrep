@@ -13,10 +13,15 @@ ships as one binary with the web frontend and an embedded database file.
 - Fully localized: German and English ship with the binary, adding a
   language means adding one catalog file. Visitors get their language from
   the URL, their earlier choice or their browser.
+- Panels fed by Prometheus queries: single values, up/down states by
+  thresholds, and charts. SitRep polls the data sources and serves
+  visitors from memory; visitors never cause queries.
+- Status pages refresh themselves and fetch only what changed.
 - Light, dark and system color schemes, remembered per visitor.
 - Admin console with sign-in by username and password (bcrypt or argon2id
-  hashes), login throttling and instance settings for languages and the
-  default color scheme.
+  hashes), login throttling, data sources, status pages with their panels
+  and a live preview, and instance settings for languages and the default
+  color scheme.
 - No third-party requests, no tracking, no consent banner needed.
 
 ## Quick start
@@ -101,6 +106,27 @@ start one within five seconds is refused as too many attempts. Each argon2id
 verification allocates its memory parameter, so hashes with m=1048576 (1 GiB)
 can make logins use up to 4 GiB. The default of `sitrep hash-password`,
 m=65536, needs 64 MiB each. Usernames are limited to 200 bytes.
+
+## Data sources
+
+Panels query data sources, which you configure in the console under "Data
+sources". SitRep ships the Prometheus type: a base URL (a path prefix is
+allowed), optional basic or bearer authentication, and a request timeout
+of 1s to 2m (default 10s). Requests never follow redirects, and responses
+over 1 MiB are refused.
+
+Passwords and tokens are stored encrypted with `SITREP_SECRET_KEY` and are
+never shown again. Without the key, data sources cannot store secrets. If
+the key is lost or changed, data sources with secrets become unusable: their
+panels show no new data and the console marks them until you enter the
+secrets again. Public pages keep working.
+
+Admins can point a data source at any URL the server reaches. That is fine
+because admins are trusted anyway: they also run arbitrary queries.
+
+Each panel is polled at once and then at its refresh interval, by default
+`SITREP_DEFAULT_REFRESH`. Panels of a status page are polled whether or
+not anyone visits it.
 
 ## URLs and languages
 
