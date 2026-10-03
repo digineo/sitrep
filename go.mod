@@ -8,6 +8,7 @@ require (
 	github.com/digineo/xlog v1.1.0
 	github.com/digineo/xlog/slogor v1.1.0
 	github.com/stretchr/testify v1.12.1
+	github.com/yuin/goldmark v1.8.6
 	go.etcd.io/bbolt v1.5.0
 	golang.org/x/crypto v0.57.0
 	golang.org/x/term v0.46.0
