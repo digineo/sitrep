@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"slices"
 
 	"github.com/digineo/sitrep/internal/httpx"
 	"github.com/digineo/sitrep/internal/model"
@@ -16,7 +17,8 @@ type siteSummary struct {
 	Languages model.Languages `json:"languages"`
 	Route     model.Route     `json:"route"`
 	Status    siteStatus      `json:"status"`
-	// Missing counts the site and panels with missing translations.
+	// Missing counts the site, panels and incidents with missing
+	// translations.
 	Missing int `json:"missing"`
 }
 
@@ -36,8 +38,12 @@ func panelState(e poller.Entry, ok bool) string {
 	return e.Data.State
 }
 
-// status computes a site's status from its panels.
-func (s *Server) status(panels []model.Panel) siteStatus {
+// status computes a site's status from its status panels and its ongoing
+// incidents: a critical one means down, any other degraded.
+func (s *Server) status(
+	panels []model.Panel,
+	incidents []model.Incident,
+) siteStatus {
 	var states []string
 	for _, p := range panels {
 		if p.Type == model.PanelStatus {
@@ -50,18 +56,37 @@ func (s *Server) status(panels []model.Panel) siteStatus {
 		Panels:    process.Worst(states...),
 		Incidents: model.StateOperational,
 	}
+	for _, inc := range incidents {
+		if inc.Phase() != model.PhaseOngoing {
+			continue
+		}
+
+		state := model.StateDegraded
+		if inc.Severity() == model.SeverityCritical {
+			state = model.StateDown
+		}
+		st.Incidents = process.Worst(st.Incidents, state)
+	}
+
 	st.Overall = process.Worst(st.Panels, st.Incidents)
 	return st
 }
 
-// missing reports whether a panel misses a translation of any text.
-func missing(p model.Panel, l model.Languages) bool {
-	for _, t := range []model.Text{p.Title, p.Description, p.Unit, p.Legend} {
-		if t.Missing(l) {
-			return true
-		}
+// missing reports whether any of the texts misses a translation.
+func missing(l model.Languages, texts ...model.Text) bool {
+	return slices.ContainsFunc(texts, func(t model.Text) bool {
+		return t.Missing(l)
+	})
+}
+
+// incidentMissing reports whether an incident's title or an update's
+// description misses a translation.
+func incidentMissing(inc model.Incident, l model.Languages) bool {
+	texts := []model.Text{inc.Title}
+	for _, u := range inc.Updates {
+		texts = append(texts, u.Description)
 	}
-	return false
+	return missing(l, texts...)
 }
 
 func (s *Server) listSites(w http.ResponseWriter, r *http.Request) {
@@ -76,6 +101,11 @@ func (s *Server) listSites(w http.ResponseWriter, r *http.Request) {
 		panels[p.Site] = append(panels[p.Site], p)
 	}
 
+	incidents := map[string][]model.Incident{}
+	for _, inc := range snap.Incidents {
+		incidents[inc.Site] = append(incidents[inc.Site], inc)
+	}
+
 	sites := []siteSummary{}
 	for _, site := range snap.Sites {
 		langs := site.Languages.Effective()
@@ -84,14 +114,20 @@ func (s *Server) listSites(w http.ResponseWriter, r *http.Request) {
 			Name:      site.Name,
 			Languages: langs,
 			Route:     site.Route,
-			Status:    s.status(panels[site.ID]),
+			Status:    s.status(panels[site.ID], incidents[site.ID]),
 		}
 		if site.Name.Missing(langs) {
 			sum.Missing++
 		}
 
 		for _, p := range panels[site.ID] {
-			if missing(p, langs) {
+			if missing(langs, p.Title, p.Description, p.Unit, p.Legend) {
+				sum.Missing++
+			}
+		}
+
+		for _, inc := range incidents[site.ID] {
+			if incidentMissing(inc, langs) {
 				sum.Missing++
 			}
 		}

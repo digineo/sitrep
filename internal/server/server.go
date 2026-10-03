@@ -97,6 +97,21 @@ func newServer(
 	handle("GET /api/admin/sites/{site}/panels/{panel}", s.getPanel)
 	handle("PUT /api/admin/sites/{site}/panels/{panel}", s.putPanel)
 	handle("DELETE /api/admin/sites/{site}/panels/{panel}", s.deletePanel)
+	handle("GET /api/admin/sites/{site}/incidents", s.listIncidents)
+	handle("POST /api/admin/sites/{site}/incidents", s.createIncident)
+	handle("GET /api/admin/sites/{site}/incidents/{incident}", s.getIncident)
+	handle("PUT /api/admin/sites/{site}/incidents/{incident}", s.putIncident)
+	handle("DELETE /api/admin/sites/{site}/incidents/{incident}", s.deleteIncident)
+	handle("POST /api/admin/sites/{site}/incidents/{incident}/updates", s.addUpdate)
+	handle(
+		"PUT /api/admin/sites/{site}/incidents/{incident}/updates/{update}",
+		s.putUpdate,
+	)
+	handle(
+		"DELETE /api/admin/sites/{site}/incidents/{incident}/updates/{update}",
+		s.deleteUpdate,
+	)
+	handle("POST /api/admin/markdown", s.previewMarkdown)
 	s.adminAPI = core.Guard(admin)
 
 	public := http.NewServeMux()
