@@ -348,8 +348,9 @@ func TestShellEscapesTitle(t *testing.T) {
 	assert.Contains(body, "<title>"+escaped+"</title>")
 	b := parseBootstrap(t, body)
 	assert.Equal("/acme", b.BasePath)
-	alt := regexp.MustCompile(`<link rel="alternate"`).FindString(body)
+	alt := regexp.MustCompile(`<link rel="alternate" hreflang`).FindString(body)
 	assert.Empty(alt, "one language has no alternates")
+	assert.Contains(body, `<link rel="alternate" type="application/atom+xml" href="http://status.example.com/acme/feed.atom">`)
 	assert.Contains(body, `<link rel="canonical" href="http://status.example.com/acme/">`)
 }
 
@@ -407,12 +408,7 @@ func TestNotFoundShell(t *testing.T) {
 	assert.NotContains(body, `rel="canonical"`)
 	assert.Equal("site", parseBootstrap(t, body).Mode)
 
-	for _, path := range []string{
-		"/incidents/0192",
-		"/imprint",
-		"/feed.atom",
-		"/incidents.json",
-	} {
+	for _, path := range []string{"/incidents/0192", "/imprint"} {
 		code := f.get("status.gamma.org", path).Code
 		assert.Equal(http.StatusNotFound, code, path)
 	}

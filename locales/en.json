@@ -42,7 +42,33 @@
     "toAdminHome": "Back to the status pages"
   },
   "incidents": {
-    "all": "All incidents"
+    "all": "All incidents",
+    "current": "Current incidents",
+    "upcoming": "Upcoming maintenance",
+    "recent": "Recent incidents",
+    "none": "No incidents",
+    "notFound": "This incident does not exist.",
+    "back": "Overview",
+    "history": "Incident history",
+    "feed": "Feed",
+    "feedHint": "Subscribe to incidents with a feed reader (Atom)",
+    "status": {
+      "planned": "Planned",
+      "active": "Active",
+      "investigating": "Investigating",
+      "monitoring": "Monitoring",
+      "resolved": "Resolved"
+    },
+    "severity": {
+      "minor": "Minor",
+      "major": "Major",
+      "critical": "Critical"
+    },
+    "severityLabel": "Severity: {label}",
+    "pagination": "Pages",
+    "newer": "Newer",
+    "older": "Older",
+    "page": "Page {page} of {pages}"
   },
   "admin": {
     "unreachable": "The server cannot be reached. Reload the page to try again."
@@ -155,7 +181,8 @@
     "noData": "No data yet",
     "empty": "No data in this period",
     "chartSummary": "{title}, last {range}: {values}",
-    "renderFailed": "This panel cannot be shown."
+    "renderFailed": "This panel cannot be shown.",
+    "incident": "Incident: {title}"
   },
   "site": {
     "currentStatus": "Current service status",
@@ -342,5 +369,12 @@
   "warnings": {
     "series_dropped": "{count} more series are not shown. Charts show at most 20.",
     "response_large": "The data source answered with {size} MiB. Large responses load the data source and make the public page slower."
+  },
+  "feed": {
+    "previous": "Previous updates",
+    "view": "View incident"
+  },
+  "format": {
+    "dateTime": "{year}-{month}-{day} {hour}:{minute} {zone}"
   }
 }

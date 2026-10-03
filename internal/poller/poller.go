@@ -48,13 +48,15 @@ type Poller struct {
 	reconciling sync.Mutex // serializes reconciliations
 	wg          sync.WaitGroup
 
-	mu      sync.Mutex
-	stopped bool
-	jobs    map[string]*job   // by panel ID
-	entries map[string]*Entry // by panel ID
-	seq     uint64
-	sites   map[string]uint64 // sequence of each site's last change
-	global  uint64            // sequence of the last instance settings change
+	mu        sync.Mutex
+	stopped   bool
+	jobs      map[string]*job   // by panel ID
+	entries   map[string]*Entry // by panel ID
+	seq       uint64
+	sites     map[string]uint64    // sequence of each site's last change
+	global    uint64               // sequence of the last instance settings change
+	incidents map[string]uint64    // sequence of each site's last incidents change
+	expiries  map[string]time.Time // when each site's incidents change with time
 }
 
 // job polls one panel. A job is replaced whenever the panel's definition
@@ -89,6 +91,8 @@ func New(
 		jobs:           map[string]*job{},
 		entries:        map[string]*Entry{},
 		sites:          map[string]uint64{},
+		incidents:      map[string]uint64{},
+		expiries:       map[string]time.Time{},
 	}
 }
 
@@ -335,4 +339,36 @@ func (p *Poller) SiteSeq(site string) uint64 {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return max(p.sites[site], p.global)
+}
+
+// IncidentsChanged records a change of a site's incidents.
+func (p *Poller) IncidentsChanged(site string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.incidents[site] = p.next()
+}
+
+// ExpireIncidents records when the public view of a site's incidents next
+// changes with time alone, e.g. when a finished incident stops being
+// public. Until the next change, the earliest recorded time counts.
+func (p *Poller) ExpireIncidents(site string, at time.Time) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if cur, ok := p.expiries[site]; !ok || at.Before(cur) {
+		p.expiries[site] = at
+	}
+}
+
+// IncidentsSeq returns the sequence number of the last change of a site's
+// incidents, or of the site and its panels, which the incidents' public
+// view depends on. Once the view's expiry has passed at now, that counts as
+// a change.
+func (p *Poller) IncidentsSeq(site string, now time.Time) uint64 {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if at, ok := p.expiries[site]; ok && !now.Before(at) {
+		delete(p.expiries, site)
+		p.incidents[site] = p.next()
+	}
+	return max(p.incidents[site], p.sites[site])
 }

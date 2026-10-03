@@ -42,7 +42,33 @@
     "toAdminHome": "Zurück zu den Statusseiten"
   },
   "incidents": {
-    "all": "Alle Vorfälle"
+    "all": "Alle Vorfälle",
+    "current": "Aktuelle Vorfälle",
+    "upcoming": "Geplante Wartungen",
+    "recent": "Letzte Vorfälle",
+    "none": "Keine Vorfälle",
+    "notFound": "Diesen Vorfall gibt es nicht.",
+    "back": "Übersicht",
+    "history": "Vorfallsverlauf",
+    "feed": "Feed",
+    "feedHint": "Vorfälle mit einem Feedreader abonnieren (Atom)",
+    "status": {
+      "planned": "Geplant",
+      "active": "Aktiv",
+      "investigating": "Wird untersucht",
+      "monitoring": "Wird beobachtet",
+      "resolved": "Behoben"
+    },
+    "severity": {
+      "minor": "Gering",
+      "major": "Erheblich",
+      "critical": "Kritisch"
+    },
+    "severityLabel": "Schweregrad: {label}",
+    "pagination": "Seiten",
+    "newer": "Neuere",
+    "older": "Ältere",
+    "page": "Seite {page} von {pages}"
   },
   "admin": {
     "unreachable": "Der Server ist nicht erreichbar. Laden Sie die Seite neu, um es erneut zu versuchen."
@@ -155,7 +181,8 @@
     "noData": "Noch keine Daten",
     "empty": "Keine Daten in diesem Zeitraum",
     "chartSummary": "{title}, letzte {range}: {values}",
-    "renderFailed": "Dieses Panel kann nicht angezeigt werden."
+    "renderFailed": "Dieses Panel kann nicht angezeigt werden.",
+    "incident": "Vorfall: {title}"
   },
   "site": {
     "currentStatus": "Aktueller Dienststatus",
@@ -342,5 +369,12 @@
   "warnings": {
     "series_dropped": "{count} weitere Datenreihen werden nicht angezeigt. Diagramme zeigen höchstens 20.",
     "response_large": "Die Datenquelle hat mit {size} MiB geantwortet. Große Antworten belasten die Datenquelle und verlangsamen die öffentliche Seite."
+  },
+  "feed": {
+    "previous": "Frühere Meldungen",
+    "view": "Vorfall ansehen"
+  },
+  "format": {
+    "dateTime": "{day}.{month}.{year}, {hour}:{minute} {zone}"
   }
 }

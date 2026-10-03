@@ -376,3 +376,42 @@ func TestCursor(t *testing.T) {
 		"instance settings changes affect every site",
 	)
 }
+
+func TestIncidentsSeq(t *testing.T) {
+	assert := assert.New(t)
+
+	f := newFixture(t, time.Hour)
+	f.await(t, fresh)
+
+	p := f.p
+	site := f.site.ID
+	now := time.Date(2026, 10, 3, 12, 0, 0, 0, time.UTC)
+	assert.Zero(p.IncidentsSeq("other", now))
+
+	p.IncidentsChanged(site)
+	seq := p.Seq()
+	assert.Equal(seq, p.IncidentsSeq(site, now))
+	p.SettingsChanged()
+	assert.Equal(
+		seq,
+		p.IncidentsSeq(site, now),
+		"instance settings do not affect the incidents' view",
+	)
+	p.SiteChanged(site)
+	assert.Equal(p.SiteSeq(site), p.IncidentsSeq(site, now), "site changes do")
+	seq = p.Seq()
+
+	p.ExpireIncidents(site, now.Add(time.Hour))
+	p.ExpireIncidents(site, now.Add(2*time.Hour))
+	assert.Equal(seq, p.IncidentsSeq(site, now.Add(time.Hour-time.Second)))
+	assert.Equal(
+		seq+1,
+		p.IncidentsSeq(site, now.Add(time.Hour)),
+		"the earliest expiry counts as a change",
+	)
+	assert.Equal(
+		seq+1,
+		p.IncidentsSeq(site, now.Add(3*time.Hour)),
+		"an expiry counts once",
+	)
+}

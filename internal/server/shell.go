@@ -40,6 +40,9 @@ var shellTemplate = template.Must(template.New("shell").Parse(`<!doctype html>
 {{- range .Alternates}}
 <link rel="alternate" hreflang="{{.Lang}}" href="{{.Href}}">
 {{- end}}
+{{- with .Feed}}
+<link rel="alternate" type="application/atom+xml" href="{{.}}">
+{{- end}}
 {{- range .Assets.Styles}}
 <link rel="stylesheet" href="{{.}}">
 {{- end}}
@@ -60,6 +63,7 @@ type shell struct {
 	Title      string
 	Canonical  string
 	Alternates []alternate
+	Feed       string // the site's Atom feed
 	Assets     shellAssets
 	Bootstrap  bootstrap
 }

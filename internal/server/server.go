@@ -3,12 +3,14 @@
 package server
 
 import (
+	"errors"
 	"net/http"
 	"slices"
 	"strings"
 
 	"github.com/digineo/xlog"
 
+	"github.com/digineo/sitrep/internal/apierr"
 	"github.com/digineo/sitrep/internal/auth"
 	"github.com/digineo/sitrep/internal/config"
 	"github.com/digineo/sitrep/internal/httpx"
@@ -116,6 +118,11 @@ func newServer(
 
 	public := http.NewServeMux()
 	public.HandleFunc("GET /api/public/sites/{site}", s.publicSite)
+	public.HandleFunc("GET /api/public/sites/{site}/incidents", s.publicArchive)
+	public.HandleFunc(
+		"GET /api/public/sites/{site}/incidents/{incident}",
+		s.publicIncident,
+	)
 	s.publicAPI = public
 
 	return s
@@ -275,6 +282,15 @@ func (s *Server) serveSite(
 		return
 	}
 
+	switch res.page.kind {
+	case pageFeed:
+		s.serveFeed(w, r, info, site, base, res.lang)
+		return
+	case pageJSON:
+		s.serveIncidentsJSON(w, r, site, res.lang)
+		return
+	}
+
 	name := site.Name.Resolve(res.lang, langs)
 	c := i18n.Get(res.lang)
 	status := http.StatusOK
@@ -283,6 +299,33 @@ func (s *Server) serveSite(
 	case pageOverview:
 	case pageArchive:
 		title = c.T("incidents.all", nil)
+		incidents, err := s.db.Incidents(site.ID)
+		if err != nil {
+			httpx.WriteError(w, r, s.log, err)
+			return
+		}
+
+		pageNum := r.URL.Query().Get("page")
+		_, _, _, ok := paginate(pageNum, len(incidents), archivePageSize)
+		if !ok {
+			res.page.kind = pageNotFound
+			status = http.StatusNotFound
+			title = c.T("page.notFound", nil)
+		}
+	case pageIncident:
+		inc, err := s.db.Incident(site.ID, res.page.id)
+		e, ok := errors.AsType[*apierr.Error](err)
+		if ok && e.Status == http.StatusNotFound {
+			res.page.kind = pageNotFound
+			status = http.StatusNotFound
+			title = c.T("incidents.notFound", nil)
+			break
+		} else if err != nil {
+			httpx.WriteError(w, r, s.log, err)
+			return
+		}
+
+		title = inc.Title.Resolve(res.lang, langs)
 	default:
 		res.page.kind = pageNotFound
 		status = http.StatusNotFound
@@ -290,6 +333,8 @@ func (s *Server) serveSite(
 	}
 
 	sh := pageShell(info, base, langs, res, title, name)
+	feed := pagePath(page{kind: pageFeed}, res.lang, len(langs.Enabled) > 1)
+	sh.Feed = info.Origin + base + feed
 
 	def := settings.DefaultTheme
 	if site.Theme != "" && site.Theme != "inherit" {

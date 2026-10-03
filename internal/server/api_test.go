@@ -1153,12 +1153,29 @@ func TestPublicLeak(t *testing.T) {
 
 	require.Eventually(t, ready, 5*time.Second, 10*time.Millisecond)
 
-	markers := []string{"SECRET", "31337", `"fake"`, "17h", "max", "internal"}
+	inc := f.createIncident(site, obj{"en": "Outage"}, obj{
+		"status":      "active",
+		"description": obj{"en": "[details](javascript:SECRET-SOURCE)"},
+	})
+	incident := "/api/admin/sites/" + site + "/incidents/" + inc.ID
+	f.admin(http.MethodPut, incident+"/updates/"+inc.Updates[0].ID, obj{
+		"status":      "active",
+		"description": obj{"en": "**bold** [x](javascript:SECRET-SOURCE)"},
+	})
+
+	markers := []string{
+		"SECRET", "31337", `"fake"`, "17h", "max", "internal", "Ann", "ann",
+		`"author"`, "editedBy", "editedAt", "displayName", "**",
+	}
 	for _, path := range []string{
 		"/api/public/sites/" + site,
 		"/api/public/sites/" + site + "?lang=de",
 		"/shop/en/",
 		"/shop/de/",
+		"/api/public/sites/" + site + "/incidents",
+		"/api/public/sites/" + site + "/incidents/" + inc.ID,
+		"/shop/en/feed.atom",
+		"/shop/de/incidents.json",
 	} {
 		body := f.get("status.example.com", path).Body.String()
 		for _, m := range markers {
