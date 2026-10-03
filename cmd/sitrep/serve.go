@@ -117,7 +117,7 @@ func serve(args []string, stderr io.Writer) int {
 
 	jobsCtx, stopJobs := context.WithCancel(context.Background())
 	var jobs sync.WaitGroup
-	jobs.Go(func() { runJobs(jobsCtx, log, db) })
+	jobs.Go(func() { runJobs(jobsCtx, log, db, polls) })
 	jobs.Go(func() { polls.Run(jobsCtx) })
 
 	hs := &http.Server{
@@ -210,8 +210,14 @@ func warnStartup(log xlog.Logger, db *store.DB) error {
 	return nil
 }
 
-// runJobs purges expired sessions at startup and hourly, until ctx ends.
-func runJobs(ctx context.Context, log xlog.Logger, db *store.DB) {
+// runJobs purges expired sessions and applies incident retention at
+// startup and hourly, until ctx ends.
+func runJobs(
+	ctx context.Context,
+	log xlog.Logger,
+	db *store.DB,
+	polls *poller.Poller,
+) {
 	t := time.NewTicker(time.Hour)
 	defer t.Stop()
 
@@ -222,6 +228,19 @@ func runJobs(ctx context.Context, log xlog.Logger, db *store.DB) {
 				xlog.Error(err))
 		} else if n > 0 {
 			log.Info("purged expired sessions",
+				slog.Int("count", n))
+		}
+
+		purged, err := db.PurgeIncidents(time.Now())
+		if err != nil {
+			log.Error("applying incident retention failed",
+				xlog.Error(err))
+		}
+
+		for site, n := range purged {
+			polls.IncidentsChanged(site)
+			log.Info("deleted incidents after their retention",
+				slog.String("site", site),
 				slog.Int("count", n))
 		}
 
