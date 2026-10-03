@@ -41,3 +41,7 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the color of the status.
 - Offline and paused status pages; paused pages are not polled.
 - Export and import of status pages as YAML files.
+- Sign-in by OpenID Connect, limited to the members of an admin group, with
+  localized notices for failed sign-ins on the login screen.
+- `/tls/authorize` for reverse proxies with on-demand TLS, which confirms
+  the base domains and the hosts of existing status pages.

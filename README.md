@@ -3,9 +3,6 @@
 SitRep is a self-hosted, multi-tenant server for public status pages. It
 ships as one binary with the web frontend and an embedded database file.
 
-> SitRep is under active development. This README describes what works
-> today.
-
 ## Features
 
 - One instance serves many status pages, reachable below a base domain
@@ -27,10 +24,11 @@ ships as one binary with the web frontend and an embedded database file.
 - Status pages can be taken offline or paused, and exported to and
   imported from YAML files.
 - Light, dark and system color schemes, remembered per visitor.
-- Admin console with sign-in by username and password (bcrypt or argon2id
-  hashes), login throttling, data sources, status pages with their panels,
-  incidents and a live preview, and instance settings for languages, the
-  default color scheme, legal pages and the landing text.
+- Admin console with sign-in by single sign-on (OpenID Connect, limited to
+  an admin group) or by username and password (bcrypt or argon2id hashes,
+  with login throttling). It manages data sources, status pages with their
+  panels, incidents and a live preview, and instance settings for
+  languages, the default color scheme, legal pages and the landing text.
 - No third-party requests, no tracking, no consent banner needed.
 
 ## Quick start
@@ -59,32 +57,81 @@ at ` #`. For a quick setup, copy the documented `.env.sample` to
 `.env.local` and fill in the blanks.
 
 Invalid or missing values are reported together, and the server does not
-start. Booleans accept `true/false/1/0/yes/no/on/off`. Durations combine
-the units `d`, `h`, `m` and `s` in this order, e.g. `90s`, `1h30m` or `7d`.
+start. A variable that is set but empty is an error, except for the two
+optional secrets, which then count as unset. Booleans accept
+`true/false/1/0/yes/no/on/off`. Durations combine the units `d`, `h`, `m`
+and `s` in this order, e.g. `90s`, `1h30m` or `7d`. Only the variables of
+the selected auth provider are read.
 
 | Variable | Default | Meaning |
 |---|---|---|
 | `SITREP_LISTEN` | `:2607` | HTTP listen address. |
 | `SITREP_DB` | `sitrep.db` | Database file. One instance per file. |
-| `SITREP_SECRET_KEY` | | Base64-encoded 32-byte key for data source secrets. Generate with `openssl rand -base64 32`. |
+| `SITREP_SECRET_KEY` | | Base64-encoded 32-byte key for data source secrets, see [Data sources](#data-sources). Generate with `openssl rand -base64 32`. |
 | `SITREP_DEFAULT_REFRESH` | `30s` | Default poll interval, 5s to 24h. |
-| `SITREP_BASE_DOMAINS` | required | Comma-separated base domains, e.g. `status.example.com`. |
+| `SITREP_BASE_DOMAINS` | required | Comma-separated base domains, e.g. `status.example.com`: lowercase hostnames with at least two labels, each listed once. |
 | `SITREP_TRUST_PROXY` | `false` | Honor `X-Forwarded-Host`, `X-Forwarded-Proto` and `X-Forwarded-For`. Enable only behind a trusted proxy. |
 | `SITREP_AUTH` | `oidc` | Auth provider: `oidc` or `basic`. |
 | `SITREP_SESSION_TTL` | `12h` | Admin session lifetime, 5m to 30d. |
-| `SITREP_OIDC_ISSUER` | required for oidc | Issuer URL. |
+| `SITREP_OIDC_ISSUER` | required for oidc | Issuer URL, exactly as the identity provider reports it. |
 | `SITREP_OIDC_CLIENT_ID` | required for oidc | Client ID. |
 | `SITREP_OIDC_CLIENT_SECRET` | | Client secret, for confidential clients. |
-| `SITREP_OIDC_REDIRECT_URL` | required for oidc | `https://<base domain>/auth/oidc/callback` |
-| `SITREP_OIDC_SCOPES` | `openid profile email` | Space-separated scopes. |
-| `SITREP_OIDC_GROUPS_CLAIM` | `groups` | Claim with the user's groups. |
+| `SITREP_OIDC_REDIRECT_URL` | required for oidc | `https://<base domain>/auth/oidc/callback`; the host must be a base domain. |
+| `SITREP_OIDC_SCOPES` | `openid profile email` | Space-separated scopes; `openid` is always requested. |
+| `SITREP_OIDC_GROUPS_CLAIM` | `groups` | Claim with the user's groups: a list or a single string. |
 | `SITREP_OIDC_ADMIN_GROUP` | required for oidc | Group required to sign in. |
 | `SITREP_BASIC_USERS_FILE` | required for basic | Users file, see below. |
 | `SITREP_LOG_LEVEL` | `info` | `debug`, `info`, `warn` or `error`. |
 | `SITREP_LOG_FORMAT` | `text` | `text`, `json` or `pretty` (colored console output). |
 
-The OIDC provider currently validates its configuration but cannot sign
-anyone in yet; its login screen says that sign-in is unavailable.
+The startup log shows the effective configuration, with secrets and
+credentials in URLs redacted.
+
+## Signing in with single sign-on (OIDC)
+
+With `SITREP_AUTH=oidc` (the default), admins sign in at an OpenID
+Connect identity provider. Register SitRep there as a client with the
+authorization code flow and the redirect URL
+`https://<base domain>/auth/oidc/callback`. A confidential client needs
+`SITREP_OIDC_CLIENT_SECRET`; a public client works without one, since
+SitRep always uses PKCE.
+
+Only members of `SITREP_OIDC_ADMIN_GROUP` may sign in. SitRep reads
+the groups from the claim `SITREP_OIDC_GROUPS_CLAIM` of the ID token, or
+from the user info endpoint if the ID token lacks the claim. Admins are
+shown by their `name` claim, else `preferred_username`, else their subject.
+
+- **Group changes** are checked only at sign-in. Someone removed from the
+  admin group keeps access until their session expires, at most
+  `SITREP_SESSION_TTL` after they signed in.
+- **Signing out** ends the SitRep session, but not the session at the
+  identity provider, which may sign the admin in again without asking.
+- **Startup** does not wait for the identity provider. SitRep fetches
+  its configuration in the background and retries at growing intervals of
+  up to a minute; until then, the login screen says that sign-in is
+  temporarily unavailable.
+- **Several base domains:** sign-in always completes on the host of
+  `SITREP_OIDC_REDIRECT_URL`, and the console continues there.
+
+Notes for common identity providers:
+
+- **Keycloak:** the issuer is `https://<host>/realms/<realm>`. Keycloak
+  sends no groups by default: add a "Group Membership" mapper to the
+  client with the token claim name `groups`, included in the ID token.
+  With "Full group path" on, groups read `/admins`; turn it off or set
+  `SITREP_OIDC_ADMIN_GROUP=/admins`.
+- **authentik:** the issuer is
+  `https://<host>/application/o/<application slug>/`, with the trailing
+  slash. The default `profile` scope mapping sends the group names in
+  `groups`.
+- **Microsoft Entra ID:** the issuer is
+  `https://login.microsoftonline.com/<tenant ID>/v2.0`. Use app roles
+  rather than groups: define a role with the value `sitrep-admin` in the
+  app registration, assign it to the admins, and set
+  `SITREP_OIDC_GROUPS_CLAIM=roles` and
+  `SITREP_OIDC_ADMIN_GROUP=sitrep-admin`. A groups claim would carry
+  group object IDs, and Entra ID leaves it out entirely for users in more
+  than 200 groups, which SitRep then treats as not being a member.
 
 ## Signing in with username and password
 
@@ -108,7 +155,9 @@ Failed attempts are counted per username and, independently, per client
 address. After five failures within 15 minutes for a username, or from an
 address, further attempts for that username, or from that address, are
 refused for 15 minutes. SitRep keeps addresses only as keyed hash under a
-secret that changes daily; the change resets the address counters.
+secret that changes daily; the change resets the address counters. It
+keeps at most 10,000 counters in memory; while all are in use, attempts
+that would need a new one are refused, too.
 
 At most four password verifications run at a time; an attempt that cannot
 start one within five seconds is refused as too many attempts. Each argon2id
@@ -136,10 +185,61 @@ you enter the secrets again. Public pages keep working.
 
 Admins can point a data source at any URL the server reaches. That is fine
 because admins are trusted anyway: they also run arbitrary queries.
+Requests to data sources and to the identity provider honor the proxy
+environment variables `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY`.
 
 Each panel is polled at once and then at its refresh interval, by default
 `SITREP_DEFAULT_REFRESH`. Panels of a status page are polled whether or
 not anyone visits it.
+
+## Running behind a reverse proxy
+
+SitRep speaks plain HTTP and neither terminates TLS nor compresses
+responses; a reverse proxy in front of it does both. Set
+`SITREP_TRUST_PROXY=true` so that SitRep takes the scheme, host and
+client address from the proxy's `X-Forwarded-*` headers: it needs the
+scheme to set secure cookies and to accept the console's requests. Expose
+SitRep only to the proxy then, since anyone else could forge the
+headers.
+
+With [Caddy](https://caddyserver.com/), on-demand TLS gets a certificate
+for each host the first time it is visited. Before it requests one, Caddy
+asks `/tls/authorize?domain=<host>`, which answers 200 only for the base
+domains and the hosts of existing status pages, whatever their
+availability:
+
+```caddyfile
+{
+	on_demand_tls {
+		ask http://127.0.0.1:2607/tls/authorize
+	}
+}
+
+https:// {
+	tls {
+		on_demand
+	}
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:2607
+}
+```
+
+Caddy passes the original `Host` header and sets the `X-Forwarded-*`
+headers by default. SitRep sends no `Strict-Transport-Security` header;
+add one in the proxy if you want it. `/healthz` answers `ok` while the
+database is readable, for health checks.
+
+### DNS
+
+- **Base domains:** point them at the proxy with A and AAAA records.
+- **Subdomain mode:** add a wildcard record, e.g. `*.status.example.com`,
+  pointing at the proxy. Every subdomain-mode page answers below every base
+  domain.
+- **Custom domains:** whoever owns the domain points it at the proxy,
+  usually with a CNAME record to a base domain, e.g.
+  `status.customer.example CNAME status.example.com`. SitRep does not
+  check who owns a domain; entering it in the status page's settings is
+  enough.
 
 ## URLs and languages
 
@@ -240,24 +340,33 @@ anyone:
 | `theme` | a visitor picks a color scheme | `light`, `dark` or `system` | 1 year |
 | `lang` | a visitor picks a language | the language code | 1 year |
 | `sitrep_session`, on HTTPS `__Host-sitrep_session` | an admin signs in | a random session token | the session lifetime |
+| `sitrep_oidc` | an admin starts single sign-on | random values that secure the sign-in, and the console page to return to | 10 minutes, deleted when the sign-in completes |
 
 ## Stored personal data
 
 SitRep stores the subject, display name and, if the identity provider
-sends one, the email address of signed-in admins in their session. Sessions
-expire after `SITREP_SESSION_TTL` and are deleted at startup and hourly.
+sends one, the email address of signed-in admins in their session.
+Signing out deletes the session. Sessions expire after
+`SITREP_SESSION_TTL`, and expired ones are deleted at startup and
+hourly.
 
 Incidents and their updates store the subject and display name of the
 admin who created them and of the admin who last edited each update. Only
 the console shows them; status pages, feeds and incidents.json never do.
 They are deleted with their incident, either by an admin or by the status
 page's incident retention.
-Logs contain the usernames of failed sign-ins, but no client addresses at
-level `info` or above.
 
-## Development
+Logs contain the usernames of failed sign-ins and the subjects of sign-ins
+refused by single sign-on, but no email addresses and no client
+addresses.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). `make help` lists the targets.
+## Development and testing
+
+`make dev` runs the server with live reload of the backend and the
+frontend, `make lint` runs every linter, and `make test` runs the Go,
+Vitest and Playwright tests. `make help` lists all targets.
+[CONTRIBUTING.md](CONTRIBUTING.md) explains the setup, the conventions and
+how to add a language, an auth provider or a data source type.
 
 ## License
 

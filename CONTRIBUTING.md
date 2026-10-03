@@ -37,7 +37,7 @@ password; release builds never do.
 |---|---|
 | `make test-backend` | Go tests, also with the `testauth` build tag |
 | `make test-frontend` | Vitest component and unit tests |
-| `make test-e2e` | Playwright tests against a `testauth` build and a stub of the Prometheus API (`frontend/e2e/prometheus.ts`); install the browser once with `cd frontend && npx playwright install chromium` |
+| `make test-e2e` | Playwright tests against a `testauth` build, a stub of the Prometheus API (`frontend/e2e/prometheus.ts`) and a mock OpenID provider (`frontend/e2e/idp.ts`); install the browser once with `cd frontend && npx playwright install chromium` |
 | `make test` | all of the above |
 
 ## Adding a language
@@ -54,13 +54,24 @@ placeholders differ from English or the slugs are invalid.
 
 1. Create a package `internal/auth/<id>` that implements `auth.Provider`:
    its login method (`redirect` or `credentials`), whether logins
-   currently work, and its HTTP routes below `/auth/<id>/`.
+   currently work, and its HTTP routes below `/auth/<id>/`. `Routes` is
+   called once at startup and may start background work.
 2. Register it in an `init` function with `auth.Register("<id>", New)`.
    `New` reads and validates the provider's own environment variables
    through the `config.Env` it receives.
 3. On successful authentication, call `core.Login` with the identity. The
    core creates the session and sets the cookie.
 4. Add one blank import to `cmd/sitrep/providers.go`.
+
+The login screen calls the provider's `/auth/<id>/login`:
+
+- **redirect:** a link with `?return=<console path>`. Pass the path
+  through `auth.ReturnPath` and send the browser back to it after signing
+  in. On failure, return with `login-error=<code>` in the query; the login
+  screen has notices for `denied`, `not_member`, `idp_error` and
+  `unavailable`.
+- **credentials:** a JSON post of `{"username", "password"}`, answered
+  with 204 on success, 401 for wrong credentials and 429 when throttled.
 
 The core applies CSRF checks to all routes below `/auth/`.
 
