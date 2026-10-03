@@ -232,12 +232,17 @@ func TestUpdateAndDeleteSite(t *testing.T) {
 		Site:       b.ID,
 		DataSource: "ds",
 	}))
+	require.NoError(db.CreateIncident(&model.Incident{
+		Site:    b.ID,
+		Updates: []model.Update{{Status: model.StatusActive}},
+	}))
 	require.NoError(db.DeleteSite(b.ID))
 	_, err = db.Site(b.ID)
 	assert.Equal(404, apiError(t, err).Status)
 	snap, err := db.Snapshot()
 	require.NoError(err)
 	assert.Empty(snap.Panels, "panels go with their site")
+	assert.Empty(snap.Incidents, "incidents go with their site")
 	got, err = db.SiteByRoute(b.Route)
 	require.NoError(err)
 	assert.Nil(got)
@@ -394,4 +399,152 @@ func TestDataSources(t *testing.T) {
 	require.NoError(err)
 	require.Len(all, 1)
 	assert.Equal("a", all[0].ID)
+}
+
+func TestIncidents(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	db, _ := openTemp(t)
+	site := &model.Site{Route: model.Route{
+		Mode: model.RoutePath,
+		Slug: "a",
+	}}
+	require.NoError(db.CreateSite(site))
+	t0 := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+
+	resolved := &model.Incident{
+		Site: site.ID,
+		Updates: []model.Update{{
+			At:     t0,
+			Status: model.StatusResolved,
+		}},
+	}
+	assert.Equal(400, apiError(t, db.CreateIncident(resolved)).Status)
+	orphan := &model.Incident{
+		Site: "missing",
+		Updates: []model.Update{{
+			At:     t0,
+			Status: model.StatusActive,
+		}},
+	}
+	assert.Equal(404, apiError(t, db.CreateIncident(orphan)).Status)
+
+	inc := &model.Incident{
+		Site: site.ID,
+		Updates: []model.Update{{
+			ID:     "u1",
+			At:     t0,
+			Status: model.StatusActive,
+		}},
+	}
+	require.NoError(db.CreateIncident(inc))
+	require.NotEmpty(inc.ID)
+	assert.False(inc.CreatedAt.IsZero())
+
+	backdate := func(i *model.Incident) error {
+		i.Updates = append(i.Updates, model.Update{
+			ID:       "u0",
+			At:       t0.Add(-time.Hour),
+			Severity: model.SeverityMajor,
+		})
+		return nil
+	}
+
+	_, err := db.ChangeIncident(site.ID, inc.ID, backdate)
+	assert.Equal("first_update_must_open", apiError(t, err).Code)
+	got, err := db.Incident(site.ID, inc.ID)
+	require.NoError(err)
+	assert.Len(got.Updates, 1, "a rejected change is not stored")
+
+	addPlanned := func(i *model.Incident) error {
+		i.Updates = append(i.Updates, model.Update{
+			ID:     "u2",
+			At:     t0.Add(-time.Hour),
+			Status: model.StatusPlanned,
+		})
+		return nil
+	}
+
+	changed, err := db.ChangeIncident(site.ID, inc.ID, addPlanned)
+	require.NoError(err)
+	ids := []string{changed.Updates[0].ID, changed.Updates[1].ID}
+	assert.Equal([]string{"u2", "u1"}, ids, "updates are sorted by time")
+
+	all, err := db.Incidents(site.ID)
+	require.NoError(err)
+	assert.Len(all, 1)
+	_, err = db.Incidents("missing")
+	assert.Equal(404, apiError(t, err).Status)
+
+	gone, err := db.ChangeIncident(site.ID, inc.ID, func(i *model.Incident) error {
+		i.Updates = nil
+		return nil
+	})
+	require.NoError(err)
+	assert.Nil(gone, "an incident without updates is deleted")
+	_, err = db.Incident(site.ID, inc.ID)
+	assert.Equal(404, apiError(t, err).Status)
+	_, err = db.ChangeIncident(site.ID, inc.ID, backdate)
+	assert.Equal(404, apiError(t, err).Status)
+
+	require.NoError(db.CreateIncident(inc))
+	require.NoError(db.DeleteIncident(site.ID, inc.ID))
+	assert.Equal(404, apiError(t, db.DeleteIncident(site.ID, inc.ID)).Status)
+}
+
+func TestPurgeIncidents(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	db, _ := openTemp(t)
+	t0 := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	kept := &model.Site{Route: model.Route{
+		Mode: model.RoutePath,
+		Slug: "kept",
+	}}
+	purged := &model.Site{
+		Route: model.Route{
+			Mode: model.RoutePath,
+			Slug: "purged",
+		},
+		IncidentRetentionDays: 2,
+	}
+	require.NoError(db.CreateSite(kept))
+	require.NoError(db.CreateSite(purged))
+
+	create := func(site string, statuses ...string) string {
+		inc := &model.Incident{Site: site}
+		for i, s := range statuses {
+			inc.Updates = append(inc.Updates, model.Update{
+				At:     t0.Add(time.Duration(i) * time.Hour),
+				Status: s,
+			})
+		}
+		require.NoError(db.CreateIncident(inc))
+		return inc.ID
+	}
+
+	create(kept.ID, model.StatusActive, model.StatusResolved)
+	old := create(purged.ID, model.StatusActive, model.StatusResolved)
+	create(purged.ID, model.StatusPlanned)
+	create(purged.ID, model.StatusActive)
+
+	lastActivity := t0.Add(time.Hour)
+	n, err := db.PurgeIncidents(lastActivity.Add(48 * time.Hour))
+	require.NoError(err)
+	assert.Empty(n, "exactly the retention period keeps the incident")
+
+	n, err = db.PurgeIncidents(lastActivity.Add(48*time.Hour + time.Second))
+	require.NoError(err)
+	assert.Equal(map[string]int{purged.ID: 1}, n)
+	_, err = db.Incident(purged.ID, old)
+	assert.Equal(404, apiError(t, err).Status)
+	snap, err := db.Snapshot()
+	require.NoError(err)
+	assert.Len(
+		snap.Incidents,
+		3,
+		"sites without retention, upcoming and ongoing incidents keep theirs",
+	)
 }

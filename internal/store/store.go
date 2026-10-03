@@ -21,13 +21,14 @@ import (
 const schemaVersion = 1
 
 var (
-	bucketMeta     = []byte("meta")
-	bucketSettings = []byte("settings")
-	bucketSessions = []byte("sessions")
-	bucketSites    = []byte("sites")
-	bucketRoutes   = []byte("routes")
-	bucketPanels   = []byte("panels")
-	bucketSources  = []byte("datasources")
+	bucketMeta      = []byte("meta")
+	bucketSettings  = []byte("settings")
+	bucketSessions  = []byte("sessions")
+	bucketSites     = []byte("sites")
+	bucketRoutes    = []byte("routes")
+	bucketPanels    = []byte("panels")
+	bucketSources   = []byte("datasources")
+	bucketIncidents = []byte("incidents")
 
 	keySchema   = []byte("schema")
 	keyInstance = []byte("instance")
@@ -66,6 +67,7 @@ func (db *DB) init(tx *bolt.Tx) error {
 		bucketRoutes,
 		bucketPanels,
 		bucketSources,
+		bucketIncidents,
 	}
 	for _, name := range buckets {
 		if _, err := tx.CreateBucketIfNotExists(name); err != nil {
@@ -155,15 +157,17 @@ func put(tx *bolt.Tx, bucket, key []byte, v any) error {
 	return tx.Bucket(bucket).Put(key, raw)
 }
 
-// Snapshot is the state of all sites, panels and data sources at one point
-// in time.
+// Snapshot is the state of all sites, panels, data sources and incidents
+// at one point in time.
 type Snapshot struct {
 	Sites       []model.Site
 	Panels      []model.Panel // by site, in display order
 	DataSources []model.DataSource
+	Incidents   []model.Incident // by site
 }
 
-// Snapshot reads all sites, panels and data sources in one transaction.
+// Snapshot reads all sites, panels, data sources and incidents in one
+// transaction.
 func (db *DB) Snapshot() (Snapshot, error) {
 	var s Snapshot
 	err := db.bolt.View(func(tx *bolt.Tx) (err error) {
@@ -176,6 +180,11 @@ func (db *DB) Snapshot() (Snapshot, error) {
 		}
 
 		s.DataSources, err = list[model.DataSource](tx, bucketSources, nil)
+		if err != nil {
+			return err
+		}
+
+		s.Incidents, err = list[model.Incident](tx, bucketIncidents, nil)
 		return err
 	})
 

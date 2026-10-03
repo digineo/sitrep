@@ -1,6 +1,7 @@
 package store
 
 import (
+	"bytes"
 	"net/http"
 	"uuid"
 
@@ -96,7 +97,7 @@ func (db *DB) UpdateSite(s *model.Site) error {
 	})
 }
 
-// DeleteSite deletes a site and its panels.
+// DeleteSite deletes a site, its panels and its incidents.
 func (db *DB) DeleteSite(id string) error {
 	return db.bolt.Update(func(tx *bolt.Tx) error {
 		var site model.Site
@@ -104,14 +105,8 @@ func (db *DB) DeleteSite(id string) error {
 			return err
 		}
 
-		panels, err := list[model.Panel](tx, bucketPanels, []byte(id+"/"))
-		if err != nil {
-			return err
-		}
-
-		for _, p := range panels {
-			err := tx.Bucket(bucketPanels).Delete(panelKey(p.Site, p.ID))
-			if err != nil {
+		for _, bucket := range [][]byte{bucketPanels, bucketIncidents} {
+			if err := deletePrefix(tx.Bucket(bucket), []byte(id+"/")); err != nil {
 				return err
 			}
 		}
@@ -121,6 +116,17 @@ func (db *DB) DeleteSite(id string) error {
 		}
 		return tx.Bucket(bucketSites).Delete([]byte(id))
 	})
+}
+
+// deletePrefix deletes the keys of b with prefix.
+func deletePrefix(b *bolt.Bucket, prefix []byte) error {
+	c := b.Cursor()
+	for k, _ := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, _ = c.Seek(prefix) {
+		if err := b.Delete(k); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // SiteByRoute returns the site reachable by the route, or nil.
