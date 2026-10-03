@@ -5,11 +5,14 @@ import { useRoute, useRouter } from "vue-router"
 
 import logo from "../../shared/assets/logo.svg"
 import LanguageSwitcher from "../../shared/components/LanguageSwitcher.vue"
+import LegalLinks from "../../shared/components/LegalLinks.vue"
 import SRButton from "../../shared/components/SRButton.vue"
 import SRField from "../../shared/components/SRField.vue"
 import ThemeSwitcher from "../../shared/components/ThemeSwitcher.vue"
 import { useLanguage } from "../../shared/composables/useLanguage"
-import { supported } from "../../shared/i18n"
+import { useLoad } from "../../shared/composables/useLoad"
+import { catalogs, supported } from "../../shared/i18n"
+import type { LegalKind, LegalLinks as Links } from "../../shared/payload"
 import { api, ApiError } from "../api"
 import { usePageTitle } from "../composables/usePageTitle"
 import { useSession } from "../stores/session"
@@ -28,6 +31,20 @@ const busy = ref(false)
 const error = ref("")
 
 const provider = computed(() => session.provider!)
+
+// The instance's legal pages are pages of the landing page; their paths
+// in the console's language redirect to the right language.
+const { value: legal } = useLoad(
+  () => locale.value,
+  signal => api<Links>(
+    "GET",
+    `/api/public/legal?lang=${locale.value}`,
+    undefined,
+    signal,
+  ),
+)
+const legalPath = (kind: LegalKind) =>
+  `/${catalogs[locale.value]!.legal[kind].slug}`
 const ssoHref = computed(() => `/auth/${provider.value.id}/login?return=${
   encodeURIComponent(router.resolve(route.fullPath).href)
 }`)
@@ -158,6 +175,16 @@ async function submit() {
         </form>
       </div>
     </main>
+    <footer
+        v-if="legal"
+        class="sr-login-legal"
+    >
+      <LegalLinks
+          :links="legal"
+          :path="legalPath"
+          plain
+      />
+    </footer>
   </div>
 </template>
 
@@ -170,6 +197,12 @@ async function submit() {
 
 .box {
   width: min(24rem, 100%);
+}
+
+.sr-login-legal {
+  display: flex;
+  justify-content: center;
+  padding: 0 1rem 2rem;
 }
 
 .sr-login-brand {

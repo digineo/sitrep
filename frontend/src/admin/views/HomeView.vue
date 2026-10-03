@@ -58,13 +58,20 @@ const sites = computed(() => {
         <p class="sr-muted is-size-7 mb-3">
           {{ routeLabel(site.route, bootstrap.baseDomains ?? []) }}
         </p>
-        <SRTag
-            v-if="site.missing"
-            color="warning"
-            class="mb-3"
+        <div
+            v-if="site.availability !== 'online' || site.missing"
+            class="tags"
         >
-          {{ t("home.missing", site.missing) }}
-        </SRTag>
+          <SRTag v-if="site.availability !== 'online'">
+            {{ t(`availability.${site.availability}`) }}
+          </SRTag>
+          <SRTag
+              v-if="site.missing"
+              color="warning"
+          >
+            {{ t("home.missing", site.missing) }}
+          </SRTag>
+        </div>
         <StatusBanner :status="site.status.overall" />
         <div class="buttons">
           <RouterLink

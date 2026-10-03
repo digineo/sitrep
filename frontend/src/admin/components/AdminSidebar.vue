@@ -2,8 +2,10 @@
 import {
   ChevronRight,
   Database,
+  EyeOff,
   LayoutDashboard,
   LogOut,
+  Pause,
   Plus,
   Settings,
   Siren,
@@ -58,6 +60,11 @@ watch(() => route.params.site, (site) => {
     open.value = new Set(open.value).add(site)
   }
 }, { immediate: true })
+
+const availabilityIcons = {
+  offline: EyeOff,
+  paused:  Pause,
+}
 
 function onToggle(site: string, event: Event) {
   const next = new Set(open.value)
@@ -148,6 +155,18 @@ function onToggle(site: string, event: Event) {
             <span>{{ site.label }}</span>
             <span class="sr-muted is-size-7">{{ routeLabel(site.route, bootstrap.baseDomains ?? []) }}</span>
           </span>
+          <span
+              v-if="site.availability !== 'online'"
+              class="icon sr-muted"
+              role="img"
+              :aria-label="t(`availability.${site.availability}`)"
+              :title="t(`availability.${site.availability}`)"
+          >
+            <component
+                :is="availabilityIcons[site.availability]"
+                aria-hidden="true"
+            />
+          </span>
           <SRStatusDot
               v-if="site.status.overall !== 'operational' && !open.has(site.id)"
               :state="site.status.overall"
@@ -182,6 +201,7 @@ function onToggle(site: string, event: Event) {
                 <span>{{ t("nav.panels") }}</span>
               </span>
               <SRStatusDot
+                  v-if="site.availability !== 'paused'"
                   :state="site.status.panels"
                   :label="t('nav.status', { status: t(`status.${site.status.panels}`) })"
                   class="ml-2"

@@ -8,7 +8,9 @@
   $danger: #e5484d,
 );
 
-:focus-visible {
+:focus-visible,
+// File inputs are hidden inside their labels, which show their focus.
+.sr-file:has(:focus-visible) {
   outline: 2px solid #2f6feb;
   outline-offset: 2px;
 }

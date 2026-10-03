@@ -8,7 +8,9 @@ import SRField from "../../shared/components/SRField.vue"
 import SRLocalizedInput from "../../shared/components/SRLocalizedInput.vue"
 import { useConfirm } from "../../shared/composables/useConfirm"
 import { api, fieldErrors, localizedErrors } from "../api"
+import BrandField from "../components/BrandField.vue"
 import LanguagesField from "../components/LanguagesField.vue"
+import LegalPageField from "../components/LegalPageField.vue"
 import OriginsField from "../components/OriginsField.vue"
 import RouteField from "../components/RouteField.vue"
 import TimezoneField from "../components/TimezoneField.vue"
@@ -135,6 +137,31 @@ async function remove() {
         :errors="{ slug: errors['route.slug'], domain: errors['route.domain'] }"
     />
     <SRField
+        v-slot="{ id: fieldId, describedby, invalid }"
+        :label="t('site.availability')"
+        :help="t('site.availabilityHelp')"
+        :error="errors.availability && t(`error.${errors.availability}`)"
+    >
+      <div class="select">
+        <select
+            :id="fieldId"
+            v-model="form.availability"
+            :aria-describedby="describedby"
+            :aria-invalid="invalid"
+        >
+          <option value="online">
+            {{ t("availability.online") }}
+          </option>
+          <option value="offline">
+            {{ t("availability.offlineOption") }}
+          </option>
+          <option value="paused">
+            {{ t("availability.pausedOption") }}
+          </option>
+        </select>
+      </div>
+    </SRField>
+    <SRField
         v-slot="{ id: fieldId, describedby }"
         :label="t('site.theme')"
     >
@@ -159,6 +186,28 @@ async function remove() {
         </select>
       </div>
     </SRField>
+    <BrandField
+        v-model:color="form.brandColor"
+        v-model:logo="form.logo"
+        :name="title"
+        :errors
+    />
+    <LegalPageField
+        v-model="form.legal.imprint"
+        :label="t('legal.imprint.title')"
+        :languages="form.languages"
+        inherit
+        :errors
+        path="legal.imprint"
+    />
+    <LegalPageField
+        v-model="form.legal.privacy"
+        :label="t('legal.privacy.title')"
+        :languages="form.languages"
+        inherit
+        :errors
+        path="legal.privacy"
+    />
     <OriginsField
         v-model="form.allowedOrigins"
         :error="originsError"
@@ -181,7 +230,7 @@ async function remove() {
           :aria-invalid="invalid"
       >
     </SRField>
-    <div class="field is-grouped">
+    <div class="field is-grouped is-grouped-multiline">
       <SRButton
           type="submit"
           variant="primary"

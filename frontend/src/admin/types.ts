@@ -5,12 +5,32 @@ export interface Languages {
   primary: string
 }
 
+export type Text = Record<string, string>
+
+/**
+ * LegalPage is a legal page: none, a link to a page elsewhere, or a
+ * Markdown text. Sites may inherit the instance's page.
+ */
+export interface LegalPage {
+  mode:  "inherit" | "none" | "url" | "text"
+  url?:  Text
+  text?: Text
+}
+
+export interface Legal {
+  imprint: LegalPage
+  privacy: LegalPage
+}
+
 export interface Settings {
   languages:    Languages
   defaultTheme: "light" | "dark" | "system"
+  legal:        Legal
+  /** landing is the Markdown text of the landing page. */
+  landing?:     Text
 }
 
-export type Text = Record<string, string>
+export type Availability = "online" | "offline" | "paused"
 
 export type State = "operational" | "unknown" | "degraded" | "down"
 
@@ -27,12 +47,18 @@ export interface Site {
   timezone:              string
   route:                 Route
   theme:                 "inherit" | "light" | "dark" | "system"
+  /** brandColor is "#rrggbb". */
+  brandColor?:           string
+  /** logo is the sanitized SVG source of the logo. */
+  logo?:                 string
+  legal:                 Legal
   allowedOrigins:        string[]
   /**
    * incidentRetentionDays keeps finished incidents that long; 0 keeps them
    * forever.
    */
   incidentRetentionDays: number
+  availability:          Availability
 }
 
 /** Person is the admin who created or edited something. */
@@ -70,10 +96,11 @@ export interface Incident {
 }
 
 export interface SiteSummary {
-  id:        string
-  name:      Text
-  languages: Languages
-  route:     Route
+  id:           string
+  name:         Text
+  languages:    Languages
+  route:        Route
+  availability: Availability
   status:       {
     overall:   State
     panels:    State

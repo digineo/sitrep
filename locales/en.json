@@ -119,7 +119,12 @@
     "appearance": "Appearance",
     "defaultTheme": "Default color scheme",
     "defaultThemeHelp": "Used on pages that do not set their own, unless visitors choose one.",
-    "saved": "Settings saved."
+    "saved": "Settings saved.",
+    "legal": "Default legal pages",
+    "legalHelp": "The landing page shows these legal pages, and so do status pages that do not set their own.",
+    "landing": "Landing page",
+    "landingText": "Landing page text",
+    "landingHelp": "Shown on the start page of the base domains. Without a text, the start page shows the SitRep logo and a link to the administration."
   },
   "languages": {
     "enabled": "Enabled languages",
@@ -220,7 +225,9 @@
     "originRemove": "Remove origin {n}",
     "retention": "Keep finished incidents (days)",
     "retentionHelp": "Finished incidents are deleted this many days after their last update. Leave empty to keep them forever.",
-    "unavailable": "This status page is currently unavailable."
+    "unavailable": "This status page is currently unavailable.",
+    "availability": "Availability",
+    "availabilityHelp": "Visitors of an offline or paused status page see only a notice that it is unavailable, and the legal pages."
   },
   "status": {
     "operational": "Operational",
@@ -453,5 +460,30 @@
     "edit": "Edit",
     "preview": "Preview",
     "previewFailed": "The preview is not available right now."
+  },
+  "availability": {
+    "online": "Online",
+    "offline": "Offline",
+    "paused": "Paused",
+    "offlineOption": "Offline: the public page is switched off",
+    "pausedOption": "Paused: also no data source queries"
+  },
+  "brand": {
+    "color": "Brand color",
+    "colorHelp": "Header and footer of the status page appear in this color.",
+    "none": "No brand color",
+    "logo": "Logo",
+    "logoHelp": "An SVG file of at most 64 KiB. It is sanitized when saved: scripts, links and external resources are removed.",
+    "upload": "Upload SVG file",
+    "remove": "Remove logo",
+    "preview": "Preview of the header"
+  },
+  "legalPage": {
+    "inherit": "As in the global settings",
+    "none": "None",
+    "url": "Link to a page elsewhere",
+    "text": "Text",
+    "urlOf": "{page}: link",
+    "textOf": "{page}: text"
   }
 }

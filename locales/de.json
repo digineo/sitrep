@@ -119,7 +119,12 @@
     "appearance": "Darstellung",
     "defaultTheme": "Standard-Farbschema",
     "defaultThemeHelp": "Gilt für Seiten ohne eigenes Farbschema, solange Besucher kein anderes wählen.",
-    "saved": "Einstellungen gespeichert."
+    "saved": "Einstellungen gespeichert.",
+    "legal": "Standard für rechtliche Seiten",
+    "legalHelp": "Die Startseite zeigt diese rechtlichen Seiten, ebenso Statusseiten ohne eigene.",
+    "landing": "Startseite",
+    "landingText": "Text der Startseite",
+    "landingHelp": "Erscheint auf der Startseite der Basis-Domains. Ohne Text zeigt die Startseite das SitRep-Logo und einen Link zur Verwaltung."
   },
   "languages": {
     "enabled": "Aktivierte Sprachen",
@@ -220,7 +225,9 @@
     "originRemove": "Ursprung {n} entfernen",
     "retention": "Beendete Vorfälle aufbewahren (Tage)",
     "retentionHelp": "Beendete Vorfälle werden so viele Tage nach ihrer letzten Meldung gelöscht. Leer lassen, um sie unbegrenzt aufzubewahren.",
-    "unavailable": "Diese Statusseite ist derzeit nicht verfügbar."
+    "unavailable": "Diese Statusseite ist derzeit nicht verfügbar.",
+    "availability": "Verfügbarkeit",
+    "availabilityHelp": "Besucher einer Statusseite, die offline oder pausiert ist, sehen nur einen Hinweis, dass sie nicht verfügbar ist, und die rechtlichen Seiten."
   },
   "status": {
     "operational": "Betriebsbereit",
@@ -453,5 +460,30 @@
     "edit": "Bearbeiten",
     "preview": "Vorschau",
     "previewFailed": "Die Vorschau ist gerade nicht verfügbar."
+  },
+  "availability": {
+    "online": "Online",
+    "offline": "Offline",
+    "paused": "Pausiert",
+    "offlineOption": "Offline: Die öffentliche Seite ist abgeschaltet",
+    "pausedOption": "Pausiert: auch keine Abfragen an Datenquellen"
+  },
+  "brand": {
+    "color": "Markenfarbe",
+    "colorHelp": "Kopf- und Fußbereich der Statusseite erscheinen in dieser Farbe.",
+    "none": "Keine Markenfarbe",
+    "logo": "Logo",
+    "logoHelp": "Eine SVG-Datei mit höchstens 64 KiB. Sie wird beim Speichern bereinigt: Skripte, Links und externe Ressourcen werden entfernt.",
+    "upload": "SVG-Datei hochladen",
+    "remove": "Logo entfernen",
+    "preview": "Vorschau des Kopfbereichs"
+  },
+  "legalPage": {
+    "inherit": "Wie in den globalen Einstellungen",
+    "none": "Keine",
+    "url": "Link auf eine andere Seite",
+    "text": "Text",
+    "urlOf": "{page}: Link",
+    "textOf": "{page}: Text"
   }
 }

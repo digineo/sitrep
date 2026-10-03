@@ -4,8 +4,11 @@ import { useI18n } from "vue-i18n"
 
 import SRButton from "../../shared/components/SRButton.vue"
 import SRField from "../../shared/components/SRField.vue"
-import { api, fieldErrors } from "../api"
+import SRLocalizedInput from "../../shared/components/SRLocalizedInput.vue"
+import { api, fieldErrors, localizedErrors } from "../api"
 import LanguagesField from "../components/LanguagesField.vue"
+import LegalPageField from "../components/LegalPageField.vue"
+import MarkdownEditor from "../components/MarkdownEditor.vue"
 import { usePageTitle } from "../composables/usePageTitle"
 import { useUnsavedChanges } from "../composables/useUnsavedChanges"
 import { useNotices } from "../stores/notices"
@@ -95,6 +98,44 @@ async function save() {
         </select>
       </div>
     </SRField>
+    <h2 class="title is-5 mt-5">
+      {{ t("settings.legal") }}
+    </h2>
+    <p class="block sr-muted">
+      {{ t("settings.legalHelp") }}
+    </p>
+    <LegalPageField
+        v-model="form.legal.imprint"
+        :label="t('legal.imprint.title')"
+        :languages="form.languages"
+        :errors
+        path="legal.imprint"
+    />
+    <LegalPageField
+        v-model="form.legal.privacy"
+        :label="t('legal.privacy.title')"
+        :languages="form.languages"
+        :errors
+        path="legal.privacy"
+    />
+    <h2 class="title is-5 mt-5">
+      {{ t("settings.landing") }}
+    </h2>
+    <SRLocalizedInput
+        v-slot="{ value, update, attrs }"
+        v-model="form.landing"
+        :label="t('settings.landingText')"
+        :languages="form.languages"
+        :maxlength="50000"
+        :help="t('settings.landingHelp')"
+        :errors="localizedErrors(errors, 'landing', t)"
+    >
+      <MarkdownEditor
+          :model-value="value"
+          v-bind="attrs"
+          @update:model-value="update"
+      />
+    </SRLocalizedInput>
     <SRButton
         type="submit"
         variant="primary"
