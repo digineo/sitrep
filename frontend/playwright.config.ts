@@ -1,9 +1,9 @@
 import { defineConfig } from "@playwright/test"
 
 // The servers run a testauth build (make test-e2e builds it). Each project
-// gets its own server and database: "settings" changes the instance
-// settings, which the other specs rely on. Data sources point at a stub of
-// the Prometheus API.
+// gets its own server and database: "settings" and "landing" change the
+// instance settings, which the other specs rely on. Data sources point at a
+// stub of the Prometheus API.
 const binary = "../sitrep-e2e"
 const tmp = "e2e/.tmp"
 
@@ -63,6 +63,11 @@ export default defineConfig({
       testMatch: "basic/*.spec.ts",
       use:       { baseURL: "http://sitrep.localhost:26073" },
     },
+    {
+      name:      "landing",
+      testMatch: "landing/*.spec.ts",
+      use:       { baseURL: "http://sitrep.localhost:26074" },
+    },
   ],
   webServer: [
     {
@@ -72,6 +77,7 @@ export default defineConfig({
     },
     server("bypass", 26071, { SITREP_AUTH: "bypass" }),
     server("settings", 26072, { SITREP_AUTH: "bypass" }),
+    server("landing", 26074, { SITREP_AUTH: "bypass" }),
     // Behind a trusted proxy, each test signs in from its own X-Forwarded-For
     // address, so the per-address throttle does not couple the tests.
     server("basic", 26073, basicEnv, `rm -f ${tmp}/users && ${users}`),

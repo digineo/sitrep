@@ -88,3 +88,20 @@ export async function createPanel(
 ): Promise<{ id: string }> {
   return admin(page, "POST", `/api/admin/sites/${site}/panels`, panel)
 }
+
+/** updateSite changes settings of a site through the admin API. */
+export async function updateSite(
+  page: Page,
+  id: string,
+  changes: Record<string, unknown>,
+) {
+  const site = await admin<Record<string, unknown>>(
+    page,
+    "GET",
+    `/api/admin/sites/${id}`,
+  )
+  await admin(page, "PUT", `/api/admin/sites/${id}`, {
+    ...site,
+    ...changes,
+  })
+}
