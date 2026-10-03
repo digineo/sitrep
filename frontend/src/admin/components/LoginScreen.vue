@@ -24,7 +24,18 @@ const route = useRoute()
 const router = useRouter()
 usePageTitle(() => t("login.title"))
 
-const signedOut = ref(false)
+// A notice passed in the query: after logout, or a sign-in error code
+// returned by a redirect provider.
+const loginErrors = new Map([
+  ["denied", "login.denied"],
+  ["not_member", "login.notMember"],
+  ["idp_error", "login.idpError"],
+  ["unavailable", "login.unavailable"],
+])
+const notice = ref<{
+  key:     string
+  success: boolean
+}>()
 const username = ref("")
 const password = ref("")
 const busy = ref(false)
@@ -50,10 +61,22 @@ const ssoHref = computed(() => `/auth/${provider.value.id}/login?return=${
 }`)
 
 onMounted(async() => {
-  if ("signed-out" in route.query) {
-    signedOut.value = true
-    const query = { ...route.query }
+  const query = { ...route.query }
+  const error = loginErrors.get(String(query["login-error"]))
+  if ("signed-out" in query) {
+    notice.value = {
+      key:     "login.signedOut",
+      success: true,
+    }
+  } else if (error) {
+    notice.value = {
+      key:     error,
+      success: false,
+    }
+  }
+  if ("signed-out" in query || "login-error" in query) {
     delete query["signed-out"]
+    delete query["login-error"]
     await router.replace({ query })
   }
 })
@@ -105,16 +128,18 @@ async function submit() {
           {{ t("login.continue") }}
         </p>
         <div
-            v-if="signedOut"
-            class="notification is-success"
+            v-if="notice"
+            class="notification"
+            :class="notice.success ? 'is-success' : 'is-danger'"
+            :role="notice.success ? undefined : 'alert'"
         >
           <button
               type="button"
               class="delete"
               :aria-label="t('common.dismiss')"
-              @click="signedOut = false"
+              @click="notice = undefined"
           />
-          {{ t("login.signedOut") }}
+          {{ t(notice.key) }}
         </div>
         <div
             v-if="!provider.available"

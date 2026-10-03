@@ -86,6 +86,9 @@
     "failed": "Sign-in failed. Check your username and password.",
     "throttled": "Too many attempts. Please try again later.",
     "unavailable": "Sign-in is temporarily unavailable. Please try again later.",
+    "denied": "Your identity provider denied the sign-in.",
+    "notMember": "Your account is not a member of the admin group. Ask whoever manages your accounts for access.",
+    "idpError": "Sign-in with single sign-on failed. Please try again.",
     "signedOut": "You have been signed out."
   },
   "nav": {

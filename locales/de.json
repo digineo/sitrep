@@ -86,6 +86,9 @@
     "failed": "Anmeldung fehlgeschlagen. Prüfen Sie Benutzername und Passwort.",
     "throttled": "Zu viele Versuche. Bitte versuchen Sie es später erneut.",
     "unavailable": "Die Anmeldung ist vorübergehend nicht möglich. Bitte versuchen Sie es später erneut.",
+    "denied": "Ihr Identitätsanbieter hat die Anmeldung abgelehnt.",
+    "notMember": "Ihr Konto gehört nicht zur Admin-Gruppe. Wenden Sie sich für den Zugang an die Verwaltung Ihrer Konten.",
+    "idpError": "Die Anmeldung mit Single Sign-on ist fehlgeschlagen. Bitte versuchen Sie es erneut.",
     "signedOut": "Sie wurden abgemeldet."
   },
   "nav": {
