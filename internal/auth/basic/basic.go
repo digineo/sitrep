@@ -3,6 +3,7 @@
 package basic
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -23,11 +24,22 @@ func init() {
 	auth.Register("basic", New)
 }
 
+// Bounds of the unauthenticated login endpoint. Each argon2id verification
+// allocates its memory parameter, so only a few may run at a time.
+const (
+	maxUsername   = 200 // bytes
+	verifications = 4
+	verifyWait    = 5 * time.Second
+)
+
 type provider struct {
 	path       string
 	trustProxy bool
 	throttle   *throttle
-	dummy      string // verified for unknown users, so timing reveals nothing
+	// verified for unknown users, so timing reveals nothing
+	dummy    string
+	slots    chan struct{} // one per running verification
+	slotWait time.Duration // how long an attempt waits for a slot
 
 	mu    sync.Mutex
 	users map[string]string
@@ -42,6 +54,8 @@ func New(env *config.Env, cfg config.Config) auth.Provider {
 		trustProxy: cfg.TrustProxy,
 		throttle:   newThrottle(),
 		dummy:      Hash(""),
+		slots:      make(chan struct{}, verifications),
+		slotWait:   verifyWait,
 	}
 	if p.path != "" {
 		if err := p.load(); err != nil {
@@ -106,6 +120,14 @@ func parseUsers(data string) (map[string]string, error) {
 			return nil, fmt.Errorf("line %d: expected username:hash", i+1)
 		}
 
+		if len(name) > maxUsername {
+			return nil, fmt.Errorf(
+				"line %d: username longer than %d bytes",
+				i+1,
+				maxUsername,
+			)
+		}
+
 		if _, dup := users[name]; dup {
 			return nil, fmt.Errorf("line %d: duplicate username", i+1)
 		}
@@ -131,12 +153,69 @@ func (p *provider) login(w http.ResponseWriter, r *http.Request, core *auth.Core
 		return
 	}
 
+	if len(c.Username) > maxUsername {
+		core.Log.Info("failed login with an overlong username")
+		e := apierr.New(http.StatusUnauthorized, apierr.InvalidCredentials)
+		httpx.WriteError(w, r, core.Log, e)
+		return
+	}
+
+	// The throttle is checked while holding a slot, so parallel attempts
+	// cannot all pass it before the first failure is recorded.
 	ip := httpx.Effective(r, p.trustProxy).IP
-	now := time.Now()
-	if p.throttle.blocked(c.Username, ip, now) {
+	if !p.acquire(r.Context()) {
 		e := apierr.New(http.StatusTooManyRequests, apierr.Throttled)
 		httpx.WriteError(w, r, core.Log, e)
 		return
+	}
+
+	ok, throttled := p.verify(core, c, ip)
+	<-p.slots
+	switch {
+	case throttled:
+		e := apierr.New(http.StatusTooManyRequests, apierr.Throttled)
+		httpx.WriteError(w, r, core.Log, e)
+	case !ok:
+		core.Log.Info("failed login",
+			slog.String("username", c.Username))
+		e := apierr.New(http.StatusUnauthorized, apierr.InvalidCredentials)
+		httpx.WriteError(w, r, core.Log, e)
+	default:
+		id := auth.Identity{
+			Subject:     c.Username,
+			DisplayName: c.Username,
+		}
+		if err := core.Login(w, r, id); err != nil {
+			httpx.WriteError(w, r, core.Log, err)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+// acquire takes a verification slot. It gives up after p.slotWait or when
+// ctx ends.
+func (p *provider) acquire(ctx context.Context) bool {
+	select {
+	case p.slots <- struct{}{}:
+		return true
+	case <-time.After(p.slotWait):
+	case <-ctx.Done():
+	}
+	return false
+}
+
+// verify checks the credentials unless the throttle blocks them, and
+// records the outcome with the throttle. Unknown users are verified against
+// a dummy hash. The caller holds a slot.
+func (p *provider) verify(
+	core *auth.Core,
+	c credentials,
+	ip string,
+) (ok, throttled bool) {
+	if p.throttle.blocked(c.Username, ip, time.Now()) {
+		return false, true
 	}
 
 	if err := p.load(); err != nil {
@@ -151,23 +230,10 @@ func (p *provider) login(w http.ResponseWriter, r *http.Request, core *auth.Core
 		hash = p.dummy
 	}
 	if !Verify(hash, c.Password) || !known {
-		p.throttle.fail(c.Username, ip, now)
-		core.Log.Info("failed login",
-			slog.String("username", c.Username))
-		e := apierr.New(http.StatusUnauthorized, apierr.InvalidCredentials)
-		httpx.WriteError(w, r, core.Log, e)
-		return
+		p.throttle.fail(c.Username, ip, time.Now())
+		return false, false
 	}
 
-	p.throttle.reset(c.Username, ip, now)
-	id := auth.Identity{
-		Subject:     c.Username,
-		DisplayName: c.Username,
-	}
-	if err := core.Login(w, r, id); err != nil {
-		httpx.WriteError(w, r, core.Log, err)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
+	p.throttle.reset(c.Username, ip, time.Now())
+	return true, false
 }

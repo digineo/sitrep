@@ -96,6 +96,12 @@ address, further attempts for that username, or from that address, are
 refused for 15 minutes. SitRep keeps addresses only as keyed hash under a
 secret that changes daily; the change resets the address counters.
 
+At most four password verifications run at a time; an attempt that cannot
+start one within five seconds is refused as too many attempts. Each argon2id
+verification allocates its memory parameter, so hashes with m=1048576 (1 GiB)
+can make logins use up to 4 GiB. The default of `sitrep hash-password`,
+m=65536, needs 64 MiB each. Usernames are limited to 200 bytes.
+
 ## URLs and languages
 
 A base domain host serves the landing page at `/`, the console at `/admin`

@@ -4,11 +4,15 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -233,11 +237,63 @@ func TestThrottleAddressWithManyUsernames(t *testing.T) {
 	assert.False(blocked, "success drops the address counter")
 }
 
+func TestThrottleCap(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	th := newThrottle()
+	now := time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
+	for i := range maxCounters / 2 {
+		ip := fmt.Sprintf("10.0.%d.%d", i/256, i%256)
+		th.fail(fmt.Sprintf("user%d", i), ip, now)
+	}
+
+	require.Equal(maxCounters, len(th.users)+len(th.addrs))
+	blocked := th.blocked("user1", "10.0.0.1", now)
+	assert.False(blocked, "known keys are counted as usual")
+	blocked = th.blocked("fresh", "10.0.0.1", now)
+	assert.True(blocked, "a new username is locked while the counters are full")
+	blocked = th.blocked("user1", "192.0.2.1", now)
+	assert.True(blocked, "a new address is locked while the counters are full")
+
+	later := now.Add(window)
+	blocked = th.blocked("fresh", "192.0.2.1", later)
+	assert.False(blocked, "expired counters make room")
+	assert.Empty(th.users)
+}
+
+func TestThrottlePrunesPeriodically(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	th := newThrottle()
+	t0 := time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
+	th.fail("ann", "192.0.2.1", t0)
+	th.fail("bob", "192.0.2.2", t0.Add(50*time.Second))
+	require.Len(th.users, 2)
+
+	th.blocked("eve", "192.0.2.3", t0.Add(window+10*time.Second))
+	users := slices.Collect(maps.Keys(th.users))
+	assert.Equal([]string{"bob"}, users, "ann expired")
+
+	th.blocked("eve", "192.0.2.3", t0.Add(window+time.Minute))
+	assert.Len(
+		th.users,
+		1,
+		"bob expired, but the last pruning was less than a minute ago",
+	)
+
+	th.blocked("eve", "192.0.2.3", t0.Add(window+70*time.Second))
+	assert.Empty(th.users)
+	assert.Empty(th.addrs)
+}
+
 type fixture struct {
+	provider *provider
 	core     *auth.Core
 	path     string
 	login    http.Handler
-	attempts int
+	attempts atomic.Int32
 }
 
 func newFixture(t *testing.T, users string) *fixture {
@@ -258,19 +314,20 @@ func newFixture(t *testing.T, users string) *fixture {
 
 	core := auth.NewCore(xlog.NewDiscard(), db, "basic", p, time.Hour, false)
 	return &fixture{
-		core:  core,
-		path:  path,
-		login: core.Handler(),
+		provider: p.(*provider),
+		core:     core,
+		path:     path,
+		login:    core.Handler(),
 	}
 }
 
 // attempt posts a login, each one from another client address.
 func (f *fixture) attempt(username, password string) *httptest.ResponseRecorder {
-	f.attempts++
+	n := f.attempts.Add(1)
 	target := "http://status.example.com/auth/basic/login"
 	body := `{"username":"` + username + `","password":"` + password + `"}`
 	r := httptest.NewRequest(http.MethodPost, target, strings.NewReader(body))
-	r.RemoteAddr = fmt.Sprintf("192.0.2.%d:1234", f.attempts)
+	r.RemoteAddr = fmt.Sprintf("10.0.%d.%d:1234", n/256, n%256)
 	r.Header.Set("Origin", "http://status.example.com")
 	r.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -378,5 +435,83 @@ func TestReload(t *testing.T) {
 		http.StatusNoContent,
 		f.attempt("bob", "correct horse").Code,
 		"a broken file keeps the previous users",
+	)
+}
+
+// occupySlots takes every verification slot until the test ends, and makes
+// attempts give up waiting for one quickly.
+func (f *fixture) occupySlots(t *testing.T) {
+	t.Helper()
+	f.provider.slotWait = 10 * time.Millisecond
+	for range verifications {
+		f.provider.slots <- struct{}{}
+	}
+	t.Cleanup(func() {
+		for range verifications {
+			<-f.provider.slots
+		}
+	})
+}
+
+func TestLoginWaitsForAVerificationSlot(t *testing.T) {
+	f := newFixture(t, "ann:"+argonCorrectHorse+"\n")
+	f.occupySlots(t)
+	w := f.attempt("ann", "correct horse")
+	assert.Equal(t, http.StatusTooManyRequests, w.Code)
+	assert.Contains(t, w.Body.String(), `"code":"throttled"`)
+	users := f.provider.throttle.users
+	assert.Empty(t, users, "no verification ran, so no failure is counted")
+}
+
+func TestLoginRejectsOverlongUsernames(t *testing.T) {
+	assert := assert.New(t)
+
+	f := newFixture(t, "ann:"+argonCorrectHorse+"\n")
+	f.occupySlots(t)
+	w := f.attempt(strings.Repeat("a", maxUsername+1), "correct horse")
+	assert.Equal(
+		http.StatusUnauthorized,
+		w.Code,
+		"answered without a verification slot",
+	)
+	assert.Contains(w.Body.String(), `"code":"invalid_credentials"`)
+	assert.Empty(f.provider.throttle.users)
+	assert.Empty(f.provider.throttle.addrs)
+
+	w = f.attempt(strings.Repeat("a", maxUsername), "correct horse")
+	assert.Equal(
+		http.StatusTooManyRequests,
+		w.Code,
+		"a username at the limit is verified",
+	)
+
+	line := strings.Repeat("a", maxUsername+1) + ":" + argonCorrectHorse
+	_, err := parseUsers(line)
+	assert.ErrorContains(err, "line 1: username longer than 200 bytes")
+}
+
+func TestLoginParallelAttemptsAreThrottled(t *testing.T) {
+	f := newFixture(t, "ann:"+argonCorrectHorse+"\n")
+	var mu sync.Mutex
+	codes := map[int]int{}
+	var wg sync.WaitGroup
+	for range 20 {
+		wg.Go(func() {
+			code := f.attempt("ann", "wrong").Code
+			mu.Lock()
+			codes[code]++
+			mu.Unlock()
+		})
+	}
+
+	wg.Wait()
+	total := codes[http.StatusUnauthorized] + codes[http.StatusTooManyRequests]
+	assert.Equal(t, 20, total, codes)
+	assert.GreaterOrEqual(t, codes[http.StatusUnauthorized], maxFailures, codes)
+	assert.LessOrEqual(
+		t,
+		codes[http.StatusUnauthorized],
+		maxFailures+verifications-1,
+		"only attempts holding a slot can pass the throttle together",
 	)
 }
