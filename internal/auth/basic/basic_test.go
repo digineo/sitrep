@@ -3,6 +3,7 @@ package basic
 import (
 	"bytes"
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -140,6 +141,7 @@ func TestParseUsers(t *testing.T) {
 }
 
 func TestThrottle(t *testing.T) {
+	require := require.New(t)
 	assert := assert.New(t)
 
 	th := newThrottle()
@@ -157,42 +159,85 @@ func TestThrottle(t *testing.T) {
 	blocked = th.blocked("ann", "192.0.2.1", now.Add(20*time.Minute))
 	assert.False(blocked, "the lockout lasts 15 minutes")
 	blocked = th.blocked("ann", "192.0.2.2", now.Add(5*time.Minute))
-	assert.False(blocked, "other addresses are counted separately")
+	assert.True(blocked, "the username is locked from every address")
 	blocked = th.blocked("bob", "192.0.2.1", now.Add(5*time.Minute))
-	assert.False(blocked, "other users are counted separately")
+	assert.True(blocked, "the address is locked for every username")
+	assert.False(th.blocked("bob", "192.0.2.2", now.Add(5*time.Minute)))
 
 	for i := range maxFailures - 1 {
-		th.fail("bob", "192.0.2.1", now.Add(time.Duration(i)*5*time.Minute))
+		th.fail("bob", "192.0.2.3", now.Add(time.Duration(i)*5*time.Minute))
 	}
 
-	th.fail("bob", "192.0.2.1", now.Add(20*time.Minute))
-	blocked = th.blocked("bob", "192.0.2.1", now.Add(20*time.Minute))
+	th.fail("bob", "192.0.2.3", now.Add(20*time.Minute))
+	blocked = th.blocked("bob", "192.0.2.3", now.Add(20*time.Minute))
 	assert.False(blocked, "failures older than 15 minutes expire")
 
 	for range maxFailures - 1 {
-		th.fail("eve", "192.0.2.1", now)
+		th.fail("eve", "192.0.2.4", now)
 	}
 
-	th.reset("eve", "192.0.2.1", now)
-	th.fail("eve", "192.0.2.1", now)
-	assert.False(th.blocked("eve", "192.0.2.1", now), "success drops the counter")
+	th.reset("eve", "192.0.2.4", now)
+	th.fail("eve", "192.0.2.4", now)
+	assert.False(th.blocked("eve", "192.0.2.4", now), "success drops the counters")
 
-	for range maxFailures {
-		th.fail("ann", "192.0.2.9", now)
+	late := time.Date(2026, 10, 2, 23, 55, 0, 0, time.UTC)
+	for i := range maxFailures {
+		th.fail("mallory", fmt.Sprintf("198.51.100.%d", i+1), late)
+		th.fail(fmt.Sprintf("user%d", i), "192.0.2.9", late)
 	}
 
-	assert.True(th.blocked("ann", "192.0.2.9", now))
-	blocked = th.blocked("ann", "192.0.2.9", now.Add(12*time.Hour))
-	assert.False(blocked, "the daily secret change drops the counters")
-	for key := range th.entries {
+	require.True(th.blocked("trent", "192.0.2.9", late))
+	nextDay := late.Add(10 * time.Minute)
+	blocked = th.blocked("trent", "192.0.2.9", nextDay)
+	assert.False(blocked, "the daily secret change drops the address counters")
+	blocked = th.blocked("mallory", "203.0.113.1", nextDay)
+	assert.True(blocked, "username counters survive the secret change")
+	for key := range th.addrs {
 		assert.NotContains(key, "192.0.2", "addresses are only kept as keyed hash")
 	}
 }
 
+func TestThrottleUsernameFromManyAddresses(t *testing.T) {
+	th := newThrottle()
+	now := time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
+	for i := range maxFailures {
+		ip := fmt.Sprintf("192.0.2.%d", i+1)
+		assert.False(t, th.blocked("ann", ip, now), ip)
+		th.fail("ann", ip, now)
+	}
+
+	blocked := th.blocked("ann", "198.51.100.1", now)
+	assert.True(t, blocked, "a fresh address cannot try the username")
+	blocked = th.blocked("bob", "192.0.2.1", now)
+	assert.False(t, blocked, "the addresses each failed only once")
+}
+
+func TestThrottleAddressWithManyUsernames(t *testing.T) {
+	assert := assert.New(t)
+
+	th := newThrottle()
+	now := time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
+	for i := range maxFailures {
+		user := fmt.Sprintf("user%d", i)
+		assert.False(th.blocked(user, "192.0.2.1", now), user)
+		th.fail(user, "192.0.2.1", now)
+	}
+
+	blocked := th.blocked("fresh", "192.0.2.1", now)
+	assert.True(blocked, "the address cannot try another username")
+	blocked = th.blocked("user0", "192.0.2.2", now)
+	assert.False(blocked, "the usernames each failed only once")
+
+	th.reset("fresh", "192.0.2.1", now)
+	blocked = th.blocked("fresh", "192.0.2.1", now)
+	assert.False(blocked, "success drops the address counter")
+}
+
 type fixture struct {
-	core  *auth.Core
-	path  string
-	login http.Handler
+	core     *auth.Core
+	path     string
+	login    http.Handler
+	attempts int
 }
 
 func newFixture(t *testing.T, users string) *fixture {
@@ -219,10 +264,13 @@ func newFixture(t *testing.T, users string) *fixture {
 	}
 }
 
+// attempt posts a login, each one from another client address.
 func (f *fixture) attempt(username, password string) *httptest.ResponseRecorder {
+	f.attempts++
 	target := "http://status.example.com/auth/basic/login"
 	body := `{"username":"` + username + `","password":"` + password + `"}`
 	r := httptest.NewRequest(http.MethodPost, target, strings.NewReader(body))
+	r.RemoteAddr = fmt.Sprintf("192.0.2.%d:1234", f.attempts)
 	r.Header.Set("Origin", "http://status.example.com")
 	r.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -284,7 +332,8 @@ func TestLoginThrottled(t *testing.T) {
 	)
 	assert.Contains(w.Body.String(), `"code":"throttled"`)
 
-	assert.Equal(http.StatusNoContent, f.attempt("bob", "correct horse").Code)
+	w = f.attempt("bob", "correct horse")
+	assert.Equal(http.StatusNoContent, w.Code, "the addresses failed only once")
 }
 
 func TestLoginUnknownUserTakesComparableTime(t *testing.T) {

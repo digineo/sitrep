@@ -90,9 +90,11 @@ htpasswd -B -C 12 users bob
 bcrypt needs a cost of at least 10. argon2id hashes need at least
 m=19456, t=2 and p=1, and at most m=1048576, t=10 and p=16.
 
-After five failed attempts for a username from one address within 15
-minutes, further attempts are refused for 15 minutes. SitRep keeps the
-address only as keyed hash under a secret that changes daily.
+Failed attempts are counted per username and, independently, per client
+address. After five failures within 15 minutes for a username, or from an
+address, further attempts for that username, or from that address, are
+refused for 15 minutes. SitRep keeps addresses only as keyed hash under a
+secret that changes daily; the change resets the address counters.
 
 ## URLs and languages
 

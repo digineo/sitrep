@@ -1,6 +1,12 @@
-import { expect, test } from "@playwright/test"
+import { expect, type Page, test } from "@playwright/test"
+
+/** from makes the page's requests come from address, as seen by the server. */
+async function from(page: Page, address: string) {
+  await page.setExtraHTTPHeaders({ "X-Forwarded-For": address })
+}
 
 test("signs in with username and password", async({ page }) => {
+  await from(page, "192.0.2.1")
   await page.goto("/admin/settings")
   await page.getByLabel("Username").fill("admin")
   await page.getByLabel("Password").fill("wrong")
@@ -19,6 +25,7 @@ test("signs in with username and password", async({ page }) => {
 })
 
 test("refuses further attempts after five failures", async({ page }) => {
+  await from(page, "192.0.2.2")
   await page.goto("/admin/")
   await page.getByLabel("Username").fill("throttled")
   for (let i = 0; i < 5; i++) {
@@ -38,6 +45,7 @@ test.describe("in German", () => {
   test.use({ locale: "de-DE" })
 
   test("signs in with username and password", async({ page }) => {
+    await from(page, "192.0.2.3")
     await page.goto("/admin/")
     await page.getByLabel("Benutzername").fill("admin-de")
     await page.getByLabel("Passwort").fill("falsch")
@@ -54,6 +62,7 @@ test.describe("in German", () => {
   })
 
   test("refuses further attempts after five failures", async({ page }) => {
+    await from(page, "192.0.2.4")
     await page.goto("/admin/")
     await page.getByLabel("Benutzername").fill("throttled-de")
     for (let i = 0; i < 5; i++) {

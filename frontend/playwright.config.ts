@@ -35,6 +35,7 @@ const users = ["admin", "admin-de", "throttled", "throttled-de"]
 const basicEnv = {
   SITREP_AUTH:             "basic",
   SITREP_BASIC_USERS_FILE: `${tmp}/users`,
+  SITREP_TRUST_PROXY:      "true",
 }
 
 export default defineConfig({
@@ -63,6 +64,8 @@ export default defineConfig({
   webServer: [
     server("bypass", 26071, { SITREP_AUTH: "bypass" }),
     server("settings", 26072, { SITREP_AUTH: "bypass" }),
+    // Behind a trusted proxy, each test signs in from its own X-Forwarded-For
+    // address, so the per-address throttle does not couple the tests.
     server("basic", 26073, basicEnv, `rm -f ${tmp}/users && ${users}`),
   ],
 })
