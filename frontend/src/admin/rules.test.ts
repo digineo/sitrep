@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   durationError,
+  originError,
   parseDuration,
   resolveText,
   routeError,
@@ -107,5 +108,34 @@ describe("durations", () => {
     expect(durationError("4s", 5, 86400)).toBe("out_of_range")
     expect(durationError("1d1s", 5, 86400)).toBe("out_of_range")
     expect(durationError("1x", 5)).toBe("invalid_duration")
+  })
+})
+
+describe("originError", () => {
+  it("accepts origins like the server", () => {
+    for (const origin of [
+      "https://www.example.com",
+      "HTTP://Example.com:8080/",
+      "https://example.com:443",
+      "http://[::1]:3000",
+    ]) {
+      expect(originError(origin), origin).toBeNull()
+    }
+  })
+
+  it("rejects everything else", () => {
+    for (const origin of [
+      "example.com",
+      "ftp://example.com",
+      "https://example.com/path",
+      "https://user@example.com",
+      "https://example.com?q",
+      "https://example.com#f",
+      "https://*.example.com",
+      "https://example.com:",
+      "https://example.com//",
+    ]) {
+      expect(originError(origin), origin).toBe("invalid_origin")
+    }
   })
 })

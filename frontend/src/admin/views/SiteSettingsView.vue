@@ -9,6 +9,7 @@ import SRLocalizedInput from "../../shared/components/SRLocalizedInput.vue"
 import { useConfirm } from "../../shared/composables/useConfirm"
 import { api, fieldErrors, localizedErrors } from "../api"
 import LanguagesField from "../components/LanguagesField.vue"
+import OriginsField from "../components/OriginsField.vue"
 import RouteField from "../components/RouteField.vue"
 import TimezoneField from "../components/TimezoneField.vue"
 import { usePageTitle } from "../composables/usePageTitle"
@@ -33,6 +34,14 @@ const saving = ref(false)
 const title = computed(() => form.value
   ? resolveText(form.value.name, locale.value, form.value.languages)
   : "")
+const originsError = computed(() => Object.entries(errors.value)
+  .find(([path]) => path.startsWith("allowedOrigins"))?.[1])
+
+/** retention is the retention field's value: empty keeps incidents forever. */
+const retention = computed({
+  get: () => form.value?.incidentRetentionDays || "",
+  set: (v: number | string) => (form.value!.incidentRetentionDays = Number(v) || 0),
+})
 
 usePageTitle(() => t("site.settingsOf", { site: title.value }))
 useUnsavedChanges(
@@ -61,7 +70,10 @@ async function save() {
   saving.value = true
   errors.value = {}
   try {
-    apply(await api<Site>("PUT", `/api/admin/sites/${id}`, form.value))
+    apply(await api<Site>("PUT", `/api/admin/sites/${id}`, {
+      ...form.value,
+      allowedOrigins: form.value!.allowedOrigins.filter(o => o.trim()),
+    }))
     notices.success(t("site.saved"))
     await router.push(`/sites/${id}`)
   } catch(err) {
@@ -147,6 +159,28 @@ async function remove() {
         </select>
       </div>
     </SRField>
+    <OriginsField
+        v-model="form.allowedOrigins"
+        :error="originsError"
+    />
+    <SRField
+        v-slot="{ id: fieldId, describedby, invalid }"
+        :label="t('site.retention')"
+        :help="t('site.retentionHelp')"
+        :error="errors.incidentRetentionDays && t(`error.${errors.incidentRetentionDays}`)"
+    >
+      <input
+          :id="fieldId"
+          v-model="retention"
+          class="input sr-days"
+          type="number"
+          min="1"
+          max="36500"
+          step="1"
+          :aria-describedby="describedby"
+          :aria-invalid="invalid"
+      >
+    </SRField>
     <div class="field is-grouped">
       <SRButton
           type="submit"
@@ -175,5 +209,9 @@ async function remove() {
 <style scoped>
 .sr-form {
   max-width: 40rem;
+}
+
+.sr-days {
+  max-width: 10rem;
 }
 </style>

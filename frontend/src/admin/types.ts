@@ -19,12 +19,18 @@ export interface Route {
 }
 
 export interface Site {
-  id:        string
-  name:      Text
-  languages: Languages
-  timezone:  string
-  route:     Route
-  theme:     "inherit" | "light" | "dark" | "system"
+  id:                    string
+  name:                  Text
+  languages:             Languages
+  timezone:              string
+  route:                 Route
+  theme:                 "inherit" | "light" | "dark" | "system"
+  allowedOrigins:        string[]
+  /**
+   * incidentRetentionDays keeps finished incidents that long; 0 keeps them
+   * forever.
+   */
+  incidentRetentionDays: number
 }
 
 export interface SiteSummary {

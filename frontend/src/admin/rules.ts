@@ -137,3 +137,22 @@ export function durationError(s: string, min: number, max?: number): string | nu
   }
   return d < min || (max !== undefined && d > max) ? "out_of_range" : null
 }
+
+/**
+ * originError returns the error code of an origin "scheme://host[:port]"
+ * with the scheme http or https, or null if it is valid. Paths, userinfo,
+ * queries, fragments and wildcards are invalid.
+ */
+export function originError(origin: string): string | null {
+  let url: URL
+  try {
+    url = new URL(origin.trim())
+  } catch {
+    return "invalid_origin"
+  }
+
+  const valid = (url.protocol === "http:" || url.protocol === "https:")
+    && url.host !== "" && url.pathname === "/"
+    && !/[@?#*\\]/.test(origin) && !/:\/?$/.test(origin.trim())
+  return valid ? null : "invalid_origin"
+}

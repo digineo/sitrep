@@ -201,7 +201,14 @@
     "themeInherit": "Standard ({theme})",
     "delete": "Statusseite löschen",
     "deleteTitle": "Statusseite löschen?",
-    "deleteMessage": "{site} wird mit allen Panels gelöscht."
+    "deleteMessage": "{site} wird mit allen Panels gelöscht.",
+    "origins": "Erlaubte Ursprünge für incidents.json",
+    "originsHelp": "Andere Websites unter diesen Ursprüngen dürfen die Vorfälle im Browser lesen (CORS), z. B. https://www.example.com.",
+    "origin": "Ursprung {n}",
+    "originAdd": "Ursprung hinzufügen",
+    "originRemove": "Ursprung {n} entfernen",
+    "retention": "Beendete Vorfälle aufbewahren (Tage)",
+    "retentionHelp": "Beendete Vorfälle werden so viele Tage nach ihrer letzten Meldung gelöscht. Leer lassen, um sie unbegrenzt aufzubewahren."
   },
   "status": {
     "operational": "Betriebsbereit",

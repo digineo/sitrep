@@ -201,7 +201,14 @@
     "themeInherit": "Default ({theme})",
     "delete": "Delete status page",
     "deleteTitle": "Delete status page?",
-    "deleteMessage": "{site} will be deleted with all its panels."
+    "deleteMessage": "{site} will be deleted with all its panels.",
+    "origins": "Allowed origins for incidents.json",
+    "originsHelp": "Other websites at these origins may read the incidents in the browser (CORS), e.g. https://www.example.com.",
+    "origin": "Origin {n}",
+    "originAdd": "Add origin",
+    "originRemove": "Remove origin {n}",
+    "retention": "Keep finished incidents (days)",
+    "retentionHelp": "Finished incidents are deleted this many days after their last update. Leave empty to keep them forever."
   },
   "status": {
     "operational": "Operational",
