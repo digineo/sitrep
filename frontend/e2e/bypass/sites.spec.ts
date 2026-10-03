@@ -161,6 +161,14 @@ test("serves subdomain sites", async({ page }) => {
   await expect(
     page.getByRole("status").filter({ hasText: "All systems operational" }),
   ).toBeVisible()
+
+  // Reverse proxies with on-demand TLS ask before requesting a certificate.
+  const known = await page.goto(`/tls/authorize?domain=${slug}.sitrep.localhost`)
+  expect(known?.status()).toBe(200)
+  const unknown = await page.goto(
+    `/tls/authorize?domain=${unique("sub")}.sitrep.localhost`,
+  )
+  expect(unknown?.status()).toBe(404)
 })
 
 test("shows outages and unusable data", async({ page }) => {

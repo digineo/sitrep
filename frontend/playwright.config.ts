@@ -3,7 +3,7 @@ import { defineConfig } from "@playwright/test"
 // The servers run a testauth build (make test-e2e builds it). Each project
 // gets its own server and database: "settings" and "landing" change the
 // instance settings, which the other specs rely on. Data sources point at a
-// stub of the Prometheus API.
+// stub of the Prometheus API, and "oidc" signs in with a mock IdP.
 const binary = "../sitrep-e2e"
 const tmp = "e2e/.tmp"
 
@@ -68,11 +68,21 @@ export default defineConfig({
       testMatch: "landing/*.spec.ts",
       use:       { baseURL: "http://sitrep.localhost:26074" },
     },
+    {
+      name:      "oidc",
+      testMatch: "oidc/*.spec.ts",
+      use:       { baseURL: "http://sitrep.localhost:26075" },
+    },
   ],
   webServer: [
     {
       command:             "node e2e/prometheus.ts",
       url:                 "http://127.0.0.1:26090/api/v1/status/flags",
+      reuseExistingServer: false,
+    },
+    {
+      command:             "node e2e/idp.ts",
+      url:                 "http://127.0.0.1:26091/.well-known/openid-configuration",
       reuseExistingServer: false,
     },
     server("bypass", 26071, { SITREP_AUTH: "bypass" }),
@@ -81,5 +91,12 @@ export default defineConfig({
     // Behind a trusted proxy, each test signs in from its own X-Forwarded-For
     // address, so the per-address throttle does not couple the tests.
     server("basic", 26073, basicEnv, `rm -f ${tmp}/users && ${users}`),
+    server("oidc", 26075, {
+      SITREP_AUTH:              "oidc",
+      SITREP_OIDC_ISSUER:       "http://127.0.0.1:26091",
+      SITREP_OIDC_CLIENT_ID:    "sitrep",
+      SITREP_OIDC_REDIRECT_URL: "http://sitrep.localhost:26075/auth/oidc/callback",
+      SITREP_OIDC_ADMIN_GROUP:  "admins",
+    }),
   ],
 })
