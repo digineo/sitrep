@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"mime"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/digineo/xlog"
@@ -53,7 +54,7 @@ func (c *Core) Handler() http.Handler {
 	mux.HandleFunc("GET /auth/session", c.session)
 	mux.HandleFunc("POST /auth/logout", c.logout)
 	c.provider.Routes(mux, c)
-	return c.CSRF(mux)
+	return c.CSRF(mux, "application/json")
 }
 
 // cookieName returns the session cookie's name. HTTPS requests use the
@@ -137,8 +138,8 @@ func (c *Core) Guard(next http.Handler) http.Handler {
 }
 
 // CSRF rejects requests with unsafe methods unless their Origin is the
-// request's own origin and their body is JSON.
-func (c *Core) CSRF(next http.Handler) http.Handler {
+// request's own origin and their body has one of the media types.
+func (c *Core) CSRF(next http.Handler, mediaTypes ...string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet, http.MethodHead, http.MethodOptions:
@@ -154,7 +155,7 @@ func (c *Core) CSRF(next http.Handler) http.Handler {
 		}
 
 		mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-		if err != nil || mt != "application/json" {
+		if err != nil || !slices.Contains(mediaTypes, mt) {
 			e := apierr.New(
 				http.StatusUnsupportedMediaType,
 				apierr.UnsupportedMediaType,

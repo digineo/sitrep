@@ -197,7 +197,7 @@ func TestCSRF(t *testing.T) {
 		w.WriteHeader(http.StatusTeapot)
 	})
 
-	h := core.CSRF(teapot)
+	h := core.CSRF(teapot, "application/json")
 	serve := func(method, origin, contentType string) int {
 		target := "http://status.example.com:8080/api/admin/x"
 		r := httptest.NewRequest(method, target, nil)
@@ -245,6 +245,20 @@ func TestCSRF(t *testing.T) {
 		code = serve(m, own, "application/x-www-form-urlencoded")
 		assert.Equal(http.StatusUnsupportedMediaType, code, m)
 	}
+
+	form := core.CSRF(teapot, "application/x-www-form-urlencoded")
+	target := "http://status.example.com:8080/api/admin/x"
+	r := httptest.NewRequest(http.MethodPost, target, nil)
+	r.Header.Set("Origin", own)
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	form.ServeHTTP(w, r)
+	assert.Equal(http.StatusTeapot, w.Code, "other media types where allowed")
+
+	r.Header.Set("Origin", "http://evil.example:8080")
+	w = httptest.NewRecorder()
+	form.ServeHTTP(w, r)
+	assert.Equal(http.StatusForbidden, w.Code)
 }
 
 func TestSessionEndpoint(t *testing.T) {
