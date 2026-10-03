@@ -353,6 +353,48 @@ func TestShellEscapesTitle(t *testing.T) {
 	assert.Contains(body, `<link rel="canonical" href="http://status.example.com/acme/">`)
 }
 
+func TestSiteShellTheme(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	f := newFixture(t)
+	site, err := f.db.SiteByRoute(model.Route{
+		Mode: model.RoutePath,
+		Slug: "acme",
+	})
+	require.NoError(err)
+	assert.Contains(
+		f.get("status.example.com", "/acme/").Body.String(),
+		`<html lang="de">`,
+		"inherits the instance's system default",
+	)
+
+	site.Theme = "dark"
+	require.NoError(f.db.UpdateSite(site))
+	assert.Contains(
+		f.get("status.example.com", "/acme/").Body.String(),
+		`<html lang="de" data-theme="dark">`,
+	)
+	light := f.get("status.example.com", "/acme/", "Cookie", "theme=light")
+	assert.Contains(
+		light.Body.String(),
+		`data-theme="light"`,
+		"the visitor's choice comes first",
+	)
+
+	site.Theme = "system"
+	require.NoError(f.db.UpdateSite(site))
+	require.NoError(f.db.PutSettings(model.Settings{
+		Languages:    model.DefaultSettings().Languages,
+		DefaultTheme: "dark",
+	}))
+	assert.Contains(
+		f.get("status.example.com", "/acme/").Body.String(),
+		`<html lang="de">`,
+		"the site's choice before the instance's",
+	)
+}
+
 func TestNotFoundShell(t *testing.T) {
 	require := require.New(t)
 	assert := assert.New(t)

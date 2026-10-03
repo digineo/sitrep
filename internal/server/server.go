@@ -275,7 +275,13 @@ func (s *Server) serveSite(
 	}
 
 	sh := pageShell(info, base, langs, res, title, name)
-	sh.Theme = theme(r, settings.DefaultTheme)
+
+	def := settings.DefaultTheme
+	if site.Theme != "" && site.Theme != "inherit" {
+		def = site.Theme
+	}
+
+	sh.Theme = theme(r, def)
 	sh.Assets = s.assets.entry("public")
 	sh.Bootstrap.Mode = "site"
 	sh.Bootstrap.SiteID = site.ID
