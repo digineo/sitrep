@@ -73,6 +73,17 @@ func Effective(r *http.Request, trustProxy bool) Info {
 	}
 }
 
+// NormalizeHost returns s lowercased, without port and one trailing dot.
+// It reports false if s is not a DNS name or IP address with an optional
+// port.
+func NormalizeHost(s string) (string, bool) {
+	if !validHostPort(s) {
+		return "", false
+	}
+	host, _ := splitHostPort(strings.ToLower(s))
+	return strings.TrimSuffix(host, "."), true
+}
+
 func splitHostPort(s string) (string, string) {
 	if h, p, err := net.SplitHostPort(s); err == nil {
 		return h, p

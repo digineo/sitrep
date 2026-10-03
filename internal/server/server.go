@@ -150,6 +150,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case path == "/healthz":
 		s.health(w)
 		return
+	case path == "/tls/authorize":
+		s.authorizeTLS(w, r)
+		return
 	case strings.HasPrefix(path, "/assets/"):
 		s.assets.ServeHTTP(w, r)
 		return
@@ -183,6 +186,28 @@ func (s *Server) health(w http.ResponseWriter) {
 		return
 	}
 	_, _ = w.Write([]byte("ok\n"))
+}
+
+// authorizeTLS answers 200 if the domain parameter is a base domain or the
+// host of a site, whatever its availability, and 404 otherwise. Reverse
+// proxies with on-demand TLS ask it before they request a certificate.
+func (s *Server) authorizeTLS(w http.ResponseWriter, r *http.Request) {
+	host, ok := httpx.NormalizeHost(r.URL.Query().Get("domain"))
+	if ok && !slices.Contains(s.cfg.BaseDomains, host) {
+		site, err := s.siteByHost(host)
+		if err != nil {
+			httpx.WriteError(w, r, s.log, err)
+			return
+		}
+
+		ok = site != nil
+	}
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 // siteByHost returns the subdomain-mode or custom-domain site served on

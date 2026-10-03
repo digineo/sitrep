@@ -7,6 +7,7 @@ import (
 	"html"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -250,6 +251,48 @@ func TestEveryHostRoutes(t *testing.T) {
 	require.NoError(f.db.Close())
 	code := f.get("status.example.com", "/healthz").Code
 	assert.Equal(http.StatusServiceUnavailable, code)
+}
+
+func TestTLSAuthorize(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	f := newFixture(t)
+	gamma, err := f.db.SiteByRoute(model.Route{
+		Mode:   model.RouteCustom,
+		Domain: "status.gamma.org",
+	})
+	require.NoError(err)
+	gamma.Availability = model.AvailabilityPaused
+	require.NoError(f.db.UpdateSite(gamma))
+
+	tests := map[string]int{
+		"status.example.com":           http.StatusOK,
+		"SitRep.Localhost.":            http.StatusOK,
+		"beta.status.example.com":      http.StatusOK,
+		"beta.sitrep.localhost:443":    http.StatusOK,
+		"status.gamma.org":             http.StatusOK,
+		"":                             http.StatusNotFound,
+		"example.com":                  http.StatusNotFound,
+		"acme.status.example.com":      http.StatusNotFound,
+		"x.beta.status.example.com":    http.StatusNotFound,
+		"beta.status.example.com:none": http.StatusNotFound,
+		"status_gamma.org":             http.StatusNotFound,
+		"[::1]:443":                    http.StatusNotFound,
+	}
+	for domain, status := range tests {
+		for _, host := range []string{
+			"status.example.com",
+			"status.gamma.org",
+			"unknown.example",
+		} {
+			w := f.get(host, "/tls/authorize?domain="+url.QueryEscape(domain))
+			assert.Equal(status, w.Code, domain+" on "+host)
+			if status == http.StatusOK {
+				assert.Empty(w.Body.String(), domain)
+			}
+		}
+	}
 }
 
 func TestNegotiatedRedirects(t *testing.T) {
