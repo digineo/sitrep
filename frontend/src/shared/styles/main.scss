@@ -53,3 +53,45 @@
     animation-duration: 0s !important;
   }
 }
+
+// Status colors, also used for dots and the unknown banner.
+.sr-dot {
+  display: inline-block;
+  flex: none;
+  width: 0.625rem;
+  height: 0.625rem;
+  background: var(--sr-state);
+  border-radius: 50%;
+
+  &.is-operational {
+    --sr-state: #2f9e6b;
+  }
+
+  &.is-degraded {
+    --sr-state: #e0a52b;
+  }
+
+  &.is-down {
+    --sr-state: #e5484d;
+  }
+
+  &.is-unknown {
+    --sr-state: #8892a0;
+  }
+}
+
+.notification.sr-is-unknown {
+  color: rgb(0 0 0 / 85%);
+  background: #8892a0;
+}
+
+.sr-muted {
+  color: var(--bulma-text-weak);
+}
+
+.sr-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}

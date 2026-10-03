@@ -134,6 +134,37 @@
     "network": "Der Server ist nicht erreichbar."
   },
   "panel": {
-    "seriesName": "{title} #{n}"
+    "seriesName": "{title} #{n}",
+    "stale": "Veraltet",
+    "staleSince": "Daten vom {time}",
+    "noData": "Noch keine Daten",
+    "empty": "Keine Daten in diesem Zeitraum",
+    "chartSummary": "{title}, letzte {range}: {values}",
+    "renderFailed": "Dieses Panel kann nicht angezeigt werden."
+  },
+  "site": {
+    "currentStatus": "Aktueller Dienststatus",
+    "loadFailed": "Der Status konnte nicht geladen werden. Diese Seite versucht es weiter."
+  },
+  "status": {
+    "operational": "Betriebsbereit",
+    "degraded": "Eingeschränkt",
+    "down": "Ausgefallen",
+    "unknown": "Unbekannt"
+  },
+  "banner": {
+    "operational": "Alle Systeme betriebsbereit",
+    "degraded": "Einige Systeme sind eingeschränkt",
+    "down": "Größere Störung",
+    "unknown": "Status nicht vollständig verfügbar"
+  },
+  "live": {
+    "state": {
+      "loading": "Status wird geladen",
+      "ok": "Status ist aktuell",
+      "failed": "Aktualisierung des Status fehlgeschlagen"
+    },
+    "updated": "Aktualisiert {time}",
+    "lastFailed": "Letzte Aktualisierung fehlgeschlagen: {error}"
   }
 }

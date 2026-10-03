@@ -134,6 +134,37 @@
     "network": "The server cannot be reached."
   },
   "panel": {
-    "seriesName": "{title} #{n}"
+    "seriesName": "{title} #{n}",
+    "stale": "Stale",
+    "staleSince": "Data from {time}",
+    "noData": "No data yet",
+    "empty": "No data in this period",
+    "chartSummary": "{title}, last {range}: {values}",
+    "renderFailed": "This panel cannot be shown."
+  },
+  "site": {
+    "currentStatus": "Current service status",
+    "loadFailed": "The status could not be loaded. This page keeps trying."
+  },
+  "status": {
+    "operational": "Operational",
+    "degraded": "Degraded",
+    "down": "Down",
+    "unknown": "Unknown"
+  },
+  "banner": {
+    "operational": "All systems operational",
+    "degraded": "Some systems are degraded",
+    "down": "Major outage",
+    "unknown": "Status not fully available"
+  },
+  "live": {
+    "state": {
+      "loading": "Loading the status",
+      "ok": "Status is up to date",
+      "failed": "Refreshing the status failed"
+    },
+    "updated": "Updated {time}",
+    "lastFailed": "Last refresh failed: {error}"
   }
 }
