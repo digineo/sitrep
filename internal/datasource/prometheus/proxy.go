@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -39,7 +40,10 @@ func discovery(path string) ([]string, string) {
 
 // ServeAdmin is the discovery proxy. It forwards allowed requests with the
 // configured authentication and none of the inbound credentials or proxy
-// headers, and drops cookies from responses.
+// headers. Only successful answers are passed on, as JSON and without
+// upstream headers; anything else is a bad gateway, so that an upstream 401
+// is never taken for the end of the admin's session, and an upstream HTML
+// page is never rendered on the admin origin.
 func (Type) ServeAdmin(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -82,15 +86,15 @@ func (Type) ServeAdmin(
 		contentType,
 		bytes.NewReader(body),
 	)
+	if err == nil && res.StatusCode/100 != 2 {
+		err = fmt.Errorf("HTTP %s", res.Status)
+	}
 	if err != nil {
 		e := apierr.New(http.StatusBadGateway, apierr.BadGateway)
 		return errors.Join(e, err)
 	}
 
-	if ct := res.Header.Get("Content-Type"); ct != "" {
-		w.Header().Set("Content-Type", ct)
-	}
-
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(res.StatusCode)
 	_, _ = w.Write(data)
 	return nil

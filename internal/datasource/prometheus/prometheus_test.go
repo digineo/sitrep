@@ -3,6 +3,7 @@ package prometheus
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"net/http"
@@ -396,6 +397,58 @@ func TestProxy(t *testing.T) {
 	cfg["url"] = "http://127.0.0.1:1"
 	_, err = proxy(http.MethodGet, "/api/v1/labels", "", "")
 	assertAPIError(t, err, http.StatusBadGateway, "unreachable backend")
+}
+
+func TestProxyPassesOnlySuccessfulAnswers(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	answer := func(status int, contentType, body string) http.HandlerFunc {
+		return func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", contentType)
+			w.WriteHeader(status)
+			_, _ = io.WriteString(w, body)
+		}
+	}
+
+	proxy := func(handler http.HandlerFunc) (*httptest.ResponseRecorder, error) {
+		target := "/api/admin/datasources/x/prometheus/api/v1/labels"
+		r := httptest.NewRequest(http.MethodGet, target, nil)
+		w := httptest.NewRecorder()
+		return w, Type{}.ServeAdmin(w, r, stub(t, handler), "/api/v1/labels")
+	}
+
+	w, err := proxy(answer(http.StatusOK, "text/html", "<script>alert(1)</script>"))
+	require.NoError(err)
+	assert.Equal(http.StatusOK, w.Code)
+	assert.Equal(
+		"application/json",
+		w.Header().Get("Content-Type"),
+		"the upstream media type is never passed on",
+	)
+	assert.Equal("<script>alert(1)</script>", w.Body.String())
+
+	handler := answer(http.StatusNonAuthoritativeInfo, "application/json", "[]")
+	w, err = proxy(handler)
+	require.NoError(err)
+	assert.Equal(http.StatusNonAuthoritativeInfo, w.Code)
+
+	for _, status := range []int{
+		http.StatusUnauthorized,
+		http.StatusForbidden,
+		http.StatusNotFound,
+		http.StatusInternalServerError,
+	} {
+		w, err := proxy(answer(status, "text/html", "<h1>Sign in</h1>"))
+		assertAPIError(t, err, http.StatusBadGateway, http.StatusText(status))
+		assert.ErrorContains(err, fmt.Sprintf("HTTP %d", status))
+		assert.Empty(w.Body.String(), "nothing of the upstream answer is written")
+		assert.Empty(w.Header().Get("Content-Type"))
+	}
+
+	oversized := `"` + strings.Repeat("x", datasource.MaxResponse) + `"`
+	_, err = proxy(answer(http.StatusOK, "application/json", oversized))
+	assertAPIError(t, err, http.StatusBadGateway, "oversized answer")
 }
 
 func assertAPIError(t *testing.T, err error, status int, msg string) {
