@@ -92,7 +92,8 @@ func updateLabel(c *i18n.Catalog, u model.Update) string {
 	return c.T("incidents.severityLabel", map[string]string{"label": label})
 }
 
-// formatTime formats t in the zone with the catalog's pattern.
+// formatTime formats t in the zone with the catalog's pattern and the
+// numeric UTC offset, which needs no translation unlike zone names.
 func formatTime(c *i18n.Catalog, t time.Time, loc *time.Location) string {
 	t = t.In(loc)
 	two := func(n int) string { return strconv.Itoa(100 + n)[1:] }
@@ -102,7 +103,7 @@ func formatTime(c *i18n.Catalog, t time.Time, loc *time.Location) string {
 		"day":    two(t.Day()),
 		"hour":   two(t.Hour()),
 		"minute": two(t.Minute()),
-		"zone":   t.Format("MST"),
+		"offset": t.Format("-07:00"),
 	})
 }
 

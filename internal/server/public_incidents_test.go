@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"html"
 	"net/http"
 	"strings"
 	"testing"
@@ -13,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/digineo/sitrep/internal/i18n"
 	"github.com/digineo/sitrep/internal/model"
 )
 
@@ -239,6 +241,22 @@ func TestUUIDv5(t *testing.T) {
 	assert.Equal(t, "2ed6657d-e927-568b-95e1-2665a8aea6a2", got.String())
 }
 
+func TestFormatTime(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	berlin, err := time.LoadLocation("Europe/Berlin")
+	require.NoError(err)
+
+	en, de := i18n.Get("en"), i18n.Get("de")
+	summer := time.Date(2026, 7, 1, 8, 5, 0, 0, time.UTC)
+	winter := time.Date(2026, 12, 24, 23, 30, 0, 0, time.UTC)
+	assert.Equal("2026-07-01 10:05 +02:00", formatTime(en, summer, berlin))
+	assert.Equal("01.07.2026, 10:05 +02:00", formatTime(de, summer, berlin))
+	assert.Equal("2026-12-25 00:30 +01:00", formatTime(en, winter, berlin))
+	assert.Equal("24.12.2026, 23:30 +00:00", formatTime(de, winter, time.UTC))
+}
+
 type testFeed struct {
 	XMLName xml.Name `xml:"http://www.w3.org/2005/Atom feed"`
 	Lang    string   `xml:"http://www.w3.org/XML/1998/namespace lang,attr"`
@@ -323,7 +341,7 @@ func TestFeed(t *testing.T) {
 	assert.Contains(opening.Content, `<a href="http://status.example.com/shop/de/incidents/`+inc.ID+`">Vorfall ansehen</a>`)
 	assert.NotContains(opening.Content, "Frühere Meldungen")
 	assert.Contains(latest.Content, "Frühere Meldungen")
-	assert.Contains(latest.Content, `<time datetime="2026-10-01T10:00:00Z">01.10.2026, 10:00 UTC</time> Aktiv: Gestört`)
+	assert.Contains(html.UnescapeString(latest.Content), `<time datetime="2026-10-01T10:00:00Z">01.10.2026, 10:00 +00:00</time> Aktiv: Gestört`)
 
 	w = f.get("status.example.com", "/shop/feed.atom", "Accept-Language", "en")
 	assert.Equal(http.StatusFound, w.Code)

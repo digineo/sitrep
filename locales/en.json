@@ -384,7 +384,7 @@
     "view": "View incident"
   },
   "format": {
-    "dateTime": "{year}-{month}-{day} {hour}:{minute} {zone}"
+    "dateTime": "{year}-{month}-{day} {hour}:{minute} {offset}"
   },
   "incidentList": {
     "title": "Incidents of {site}",
