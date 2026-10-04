@@ -1,6 +1,8 @@
 // Status colors double as Bulma's success, warning and danger colors; the
-// product accent is the primary and link color.
+// product accent is the primary and link color. The type is a notch smaller
+// than Bulma's, relative to the browser's font size.
 @use "bulma/sass" with (
+  $body-size: 0.9375em,
   $primary: #2f6feb,
   $link: #2f6feb,
   $success: #2f9e6b,
