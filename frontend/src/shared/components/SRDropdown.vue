@@ -145,3 +145,12 @@ function onFocusOut(event: FocusEvent) {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Lucide leaves a twelfth of an icon empty around its drawing; lowering the
+   icon by as much puts the drawing on the label's baseline. */
+.dropdown-item .icon {
+  margin-inline-end: var(--bulma-icon-text-spacing);
+  vertical-align: calc(var(--bulma-icon-dimensions-small) / -12);
+}
+</style>
