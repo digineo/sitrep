@@ -23,6 +23,7 @@ const kinds = computed(() => allKinds.filter(kind => props.links[kind]))
 <template>
   <nav
       v-if="kinds.length"
+      class="has-text-centered"
       :aria-label="t('legal.label')"
   >
     <template
