@@ -266,19 +266,27 @@ function onToggle(site: string, event: Event) {
       <strong>{{ session.user?.displayName }}</strong>
     </p>
     <div class="buttons">
-      <SRButton @click="session.logout()">
+      <SRButton
+          class="is-small"
+          @click="session.logout()"
+      >
         <span class="icon"><LogOut aria-hidden="true" /></span>
         <span>{{ t("nav.signOut") }}</span>
       </SRButton>
+      <!-- At the right edge, menus opening to the left stay inside the
+           sidebar. -->
       <ThemeSwitcher
+          class="ml-auto"
           compact
           up
+          right
       />
       <LanguageSwitcher
           :model-value="locale"
           :languages="supported"
           compact
           up
+          right
           @update:model-value="choose"
       />
     </div>
