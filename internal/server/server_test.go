@@ -660,3 +660,123 @@ func TestSettingsAPI(t *testing.T) {
 	r.AddCookie(session)
 	assert.Equal(http.StatusForbidden, f.do(r).Code, "CSRF protection")
 }
+
+func TestPromotedSite(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	f := newFixture(t)
+	w := f.admin(http.MethodPut, "/api/admin/settings", obj{
+		"languages": obj{
+			"enabled": []string{"en"},
+			"primary": "en",
+		},
+		"defaultTheme": "system",
+		"landingSite":  "0192",
+	})
+	want := map[string]string{"landingSite": "not_found"}
+	assert.Equal(want, fieldCodes(t, w, http.StatusBadRequest))
+
+	promote := func(route model.Route) *model.Site {
+		t.Helper()
+		site, err := f.db.SiteByRoute(route)
+		require.NoError(err)
+		settings, err := f.db.Settings()
+		require.NoError(err)
+		settings.LandingSite = site.ID
+		require.NoError(f.db.PutSettings(settings))
+		return site
+	}
+
+	beta := promote(model.Route{
+		Mode: model.RouteSubdomain,
+		Slug: "beta",
+	})
+	tests := []struct {
+		host, path string
+		status     int
+		location   string
+		mode       string
+	}{
+		{"status.example.com", "/", http.StatusFound, "/en/", ""},
+		{"sitrep.localhost", "/en/incidents", http.StatusOK, "", "site"},
+		{"status.example.com", "/nope", http.StatusNotFound, "", "site"},
+		{"status.example.com", "/acme/", http.StatusOK, "", "site"},
+		{"status.example.com", "/admin", http.StatusOK, "", "admin"},
+		{"beta.status.example.com", "/", http.StatusFound, "http://status.example.com/", ""},
+		{"beta.sitrep.localhost:2607", "/de/incidents?page=2", http.StatusFound, "http://sitrep.localhost:2607/de/incidents?page=2", ""},
+		{"beta.status.example.com", "/en/feed.atom", http.StatusFound, "http://status.example.com/en/feed.atom", ""},
+		{"beta.status.example.com", "//evil.example/", http.StatusFound, "http://status.example.com//evil.example/", ""},
+		{"unknown.example", "/tls/authorize?domain=beta.status.example.com", http.StatusOK, "", ""},
+	}
+	for _, tt := range tests {
+		w := f.get(tt.host, tt.path)
+		name := tt.host + tt.path
+		assert.Equal(tt.status, w.Code, name)
+		assert.Equal(tt.location, w.Header().Get("Location"), name)
+		if tt.mode != "" {
+			assert.Equal(tt.mode, parseBootstrap(t, w.Body.String()).Mode, name)
+		}
+	}
+
+	w = f.get("status.example.com", "/de/")
+	require.Equal(http.StatusOK, w.Code)
+	body := w.Body.String()
+	assert.Contains(body, "<title>Beta DE</title>")
+	assert.Contains(body, `<link rel="canonical" href="http://status.example.com/de/">`)
+	b := parseBootstrap(t, body)
+	assert.Equal(beta.ID, b.SiteID)
+	assert.Empty(b.BasePath)
+
+	w = f.get("status.example.com", "/en/feed.atom")
+	require.Equal(http.StatusOK, w.Code)
+	assert.Contains(w.Body.String(), `href="http://status.example.com/en/"`)
+
+	w = f.admin(http.MethodGet, "/api/admin/sites", nil)
+	sites := decode[[]siteSummary](t, w, http.StatusOK)
+	for _, s := range sites {
+		assert.Equal(s.ID == beta.ID, s.Landing, s.Route)
+	}
+
+	f.putSiteLegal(beta.ID, model.Legal{
+		Imprint: model.LegalPage{
+			Mode: model.LegalURL,
+			URL:  model.Text{"en": "https://beta.example/imprint"},
+		},
+	})
+	w = f.get("status.example.com", "/api/public/legal?lang=en")
+	assert.JSONEq(
+		`{"imprint": {"mode": "url", "url": "https://beta.example/imprint"}}`,
+		w.Body.String(),
+		"the login screen links the promoted site's legal pages",
+	)
+
+	redirects := func(want map[string]string) {
+		t.Helper()
+		for url, location := range want {
+			host, path, _ := strings.Cut(url, "/")
+			w := f.get(host, "/"+path)
+			assert.Equal(http.StatusFound, w.Code, url)
+			assert.Equal(location, w.Header().Get("Location"), url)
+		}
+	}
+
+	promote(model.Route{
+		Mode: model.RoutePath,
+		Slug: "acme",
+	})
+	redirects(map[string]string{
+		"status.example.com/acme":         "http://status.example.com/",
+		"sitrep.localhost/acme/incidents": "http://sitrep.localhost/incidents",
+	})
+	assert.Equal(http.StatusOK, f.get("beta.status.example.com", "/en/").Code)
+
+	promote(model.Route{
+		Mode:   model.RouteCustom,
+		Domain: "status.gamma.org",
+	})
+	redirects(map[string]string{
+		"status.gamma.org/incidents?page=2": "http://status.example.com/incidents?page=2",
+	})
+	assert.Equal(http.StatusOK, f.get("status.example.com", "/acme/").Code)
+}

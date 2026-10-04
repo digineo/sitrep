@@ -3,6 +3,7 @@ package store
 import (
 	bolt "go.etcd.io/bbolt"
 
+	"github.com/digineo/sitrep/internal/apierr"
 	"github.com/digineo/sitrep/internal/model"
 )
 
@@ -16,9 +17,17 @@ func (db *DB) Settings() (model.Settings, error) {
 	return s, err
 }
 
-// PutSettings replaces the instance settings.
+// PutSettings replaces the instance settings. The promoted site must
+// exist.
 func (db *DB) PutSettings(s model.Settings) error {
 	return db.bolt.Update(func(tx *bolt.Tx) error {
+		site := []byte(s.LandingSite)
+		if s.LandingSite != "" && tx.Bucket(bucketSites).Get(site) == nil {
+			return apierr.Fields{{
+				Path: "landingSite",
+				Code: apierr.NotFound,
+			}}.Err()
+		}
 		return put(tx, bucketSettings, keyInstance, s)
 	})
 }

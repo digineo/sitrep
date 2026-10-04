@@ -97,3 +97,33 @@ test.describe("in German", () => {
     await expect(page.getByRole("main")).toContainText("Acme Inc.")
   })
 })
+
+test("promotes a status page to start page", async({ page }) => {
+  await signIn(page)
+  const slug = unique("promoted")
+  const site = await createSite(page, slug)
+  await page.goto("/admin/settings")
+  await page.getByLabel("Status page as start page")
+    .selectOption({ label: `${slug} en` })
+  await expect(page.getByText("Landing page text", { exact: true }))
+    .toHaveCount(0)
+  await page.getByRole("button", { name: "Save" }).click()
+  await expect(page.getByText("Settings saved.")).toBeVisible()
+
+  await page.goto(`/admin/sites/${site.id}/settings`)
+  await expect(page.getByText(
+    "The status page is the start page at http://sitrep.localhost:26074/.",
+  )).toBeVisible()
+
+  await page.goto("/")
+  await expect(page).toHaveTitle(`${slug} en`)
+  await expect(page.getByRole("heading", {
+    level: 1,
+    name:  `${slug} en`,
+  })).toBeVisible()
+  await page.getByRole("link", { name: "Incident history" }).click()
+  await expect(page).toHaveURL("/incidents")
+
+  await page.goto(`/${slug}/incidents`)
+  await expect(page).toHaveURL("/incidents")
+})

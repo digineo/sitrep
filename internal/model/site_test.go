@@ -101,6 +101,7 @@ func TestSiteValidate(t *testing.T) {
 		{"language slug", func(s *Site) { s.Route.Slug = "fr" }, map[string]string{"route.slug": "slug_reserved"}},
 		{"region slug", func(s *Site) { s.Route.Slug = "pt-br" }, map[string]string{"route.slug": "slug_reserved"}},
 		{"legal slug", func(s *Site) { s.Route.Slug = "impressum" }, map[string]string{"route.slug": "slug_reserved"}},
+		{"archive slug", func(s *Site) { s.Route.Slug = "incidents" }, map[string]string{"route.slug": "slug_reserved"}},
 		{"reserved slug as subdomain", func(s *Site) { s.Route = Route{Mode: RouteSubdomain, Slug: "admin"} }, nil},
 		{"domain", func(s *Site) { s.Route = Route{Mode: RouteCustom, Domain: "Status.acme.com"} }, map[string]string{"route.domain": "invalid_domain"}},
 		{"base domain", func(s *Site) { s.Route = Route{Mode: RouteCustom, Domain: "status.example.com"} },

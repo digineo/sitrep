@@ -21,6 +21,8 @@ type siteSummary struct {
 	// Missing counts the site, panels and incidents with missing
 	// translations.
 	Missing int `json:"missing"`
+	// Landing is whether the site is promoted to the base domains.
+	Landing bool `json:"landing,omitempty"`
 }
 
 // siteStatus is a site's status and its parts.
@@ -102,6 +104,12 @@ func (s *Server) listSites(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	settings, err := s.db.Settings()
+	if err != nil {
+		httpx.WriteError(w, r, s.log, err)
+		return
+	}
+
 	panels := map[string][]model.Panel{}
 	for _, p := range snap.Panels {
 		panels[p.Site] = append(panels[p.Site], p)
@@ -122,6 +130,7 @@ func (s *Server) listSites(w http.ResponseWriter, r *http.Request) {
 			Route:        site.Route,
 			Availability: site.Availability,
 			Status:       s.status(&site, panels[site.ID], incidents[site.ID]),
+			Landing:      site.ID == settings.LandingSite,
 		}
 		if missing(langs, append(site.Legal.Texts(), site.Name)...) {
 			sum.Missing++

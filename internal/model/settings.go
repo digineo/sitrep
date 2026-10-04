@@ -18,6 +18,9 @@ type Settings struct {
 	Legal Legal `json:"legal"`
 	// Landing is the Markdown text of the landing page.
 	Landing Text `json:"landing,omitempty"`
+	// LandingSite is the ID of the promoted site, which the base domains
+	// show instead of the landing page and of the site's own route.
+	LandingSite string `json:"landingSite,omitempty"`
 }
 
 // DefaultSettings returns the settings of a fresh instance: every supported

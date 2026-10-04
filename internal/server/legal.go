@@ -122,12 +122,18 @@ func (s *Server) publicLegal(w http.ResponseWriter, r *http.Request) {
 	s.writePublic(w, r, map[string]string{"html": html}, nil)
 }
 
-// publicLegalLinks answers the instance's legal pages to link in lang, for
-// the landing page and the console's login screen.
+// publicLegalLinks answers the legal pages of the base domains to link in
+// lang, the promoted site's or the instance's, for the landing page and the
+// console's login screen.
 func (s *Server) publicLegalLinks(w http.ResponseWriter, r *http.Request) {
 	settings, err := s.db.Settings()
+	var site *model.Site
+	if err == nil && settings.LandingSite != "" {
+		site, err = s.db.Site(settings.LandingSite)
+	}
+
 	lang := contentLang(r.URL.Query().Get("lang"), settings.Languages.Effective())
-	s.writePublic(w, r, newLegalLinks(nil, settings, lang), err)
+	s.writePublic(w, r, newLegalLinks(site, settings, lang), err)
 }
 
 // publicLanding answers the rendered landing text, empty if there is none.

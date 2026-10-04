@@ -18,7 +18,8 @@ ships as one binary with the web frontend and an embedded database file.
   feed per language and as JSON for other websites.
 - Status pages refresh themselves and fetch only what changed.
 - Imprint and privacy statement per status page or for the whole instance,
-  as Markdown text or link, and a landing page text.
+  as Markdown text or link, and a landing page text or a status page as
+  start page.
 - A brand color and an SVG logo per status page; the favicon shows the
   status.
 - Status pages can be taken offline or paused, and exported to and
@@ -245,7 +246,11 @@ database is readable, for health checks.
 
 A base domain host serves the landing page at `/`, the console at `/admin`
 and path-mode status pages at `/<slug>/`. Subdomain-mode pages answer on
-`<slug>.<base domain>`, custom-domain pages on their own host.
+`<slug>.<base domain>`, custom-domain pages on their own host. A status
+page promoted to start page in the global settings answers on the base
+domains instead, at `/`, `/incidents` and so on. Its own route redirects
+there: path-mode and subdomain-mode pages to the same base domain, custom
+domains to the first base domain.
 
 With one enabled language, URLs carry no language: `/`, `/incidents`,
 `/imprint`. With several, they start with it: `/en/`, `/de/incidents`,
@@ -296,6 +301,8 @@ status page uses them unless it sets its own. The footer links them.
 
 The landing page on the base domains shows the landing text from the
 global settings, or without one a neutral page with a link to the console.
+The settings can also promote a status page to start page; the base
+domains then show it, with its own legal pages, instead.
 
 ## Branding
 

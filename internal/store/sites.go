@@ -151,12 +151,25 @@ func (db *DB) ImportSite(s *model.Site, panels []model.Panel) error {
 	})
 }
 
-// DeleteSite deletes a site, its panels and its incidents.
+// DeleteSite deletes a site, its panels and its incidents. A promoted site
+// is no longer promoted.
 func (db *DB) DeleteSite(id string) error {
 	return db.bolt.Update(func(tx *bolt.Tx) error {
 		var site model.Site
 		if err := mustGet(tx, bucketSites, []byte(id), &site); err != nil {
 			return err
+		}
+
+		var settings model.Settings
+		if _, err := get(tx, bucketSettings, keyInstance, &settings); err != nil {
+			return err
+		}
+
+		if settings.LandingSite == id {
+			settings.LandingSite = ""
+			if err := put(tx, bucketSettings, keyInstance, settings); err != nil {
+				return err
+			}
 		}
 
 		for _, bucket := range [][]byte{bucketPanels, bucketIncidents} {

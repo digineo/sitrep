@@ -58,12 +58,15 @@ describe("routes", () => {
     expect(routeLabel(pathRoute, bases)).toBe("/shop")
     expect(routeLabel(subdomainRoute, bases)).toBe("shop.status.example.com")
     expect(routeLabel(customRoute, bases)).toBe("status.shop.com")
+    expect(routeLabel(customRoute, bases, true)).toBe("status.example.com")
 
     expect(siteURL(pathRoute, bases, location))
       .toBe("https://status.example.com:8443/shop/")
     expect(siteURL(subdomainRoute, bases, location))
       .toBe("https://shop.status.example.com:8443/")
     expect(siteURL(customRoute, bases, location)).toBe("https://status.shop.com/")
+    expect(siteURL(pathRoute, bases, location, true))
+      .toBe("https://status.example.com:8443/")
   })
 
   it.each([
@@ -74,6 +77,7 @@ describe("routes", () => {
     [{ mode: "path", slug: "a--b" }, "invalid_slug"],
     [{ mode: "path", slug: "a".repeat(64) }, "invalid_slug"],
     [{ mode: "path", slug: "admin" }, "slug_reserved"],
+    [{ mode: "path", slug: "incidents" }, "slug_reserved"],
     [{ mode: "path", slug: "fr" }, "slug_reserved"],
     [{ mode: "path", slug: "pt-br" }, "slug_reserved"],
     [{ mode: "path", slug: "impressum" }, "slug_reserved"],

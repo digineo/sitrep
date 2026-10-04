@@ -33,6 +33,7 @@ const form = ref<Site | null>(null)
 /** stored is the site as last saved. */
 const stored = ref<Site | null>(null)
 const defaultTheme = ref<Settings["defaultTheme"]>("system")
+const landing = ref(false)
 const saved = ref("")
 const errors = ref<Record<string, string>>({})
 const saving = ref(false)
@@ -67,6 +68,7 @@ onMounted(async() => {
       api<Settings>("GET", "/api/admin/settings"),
     ])
     defaultTheme.value = settings.defaultTheme
+    landing.value = settings.landingSite === id
     apply(site)
   } catch(err) {
     notices.loadFailed(err)
@@ -177,6 +179,7 @@ async function remove() {
     <RouteField
         v-model="form.route"
         :errors="{ slug: errors['route.slug'], domain: errors['route.domain'] }"
+        :landing
     />
     <SRField
         v-slot="{ id: fieldId, describedby, invalid }"

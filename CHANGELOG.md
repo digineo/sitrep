@@ -45,3 +45,5 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   localized notices for failed sign-ins on the login screen.
 - `/tls/authorize` for reverse proxies with on-demand TLS, which confirms
   the base domains and the hosts of existing status pages.
+- A status page can be promoted to start page of the base domains; its own
+  route redirects there.

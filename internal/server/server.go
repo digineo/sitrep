@@ -3,6 +3,7 @@
 package server
 
 import (
+	"cmp"
 	"errors"
 	"net/http"
 	"slices"
@@ -232,7 +233,7 @@ func (s *Server) siteByHost(host string) (*model.Site, error) {
 }
 
 // serveApex serves a base domain host: the admin console, auth and admin
-// API, path-mode sites and the landing pages.
+// API, path-mode sites and the landing pages or the promoted site.
 func (s *Server) serveApex(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -311,6 +312,12 @@ func (s *Server) serveSite(
 
 	langs := site.Languages.Effective()
 	path := strings.TrimPrefix(r.URL.Path, base)
+	apex := base == "" && slices.Contains(s.cfg.BaseDomains, info.Host)
+	if site.ID == settings.LandingSite && !apex {
+		s.redirectLanding(w, r, info, site, path)
+		return
+	}
+
 	res := routePage(path, langs, false, negotiator(r, langs))
 	if res.redirect != "" {
 		redirect(w, r, base, res)
@@ -402,6 +409,33 @@ func (s *Server) serveSite(
 	writeShell(w, status, sh)
 }
 
+// redirectLanding sends a request on the promoted site's own route to the
+// same path on a base domain: the request's for path-mode sites, the parent
+// of the subdomain for subdomain-mode sites and the first for custom
+// domains. path is below the site's base.
+func (s *Server) redirectLanding(
+	w http.ResponseWriter,
+	r *http.Request,
+	info httpx.Info,
+	site *model.Site,
+	path string,
+) {
+	host := s.cfg.BaseDomains[0]
+	switch site.Route.Mode {
+	case model.RoutePath:
+		host = info.Host
+	case model.RouteSubdomain:
+		_, host, _ = strings.Cut(info.Host, ".")
+	}
+
+	port := strings.TrimPrefix(info.Origin, info.Scheme+"://"+info.Host)
+	target := info.Scheme + "://" + host + port + cmp.Or(path, "/")
+	if r.URL.RawQuery != "" {
+		target += "?" + r.URL.RawQuery
+	}
+	http.Redirect(w, r, target, http.StatusFound)
+}
+
 func (s *Server) serveLanding(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -410,6 +444,17 @@ func (s *Server) serveLanding(
 	settings, err := s.db.Settings()
 	if err != nil {
 		httpx.WriteError(w, r, s.log, err)
+		return
+	}
+
+	if settings.LandingSite != "" {
+		site, err := s.db.Site(settings.LandingSite)
+		if err != nil {
+			httpx.WriteError(w, r, s.log, err)
+			return
+		}
+
+		s.serveSite(w, r, info, site, "")
 		return
 	}
 

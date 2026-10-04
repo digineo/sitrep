@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue"
+import { computed, onMounted, ref } from "vue"
 import { useI18n } from "vue-i18n"
 
 import SRButton from "../../shared/components/SRButton.vue"
@@ -11,12 +11,22 @@ import LegalPageField from "../components/LegalPageField.vue"
 import MarkdownEditor from "../components/MarkdownEditor.vue"
 import { usePageTitle } from "../composables/usePageTitle"
 import { useUnsavedChanges } from "../composables/useUnsavedChanges"
+import { resolveText } from "../rules"
 import { useNotices } from "../stores/notices"
+import { useOverview } from "../stores/overview"
 import type { Settings } from "../types"
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const notices = useNotices()
+const overview = useOverview()
 usePageTitle(() => t("settings.title"))
+
+const sites = computed(() => (overview.sites ?? [])
+  .map(site => ({
+    id:    site.id,
+    label: resolveText(site.name, locale.value, site.languages),
+  }))
+  .sort((a, b) => a.label.localeCompare(b.label, locale.value)))
 
 const form = ref<Settings | null>(null)
 const saved = ref("")
@@ -121,7 +131,34 @@ async function save() {
     <h2 class="title is-5 mt-5">
       {{ t("settings.landing") }}
     </h2>
+    <SRField
+        v-slot="{ id, describedby, invalid }"
+        :label="t('settings.landingSite')"
+        :help="t('settings.landingSiteHelp')"
+        :error="errors.landingSite && t(`error.${errors.landingSite}`)"
+    >
+      <div class="select">
+        <select
+            :id
+            v-model="form.landingSite"
+            :aria-describedby="describedby"
+            :aria-invalid="invalid"
+        >
+          <option :value="undefined">
+            {{ t("settings.landingSiteNone") }}
+          </option>
+          <option
+              v-for="site in sites"
+              :key="site.id"
+              :value="site.id"
+          >
+            {{ site.label }}
+          </option>
+        </select>
+      </div>
+    </SRField>
     <SRLocalizedInput
+        v-if="!form.landingSite"
         v-slot="{ value, update, attrs }"
         v-model="form.landing"
         :label="t('settings.landingText')"

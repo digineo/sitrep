@@ -52,8 +52,17 @@ var (
 // instance default.
 var SiteThemes = []string{"inherit", "light", "dark", "system"}
 
-// reservedSlugs are path segments the apex serves itself.
-var reservedSlugs = []string{"admin", "api", "auth", "assets", "healthz", "tls"}
+// reservedSlugs are path segments the apex serves itself, including the
+// archive of a promoted site.
+var reservedSlugs = []string{
+	"admin",
+	"api",
+	"auth",
+	"assets",
+	"healthz",
+	"incidents",
+	"tls",
+}
 
 // Site is a public status page.
 type Site struct {

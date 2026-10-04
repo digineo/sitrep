@@ -128,7 +128,10 @@
     "legalHelp": "Die Startseite zeigt diese rechtlichen Seiten, ebenso Statusseiten ohne eigene.",
     "landing": "Startseite",
     "landingText": "Text der Startseite",
-    "landingHelp": "Erscheint auf der Startseite der Basis-Domains. Ohne Text zeigt die Startseite das SitRep-Logo und einen Link zur Verwaltung."
+    "landingHelp": "Erscheint auf der Startseite der Basis-Domains. Ohne Text zeigt die Startseite das SitRep-Logo und einen Link zur Verwaltung.",
+    "landingSite": "Statusseite als Startseite",
+    "landingSiteNone": "Keine",
+    "landingSiteHelp": "Die Basis-Domains zeigen diese Statusseite statt des Texts der Startseite. Ihre eigene Adresse leitet dann dorthin um."
   },
   "languages": {
     "enabled": "Aktivierte Sprachen",
@@ -331,7 +334,8 @@
     "slugHelp": "Kleinbuchstaben, Ziffern und Bindestriche.",
     "domain": "Domain",
     "domainHelp": "Richten Sie die Domain auf diesen Server, z. B. mit einem CNAME-Eintrag.",
-    "hint": "Die Statusseite ist unter {url} erreichbar"
+    "hint": "Die Statusseite ist unter {url} erreichbar",
+    "landingHint": "Die Statusseite ist die Startseite unter {url}. Ihre eigene Adresse leitet dorthin um, bis in den Einstellungen eine andere Startseite gewählt ist."
   },
   "preview": {
     "public": "Öffentliche Seite",

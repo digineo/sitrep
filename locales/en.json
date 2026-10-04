@@ -128,7 +128,10 @@
     "legalHelp": "The landing page shows these legal pages, and so do status pages that do not set their own.",
     "landing": "Landing page",
     "landingText": "Landing page text",
-    "landingHelp": "Shown on the start page of the base domains. Without a text, the start page shows the SitRep logo and a link to the administration."
+    "landingHelp": "Shown on the start page of the base domains. Without a text, the start page shows the SitRep logo and a link to the administration.",
+    "landingSite": "Status page as start page",
+    "landingSiteNone": "None",
+    "landingSiteHelp": "The base domains show this status page instead of the landing page text. Its own address then redirects there."
   },
   "languages": {
     "enabled": "Enabled languages",
@@ -331,7 +334,8 @@
     "slugHelp": "Lowercase letters, digits and dashes.",
     "domain": "Domain",
     "domainHelp": "Point the domain to this server, e.g. with a CNAME record.",
-    "hint": "The status page will be reachable at {url}"
+    "hint": "The status page will be reachable at {url}",
+    "landingHint": "The status page is the start page at {url}. Its own address redirects there until another start page is chosen in the settings."
   },
   "preview": {
     "public": "Public page",

@@ -16,8 +16,19 @@ export function resolveText(
     || l.enabled.map(e => text?.[e]).find(Boolean) || ""
 }
 
-/** routeLabel returns how a site is reached, e.g. "/shop" or "shop.example.com". */
-export function routeLabel(route: Route, baseDomains: string[]): string {
+/**
+ * routeLabel returns how a site is reached, e.g. "/shop" or
+ * "shop.example.com". A promoted (landing) site is reached on the base
+ * domains.
+ */
+export function routeLabel(
+  route: Route,
+  baseDomains: string[],
+  landing = false,
+): string {
+  if (landing) {
+    return baseDomains[0] ?? ""
+  }
   switch (route.mode) {
     case "path":
       return `/${route.slug ?? ""}`
@@ -28,7 +39,10 @@ export function routeLabel(route: Route, baseDomains: string[]): string {
   }
 }
 
-/** siteURL returns the public URL of a site, as seen from location. */
+/**
+ * siteURL returns the public URL of a site, as seen from location. A
+ * promoted (landing) site is at the root of the base domain.
+ */
 export function siteURL(
   route: Route,
   baseDomains: string[],
@@ -37,7 +51,12 @@ export function siteURL(
     host:     string
     port:     string
   },
+  landing = false,
 ): string {
+  if (landing) {
+    return `${location.protocol}//${location.host}/`
+  }
+
   const port = location.port ? `:${location.port}` : ""
   switch (route.mode) {
     case "path":
@@ -52,7 +71,7 @@ export function siteURL(
 const slugPattern = /^[a-z0-9]+(-[a-z0-9]+)*$/
 const languagePattern = /^[a-z]{2}(-[a-z]{2})?$/
 const labelPattern = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/
-const reserved = ["admin", "api", "auth", "assets", "healthz", "tls"]
+const reserved = ["admin", "api", "auth", "assets", "healthz", "incidents", "tls"]
 
 /** routeError returns the failing field and error code of a route, or null. */
 export function routeError(

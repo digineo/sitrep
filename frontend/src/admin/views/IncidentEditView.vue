@@ -18,6 +18,7 @@ import { useUnsavedChanges } from "../composables/useUnsavedChanges"
 import { deletable, draftOf, updateBody, type UpdateDraft } from "../incidents"
 import { resolveText, siteURL } from "../rules"
 import { useNotices } from "../stores/notices"
+import { useOverview } from "../stores/overview"
 import type { Incident, IncidentUpdate, Site, Text } from "../types"
 import NotFoundView from "./NotFoundView.vue"
 
@@ -26,6 +27,7 @@ const route = useRoute()
 const router = useRouter()
 const notices = useNotices()
 const { confirm } = useConfirm()
+const overview = useOverview()
 const bootstrap = inject<Bootstrap>("bootstrap")!
 
 const siteId = route.params.site as string
@@ -41,9 +43,12 @@ const title = computed(() => incident.value && site.value
   ? resolve(incident.value.title)
   : "")
 usePageTitle(() => title.value)
-const publicURL = computed(() => site.value && `${
-  siteURL(site.value.route, bootstrap.baseDomains ?? [], window.location)
-}incidents/${incidentId}`)
+const publicURL = computed(() => site.value && `${siteURL(
+  site.value.route,
+  bootstrap.baseDomains ?? [],
+  window.location,
+  overview.sites?.find(s => s.id === siteId)?.landing,
+)}incidents/${incidentId}`)
 const time = (update: IncidentUpdate) =>
   formatDateTime(new Date(update.at), locale.value, site.value!.timezone)
 

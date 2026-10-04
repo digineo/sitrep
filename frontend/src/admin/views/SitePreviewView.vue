@@ -39,8 +39,12 @@ const bootstrap = inject<Bootstrap>("bootstrap")!
 
 const id = route.params.site as string
 const summary = computed(() => overview.sites?.find(s => s.id === id))
-const publicURL = computed(() => summary.value
-  && siteURL(summary.value.route, bootstrap.baseDomains ?? [], window.location))
+const publicURL = computed(() => summary.value && siteURL(
+  summary.value.route,
+  bootstrap.baseDomains ?? [],
+  window.location,
+  summary.value.landing,
+))
 const lang = ref(locale.value)
 const payload = shallowRef<Payload | null>(null)
 const live = reactive({

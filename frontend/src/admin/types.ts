@@ -28,6 +28,8 @@ export interface Settings {
   legal:        Legal
   /** landing is the Markdown text of the landing page. */
   landing?:     Text
+  /** landingSite is the ID of the site shown instead of the landing page. */
+  landingSite?: string
 }
 
 export type Availability = "online" | "offline" | "paused"
@@ -107,7 +109,9 @@ export interface SiteSummary {
     incidents: State
   }
   /** missing counts the site and panels with missing translations. */
-  missing: number
+  missing:  number
+  /** landing is whether the site is promoted to the base domains. */
+  landing?: boolean
 }
 
 export type PanelType = "stat" | "status" | "timeseries"

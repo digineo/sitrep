@@ -56,7 +56,7 @@ const sites = computed(() => {
           </RouterLink>
         </h2>
         <p class="sr-muted is-size-7 mb-3">
-          {{ routeLabel(site.route, bootstrap.baseDomains ?? []) }}
+          {{ routeLabel(site.route, bootstrap.baseDomains ?? [], site.landing) }}
         </p>
         <div
             v-if="site.availability !== 'online' || site.missing"

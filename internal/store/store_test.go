@@ -249,6 +249,45 @@ func TestUpdateAndDeleteSite(t *testing.T) {
 	assert.Equal(404, apiError(t, db.DeleteSite(b.ID)).Status)
 }
 
+func TestLandingSite(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	db, _ := openTemp(t)
+	settings := model.DefaultSettings()
+	settings.LandingSite = "missing"
+	e := apiError(t, db.PutSettings(settings))
+	assert.Equal(400, e.Status)
+	want := []apierr.Field{{
+		Path: "landingSite",
+		Code: "not_found",
+	}}
+	assert.Equal(want, e.Fields)
+
+	a := &model.Site{Route: model.Route{
+		Mode: model.RoutePath,
+		Slug: "a",
+	}}
+	b := &model.Site{Route: model.Route{
+		Mode: model.RoutePath,
+		Slug: "b",
+	}}
+	require.NoError(db.CreateSite(a))
+	require.NoError(db.CreateSite(b))
+	settings.LandingSite = a.ID
+	require.NoError(db.PutSettings(settings))
+
+	require.NoError(db.DeleteSite(b.ID))
+	got, err := db.Settings()
+	require.NoError(err)
+	assert.Equal(a.ID, got.LandingSite)
+
+	require.NoError(db.DeleteSite(a.ID))
+	got, err = db.Settings()
+	require.NoError(err)
+	assert.Empty(got.LandingSite, "a deleted site is no longer promoted")
+}
+
 func TestPanels(t *testing.T) {
 	require := require.New(t)
 	assert := assert.New(t)

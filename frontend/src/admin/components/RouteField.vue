@@ -9,7 +9,9 @@ import type { Route } from "../types"
 
 const props = defineProps<{
   /** errors maps "mode", "slug" and "domain" to server error codes. */
-  errors?: Record<string, string | undefined>
+  errors?:  Record<string, string | undefined>
+  /** landing is whether the site is promoted to the base domains. */
+  landing?: boolean
 }>()
 
 const route = defineModel<Route>({ required: true })
@@ -31,7 +33,7 @@ const error = computed(() => {
 })
 const url = computed(() => clientError.value
   ? ""
-  : siteURL(route.value, bootstrap.baseDomains ?? [], window.location))
+  : siteURL(route.value, bootstrap.baseDomains ?? [], window.location, props.landing))
 
 // The browser refuses to submit an invalid route, like the server would.
 watchEffect(() => input.value?.setCustomValidity(
@@ -76,7 +78,7 @@ function setMode(mode: Route["mode"]) {
   <SRField
       v-slot="{ id, describedby, invalid }"
       :label="t(`route.${field}`)"
-      :help="url ? t('route.hint', { url }) : t(`route.${field}Help`)"
+      :help="url ? t(landing ? 'route.landingHint' : 'route.hint', { url }) : t(`route.${field}Help`)"
       :error
   >
     <input

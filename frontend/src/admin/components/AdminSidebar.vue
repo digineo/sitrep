@@ -190,7 +190,7 @@ function onToggle(site: string, event: Event) {
         <summary>
           <span class="sr-site-name">
             <span>{{ site.label }}</span>
-            <span class="sr-muted is-size-7">{{ routeLabel(site.route, bootstrap.baseDomains ?? []) }}</span>
+            <span class="sr-muted is-size-7">{{ routeLabel(site.route, bootstrap.baseDomains ?? [], site.landing) }}</span>
           </span>
           <span
               v-if="site.availability !== 'online'"
