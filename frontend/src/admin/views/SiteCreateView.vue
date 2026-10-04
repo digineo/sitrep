@@ -105,9 +105,3 @@ async function create() {
     </SRButton>
   </form>
 </template>
-
-<style scoped>
-.sr-form {
-  max-width: 40rem;
-}
-</style>

@@ -431,10 +431,6 @@ const history = computed(() => (incident.value?.updates ?? [])
   align-items: center;
 }
 
-.sr-form {
-  max-width: 60rem;
-}
-
 .sr-editing {
   outline: 2px solid var(--bulma-link);
 }

@@ -270,9 +270,3 @@ async function remove() {
     </div>
   </form>
 </template>
-
-<style scoped>
-.sr-form {
-  max-width: 40rem;
-}
-</style>

@@ -619,10 +619,6 @@ const widgetData = computed<PanelData>(() => ({
 </template>
 
 <style scoped>
-.sr-form {
-  max-width: 48rem;
-}
-
 .sr-short {
   width: 8rem;
 }

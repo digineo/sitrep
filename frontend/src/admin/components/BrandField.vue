@@ -170,6 +170,13 @@ async function upload(event: Event) {
   align-items: center;
 }
 
+/* As tall as the swatch, the checkbox's line keeps its text in the middle
+   and gives the field its baseline. */
+.sr-color > .checkbox {
+  align-self: baseline;
+  line-height: 2.5rem;
+}
+
 .sr-color-input {
   width: 4rem;
   height: 2.5rem;

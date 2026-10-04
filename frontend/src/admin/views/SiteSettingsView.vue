@@ -317,10 +317,6 @@ async function remove() {
 </template>
 
 <style scoped>
-.sr-form {
-  max-width: 40rem;
-}
-
 .sr-days {
   max-width: 10rem;
 }

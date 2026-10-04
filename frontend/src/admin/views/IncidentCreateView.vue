@@ -110,9 +110,3 @@ const updateErrors = computed(() => Object.fromEntries(Object.entries(errors.val
     </form>
   </template>
 </template>
-
-<style scoped>
-.sr-form {
-  max-width: 60rem;
-}
-</style>

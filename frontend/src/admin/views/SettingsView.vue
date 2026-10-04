@@ -71,6 +71,7 @@ async function save() {
   </h1>
   <form
       v-if="form"
+      class="sr-form"
       @submit.prevent="save"
   >
     <h2 class="title is-5">
