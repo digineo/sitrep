@@ -50,14 +50,44 @@ const sites = computed(() => {
         class="card"
     >
       <div class="card-content">
-        <h2 class="title is-5 mb-1">
-          <RouterLink :to="`/sites/${site.id}`">
-            {{ site.label }}
-          </RouterLink>
-        </h2>
-        <p class="sr-muted is-size-7 mb-3">
-          {{ routeLabel(site.route, bootstrap.baseDomains ?? [], site.landing) }}
-        </p>
+        <div class="sr-card-head">
+          <div class="sr-card-name">
+            <h2 class="title is-5 mb-1">
+              <RouterLink :to="`/sites/${site.id}`">
+                {{ site.label }}
+              </RouterLink>
+            </h2>
+            <p class="sr-muted is-size-7">
+              {{ routeLabel(site.route, bootstrap.baseDomains ?? [], site.landing) }}
+            </p>
+          </div>
+          <div class="buttons">
+            <RouterLink
+                :to="`/sites/${site.id}/incidents`"
+                class="button is-small"
+                :aria-label="t('home.incidentsOf', { site: site.label })"
+                :title="t('nav.incidents')"
+            >
+              <span class="icon"><Siren aria-hidden="true" /></span>
+            </RouterLink>
+            <RouterLink
+                :to="`/sites/${site.id}`"
+                class="button is-small"
+                :aria-label="t('home.panelsOf', { site: site.label })"
+                :title="t('nav.panels')"
+            >
+              <span class="icon"><LayoutDashboard aria-hidden="true" /></span>
+            </RouterLink>
+            <RouterLink
+                :to="`/sites/${site.id}/settings`"
+                class="button is-small"
+                :aria-label="t('home.settingsOf', { site: site.label })"
+                :title="t('nav.siteSettings')"
+            >
+              <span class="icon"><Settings aria-hidden="true" /></span>
+            </RouterLink>
+          </div>
+        </div>
         <div
             v-if="site.availability !== 'online' || site.missing"
             class="tags"
@@ -73,32 +103,6 @@ const sites = computed(() => {
           </SRTag>
         </div>
         <StatusBanner :status="site.status.overall" />
-        <div class="buttons">
-          <RouterLink
-              :to="`/sites/${site.id}/incidents`"
-              class="button is-small"
-              :aria-label="t('home.incidentsOf', { site: site.label })"
-              :title="t('nav.incidents')"
-          >
-            <span class="icon"><Siren aria-hidden="true" /></span>
-          </RouterLink>
-          <RouterLink
-              :to="`/sites/${site.id}`"
-              class="button is-small"
-              :aria-label="t('home.panelsOf', { site: site.label })"
-              :title="t('nav.panels')"
-          >
-            <span class="icon"><LayoutDashboard aria-hidden="true" /></span>
-          </RouterLink>
-          <RouterLink
-              :to="`/sites/${site.id}/settings`"
-              class="button is-small"
-              :aria-label="t('home.settingsOf', { site: site.label })"
-              :title="t('nav.siteSettings')"
-          >
-            <span class="icon"><Settings aria-hidden="true" /></span>
-          </RouterLink>
-        </div>
       </div>
     </article>
   </div>
@@ -137,5 +141,28 @@ const sites = computed(() => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1rem;
+}
+
+/* The grid spaces the cards; Bulma's bottom margin would make all but the
+   last one shorter. */
+.sr-cards > .card {
+  margin-bottom: 0;
+}
+
+.sr-card-head {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.sr-card-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sr-card-head .buttons {
+  flex: none;
 }
 </style>
