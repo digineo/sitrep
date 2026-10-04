@@ -101,7 +101,7 @@ async function submit() {
 </script>
 
 <template>
-  <div class="sr-login">
+  <div class="sr-page">
     <div class="sr-corner">
       <ThemeSwitcher right />
       <LanguageSwitcher
@@ -216,6 +216,7 @@ async function submit() {
 <style scoped>
 .sr-login-main {
   display: flex;
+  align-items: center;
   justify-content: center;
   padding: 2rem 1rem;
 }

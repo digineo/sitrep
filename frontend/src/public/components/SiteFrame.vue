@@ -72,98 +72,100 @@ watchEffect(() => {
 </script>
 
 <template>
-  <header
-      class="sr-band"
-      :class="{ 'is-branded': band }"
-      :style="band"
-  >
-    <div class="container px-4 sr-header">
-      <div class="sr-brand">
-        <img
-            v-if="site?.logo"
-            :src="site.logo"
-            alt=""
-            class="sr-logo"
-        >
-        <div>
-          <h1 class="title is-3 mb-1">
-            <RouterLink
-                :to="overview"
-                class="has-text-inherit"
-            >
-              {{ site?.name }}
-            </RouterLink>
-          </h1>
-          <p
-              v-if="!unavailable"
-              class="sr-subline sr-band-muted"
+  <div class="sr-page">
+    <header
+        class="sr-band"
+        :class="{ 'is-branded': band }"
+        :style="band"
+    >
+      <div class="container px-4 sr-header">
+        <div class="sr-brand">
+          <img
+              v-if="site?.logo"
+              :src="site.logo"
+              alt=""
+              class="sr-logo"
           >
-            <span>{{ t("site.currentStatus") }}</span>
-            <LiveIndicator
-                :state="live.state"
-                :updated-at="live.updatedAt"
-                :timezone="siteData?.site.timezone ?? 'UTC'"
-                :pulse="live.pulse"
-                :error="errorText"
-                :detail="live.detail"
-            />
-          </p>
+          <div>
+            <h1 class="title is-3 mb-1">
+              <RouterLink
+                  :to="overview"
+                  class="has-text-inherit"
+              >
+                {{ site?.name }}
+              </RouterLink>
+            </h1>
+            <p
+                v-if="!unavailable"
+                class="sr-subline sr-band-muted"
+            >
+              <span>{{ t("site.currentStatus") }}</span>
+              <LiveIndicator
+                  :state="live.state"
+                  :updated-at="live.updatedAt"
+                  :timezone="siteData?.site.timezone ?? 'UTC'"
+                  :pulse="live.pulse"
+                  :error="errorText"
+                  :detail="live.detail"
+              />
+            </p>
+          </div>
+        </div>
+        <div class="buttons sr-header-actions">
+          <template v-if="!unavailable">
+            <RouterLink
+                :to="archive"
+                class="button"
+                :aria-label="t('incidents.history')"
+                :title="t('incidents.history')"
+            >
+              <span class="icon"><History aria-hidden="true" /></span>
+            </RouterLink>
+            <a
+                :href="feed"
+                class="button"
+                type="application/atom+xml"
+                :aria-label="t('incidents.feed')"
+                :title="t('incidents.feedHint')"
+            >
+              <span class="icon"><Rss aria-hidden="true" /></span>
+            </a>
+          </template>
+          <LanguageSwitcher
+              v-if="bootstrap.languages.length > 1"
+              :model-value="locale"
+              :languages="bootstrap.languages"
+              right
+              @update:model-value="emit('switchLanguage', $event)"
+          />
+          <ThemeSwitcher right />
         </div>
       </div>
-      <div class="buttons sr-header-actions">
-        <template v-if="!unavailable">
-          <RouterLink
-              :to="archive"
-              class="button"
-              :aria-label="t('incidents.history')"
-              :title="t('incidents.history')"
-          >
-            <span class="icon"><History aria-hidden="true" /></span>
-          </RouterLink>
-          <a
-              :href="feed"
-              class="button"
-              type="application/atom+xml"
-              :aria-label="t('incidents.feed')"
-              :title="t('incidents.feedHint')"
-          >
-            <span class="icon"><Rss aria-hidden="true" /></span>
-          </a>
-        </template>
-        <LanguageSwitcher
-            v-if="bootstrap.languages.length > 1"
-            :model-value="locale"
-            :languages="bootstrap.languages"
-            right
-            @update:model-value="emit('switchLanguage', $event)"
-        />
-        <ThemeSwitcher right />
+    </header>
+    <main class="container px-4 py-5">
+      <RouterView v-if="showMain" />
+      <div
+          v-else
+          class="notification"
+          role="status"
+      >
+        {{ t("site.unavailable") }}
       </div>
-    </div>
-  </header>
-  <main class="container px-4 py-5">
-    <RouterView v-if="showMain" />
-    <div
-        v-else
-        class="notification"
-        role="status"
+    </main>
+    <footer
+        v-if="legal.imprint || legal.privacy"
+        class="sr-band"
+        :class="{ 'is-branded': band }"
+        :style="band"
     >
-      {{ t("site.unavailable") }}
-    </div>
-  </main>
-  <footer
-      v-if="legal.imprint || legal.privacy"
-      class="sr-band"
-      :class="{ 'is-branded': band }"
-      :style="band"
-  >
-    <div class="container px-4 py-4">
-      <LegalLinks
-          :links="legal"
-          :path="legalPath"
-      />
-    </div>
-  </footer>
+      <div class="container px-4 py-4">
+        <LegalLinks
+            :links="legal"
+            :path="legalPath"
+        />
+      </div>
+    </footer>
+  </div>
 </template>
 
 <style scoped>

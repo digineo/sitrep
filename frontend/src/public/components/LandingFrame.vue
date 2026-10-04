@@ -24,26 +24,37 @@ const legalPath = (kind: LegalKind) => pagePath({ kind }, locale.value, multi)
 </script>
 
 <template>
-  <div class="sr-corner">
-    <ThemeSwitcher right />
-    <LanguageSwitcher
-        v-if="bootstrap.languages.length > 1"
-        :model-value="locale"
-        :languages="bootstrap.languages"
-        right
-        @update:model-value="emit('switchLanguage', $event)"
-    />
+  <div class="sr-page">
+    <div class="sr-corner">
+      <ThemeSwitcher right />
+      <LanguageSwitcher
+          v-if="bootstrap.languages.length > 1"
+          :model-value="locale"
+          :languages="bootstrap.languages"
+          right
+          @update:model-value="emit('switchLanguage', $event)"
+      />
+    </div>
+    <main class="container px-4">
+      <RouterView />
+    </main>
+    <footer
+        v-if="legal"
+        class="container px-4 py-4"
+    >
+      <LegalLinks
+          :links="legal"
+          :path="legalPath"
+      />
+    </footer>
   </div>
-  <main class="container px-4">
-    <RouterView />
-  </main>
-  <footer
-      v-if="legal"
-      class="container px-4 py-4"
-  >
-    <LegalLinks
-        :links="legal"
-        :path="legalPath"
-    />
-  </footer>
 </template>
+
+<style scoped>
+/* The default landing page sits in the middle of the viewport. */
+main:has(> .sr-landing) {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+</style>

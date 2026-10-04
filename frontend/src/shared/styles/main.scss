@@ -38,6 +38,22 @@
   padding: 1rem;
 }
 
+// Pages fill the viewport, with the footer at its bottom.
+.sr-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+
+  > main {
+    flex-grow: 1;
+  }
+
+  // Bulma's containers grow, too.
+  > footer {
+    flex-grow: 0;
+  }
+}
+
 .sr-visually-hidden {
   position: absolute;
   width: 1px;
