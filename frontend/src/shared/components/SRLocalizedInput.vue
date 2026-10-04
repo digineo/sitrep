@@ -16,6 +16,8 @@ const props = defineProps<{
   help?:      string
   /** errors maps languages to error messages. */
   errors?:    Record<string, string | undefined>
+  /** hideLabel leaves the label to assistive technology. */
+  hideLabel?: boolean
 }>()
 
 /**
@@ -119,6 +121,7 @@ function attrs(lang: string): Record<string, unknown> {
     <label
         :id="`${id}-label`"
         class="label"
+        :class="{ 'sr-visually-hidden': hideLabel }"
         :for="`${id}-${active}`"
     >{{ label }}</label>
     <div

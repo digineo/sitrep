@@ -64,6 +64,7 @@ const modeError = () => props.errors[`${props.path}.mode`]
       :model-value="page.url"
       :label="t('legalPage.urlOf', { page: label })"
       :languages
+      hide-label
       required
       :maxlength="2000"
       :errors="localizedErrors(errors, `${path}.url`, t)"
@@ -84,6 +85,7 @@ const modeError = () => props.errors[`${props.path}.mode`]
       :model-value="page.text"
       :label="t('legalPage.textOf', { page: label })"
       :languages
+      hide-label
       required
       :maxlength="50000"
       :errors="localizedErrors(errors, `${path}.text`, t)"
