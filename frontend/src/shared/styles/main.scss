@@ -15,6 +15,12 @@
   outline-offset: 2px;
 }
 
+// Bulma's reset lets every box inherit border-box sizing, but misses the box
+// around the content of details elements, which breaks the chain inside.
+::details-content {
+  box-sizing: inherit;
+}
+
 .sr-dialog {
   padding: 0;
   border: none;
