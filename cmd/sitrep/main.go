@@ -17,8 +17,8 @@ Commands:
   serve            run the server, configured by SITREP_* environment variables
   hash-password    print an argon2id hash for the basic auth users file
                    flags: -user <name> prints "<name>:<hash>"
-  grant-owner      make an account an owner, by email address, or by
-                   username for basic auth; the server must be stopped
+  grant-owner      make an account an owner, by ID, by email address, or
+                   by username for basic auth; the server must be stopped
   healthcheck      exit with 0 if the server at SITREP_LISTEN is healthy
   version          print the version, commit and build date
   help             show this help

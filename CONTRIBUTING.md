@@ -16,7 +16,8 @@ make dev
 Browse `http://sitrep.localhost:2607/`: the Go server proxies `/assets/`
 to Vite, so hot module replacement works on that single URL. Development
 builds contain the `bypass` auth provider, which signs you in without a
-password; release builds never do.
+password; release builds never do. It signs in `test-admin`, or with
+`/auth/bypass/login?as=<user>` `test-maintainer` or `test-responder`.
 
 ## Conventions
 

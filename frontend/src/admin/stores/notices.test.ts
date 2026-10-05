@@ -80,7 +80,12 @@ describe("api", () => {
 
     const session = useSession()
     session.state = "signed-in"
-    session.user = { displayName: "Ann" }
+    session.user = {
+      id:          "a-1",
+      displayName: "Ann",
+      role:        "",
+      sites:       {},
+    }
 
     await expect(api("GET", "/api/admin/settings")).rejects.toMatchObject({
       status: 401,

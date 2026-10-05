@@ -40,8 +40,8 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, settings)
 }
 
-// getVersion reports the build. Only admins see it, unlike the bootstrap
-// data of the admin shell, which the login screen also gets.
+// getVersion reports the build. Only signed-in accounts see it, unlike the
+// bootstrap data of the admin shell, which the login screen also gets.
 func getVersion(w http.ResponseWriter, _ *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, map[string]string{
 		"version": buildinfo.Version,

@@ -1,16 +1,25 @@
 <script setup lang="ts">
-import { onMounted } from "vue"
+import { computed, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
+import { useRoute } from "vue-router"
 
 import SRConfirmDialog from "../shared/components/SRConfirmDialog.vue"
 import AdminLayout from "./components/AdminLayout.vue"
 import LoginScreen from "./components/LoginScreen.vue"
 import ToastList from "./components/ToastList.vue"
 import { useSession } from "./stores/session"
+import NotFoundView from "./views/NotFoundView.vue"
 
 const { t } = useI18n()
 const session = useSession()
+const route = useRoute()
 onMounted(session.check)
+
+// Routes beyond the user's roles look like missing ones.
+const allowed = computed(() => session.can(
+  typeof route.params.site === "string" ? route.params.site : "",
+  route.meta.role ?? "",
+))
 </script>
 
 <template>
@@ -31,7 +40,8 @@ onMounted(session.check)
   </main>
   <LoginScreen v-else-if="session.state === 'anonymous'" />
   <AdminLayout v-else>
-    <RouterView />
+    <RouterView v-if="allowed" />
+    <NotFoundView v-else />
   </AdminLayout>
   <SRConfirmDialog />
   <ToastList />

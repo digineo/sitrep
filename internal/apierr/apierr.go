@@ -105,4 +105,7 @@ var (
 	InvalidYAML          = code("invalid_yaml")
 	UnsupportedVersion   = code("unsupported_version")
 	AmbiguousEmail       = code("ambiguous_email")
+	InvalidEmail         = code("invalid_email")
+	UnknownUser          = code("unknown_user")
+	OwnAccount           = code("own_account")
 )

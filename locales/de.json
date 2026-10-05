@@ -106,7 +106,9 @@
     "panels": "Panels",
     "siteSettings": "Einstellungen",
     "incidents": "Vorfälle",
-    "import": "Statusseite importieren"
+    "import": "Statusseite importieren",
+    "accounts": "Benutzer",
+    "members": "Mitglieder"
   },
   "home": {
     "title": "Statusseiten",
@@ -115,7 +117,59 @@
     "noDataSource": "Statusseiten zeigen Daten aus Datenquellen. Legen Sie zuerst eine Datenquelle an.",
     "panelsOf": "Panels von {site}",
     "settingsOf": "Einstellungen von {site}",
-    "incidentsOf": "Vorfälle von {site}"
+    "incidentsOf": "Vorfälle von {site}",
+    "noAccess": "Sie haben noch keinen Zugriff auf eine Statusseite. Bitten Sie einen Admin, Sie hinzuzufügen."
+  },
+  "roles": {
+    "none": "Keine Rolle",
+    "responder": "Redakteur",
+    "maintainer": "Leiter",
+    "admin": "Admin",
+    "owner": "Eigentümer"
+  },
+  "loginField": {
+    "email": "E-Mail-Adresse",
+    "username": "Benutzername",
+    "emailHelp": "Das Konto erhält, wer sich zuerst mit dieser bestätigten Adresse anmeldet.",
+    "usernameHelp": "Einer der Benutzer, die sich anmelden können.",
+    "otherDomain": "Diese Adresse gehört nicht wie Ihre zu {domain}. Prüfen Sie sie auf Tippfehler."
+  },
+  "members": {
+    "titleOf": "Mitglieder von {site}",
+    "intro": "Mitglieder verwalten diese Statusseite. Admins und Eigentümer verwalten alle Statusseiten und sind hier nicht aufgeführt.",
+    "empty": "Noch keine Mitglieder.",
+    "name": "Name",
+    "role": "Rolle",
+    "roleOf": "Rolle von {name}",
+    "roleHelp": "Redakteure verwalten Vorfälle. Leiter bearbeiten außerdem Panels, Einstellungen und Mitglieder.",
+    "add": "Mitglied hinzufügen",
+    "added": "Mitglied hinzugefügt.",
+    "saved": "Rolle geändert.",
+    "remove": "Mitglied entfernen",
+    "removeOf": "{name} entfernen",
+    "removeTitle": "Mitglied entfernen?",
+    "removeMessage": "{name} verwaltet {site} dann nicht mehr."
+  },
+  "accounts": {
+    "title": "Benutzer",
+    "intro": "Alle, die sich angemeldet haben oder hinzugefügt wurden.",
+    "login": "E-Mail oder Benutzername",
+    "role": "Globale Rolle",
+    "roleHelp": "Admins verwalten alle Statusseiten, Datenquellen und Einstellungen. Eigentümer verwalten außerdem die Benutzer.",
+    "sites": "Statusseiten",
+    "lastSignIn": "Letzte Anmeldung",
+    "actions": "Aktionen",
+    "pending": "Noch nicht angemeldet",
+    "stale": "Kann sich nicht anmelden",
+    "add": "Benutzer hinzufügen",
+    "added": "Benutzer hinzugefügt.",
+    "saved": "Rollen gespeichert.",
+    "edit": "Rollen bearbeiten",
+    "editOf": "Rollen von {name}",
+    "delete": "Benutzer löschen",
+    "deleteOf": "{name} löschen",
+    "deleteTitle": "Benutzer löschen?",
+    "deleteMessage": "{name} verliert alle Rollen und wird abgemeldet. Eine erneute Anmeldung legt ein neues Konto ohne Rollen an."
   },
   "settings": {
     "title": "Einstellungen",
@@ -198,7 +252,10 @@
     "site_unavailable": "Diese Statusseite ist derzeit nicht verfügbar.",
     "invalid_yaml": "Die Datei ist kein gültiges YAML oder enthält unbekannte Schlüssel.",
     "unsupported_version": "Diese Datei hat eine unbekannte Formatversion.",
-    "ambiguous_email": "Mehrere Konten haben diese E-Mail-Adresse."
+    "ambiguous_email": "Mehrere Konten haben diese E-Mail-Adresse.",
+    "invalid_email": "Geben Sie eine gültige E-Mail-Adresse ein.",
+    "unknown_user": "Diesen Benutzernamen gibt es nicht.",
+    "own_account": "Ihre eigenen Rollen und Ihr eigenes Konto können Sie nicht ändern."
   },
   "panel": {
     "seriesName": "{title} #{n}",

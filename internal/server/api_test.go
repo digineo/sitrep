@@ -136,20 +136,28 @@ func init() {
 	}})
 }
 
-// admin sends an admin API request with a JSON body, signed in.
+// signIn signs in the identity, given as JSON, for the following admin
+// requests.
+func (f *fixture) signIn(identity string) {
+	f.t.Helper()
+	r := httptest.NewRequest(
+		http.MethodPost,
+		"http://status.example.com/auth/test/login",
+		strings.NewReader(identity),
+	)
+	r.Header.Set("Origin", "http://status.example.com")
+	r.Header.Set("Content-Type", "application/json")
+	cookies := f.do(r).Result().Cookies()
+	require.Len(f.t, cookies, 1)
+	f.session = cookies[0]
+}
+
+// admin sends an admin API request with a JSON body, signed in, by default
+// as Ann, the owner.
 func (f *fixture) admin(method, path string, body any) *httptest.ResponseRecorder {
 	f.t.Helper()
 	if f.session == nil {
-		r := httptest.NewRequest(
-			http.MethodPost,
-			"http://status.example.com/auth/test/login",
-			strings.NewReader("{}"),
-		)
-		r.Header.Set("Origin", "http://status.example.com")
-		r.Header.Set("Content-Type", "application/json")
-		cookies := f.do(r).Result().Cookies()
-		require.Len(f.t, cookies, 1)
-		f.session = cookies[0]
+		f.signIn("{}")
 	}
 
 	var reader io.Reader

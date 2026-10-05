@@ -106,7 +106,9 @@
     "panels": "Panels",
     "siteSettings": "Settings",
     "incidents": "Incidents",
-    "import": "Import status page"
+    "import": "Import status page",
+    "accounts": "Users",
+    "members": "Members"
   },
   "home": {
     "title": "Status pages",
@@ -115,7 +117,59 @@
     "noDataSource": "Status pages show data from data sources. Add a data source first.",
     "panelsOf": "Panels of {site}",
     "settingsOf": "Settings of {site}",
-    "incidentsOf": "Incidents of {site}"
+    "incidentsOf": "Incidents of {site}",
+    "noAccess": "You have no access to a status page yet. Ask an admin to add you."
+  },
+  "roles": {
+    "none": "No role",
+    "responder": "Responder",
+    "maintainer": "Maintainer",
+    "admin": "Admin",
+    "owner": "Owner"
+  },
+  "loginField": {
+    "email": "Email address",
+    "username": "Username",
+    "emailHelp": "The account goes to whoever first signs in with this verified address.",
+    "usernameHelp": "One of the users who can sign in.",
+    "otherDomain": "This address is not at {domain}, like yours. Check it for typos."
+  },
+  "members": {
+    "titleOf": "Members of {site}",
+    "intro": "Members manage this status page. Admins and owners manage every status page and are not listed.",
+    "empty": "No members yet.",
+    "name": "Name",
+    "role": "Role",
+    "roleOf": "Role of {name}",
+    "roleHelp": "Responders manage incidents. Maintainers also edit panels, settings and members.",
+    "add": "Add member",
+    "added": "Member added.",
+    "saved": "Role changed.",
+    "remove": "Remove member",
+    "removeOf": "Remove {name}",
+    "removeTitle": "Remove member?",
+    "removeMessage": "{name} will no longer manage {site}."
+  },
+  "accounts": {
+    "title": "Users",
+    "intro": "Everyone who signed in or was added.",
+    "login": "Email or username",
+    "role": "Global role",
+    "roleHelp": "Admins manage all status pages, data sources and settings. Owners also manage users.",
+    "sites": "Status pages",
+    "lastSignIn": "Last sign-in",
+    "actions": "Actions",
+    "pending": "Not signed in yet",
+    "stale": "Cannot sign in",
+    "add": "Add user",
+    "added": "User added.",
+    "saved": "Roles saved.",
+    "edit": "Edit roles",
+    "editOf": "Roles of {name}",
+    "delete": "Delete user",
+    "deleteOf": "Delete {name}",
+    "deleteTitle": "Delete user?",
+    "deleteMessage": "{name} loses all roles and is signed out. Signing in again creates a new account without roles."
   },
   "settings": {
     "title": "Settings",
@@ -198,7 +252,10 @@
     "site_unavailable": "This status page is currently unavailable.",
     "invalid_yaml": "The file is not valid YAML or contains unknown keys.",
     "unsupported_version": "This file has an unknown format version.",
-    "ambiguous_email": "Several accounts have this email address."
+    "ambiguous_email": "Several accounts have this email address.",
+    "invalid_email": "Enter a valid email address.",
+    "unknown_user": "There is no user with this name.",
+    "own_account": "You cannot change your own roles or delete your own account."
   },
   "panel": {
     "seriesName": "{title} #{n}",

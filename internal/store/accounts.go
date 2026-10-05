@@ -16,6 +16,11 @@ import (
 	"github.com/digineo/sitrep/internal/model"
 )
 
+var (
+	errForbidden  = apierr.New(http.StatusForbidden, apierr.Forbidden)
+	errOwnAccount = apierr.New(http.StatusConflict, apierr.OwnAccount)
+)
+
 // SignIn returns the account of someone the provider authenticated, with
 // their display name, email (verified or empty) and time of sign-in
 // updated. It reports whether the account is new, and the ID of the
@@ -107,10 +112,62 @@ func merge(a, from *model.Account) {
 	}
 }
 
-// Grant applies change to the provider's account with the login, a
-// subject or else an email, creating the account if there is none. A new
-// account for an email is pending until its first sign-in.
+// Actor is the account that changes another one, and the role it needs
+// for that: on Site, or anywhere without Site.
+type Actor struct {
+	ID   string
+	Site string
+	Role model.Role
+}
+
+// authorize fails unless the actor, as stored now, holds its role and is
+// not the account a: nobody changes their own account. Checking within
+// the change keeps concurrent ones from acting on outdated roles, e.g. two
+// owners from demoting each other. A nil actor is the operator, who may
+// change any account.
+func (by *Actor) authorize(tx *bolt.Tx, a *model.Account) error {
+	if by == nil {
+		return nil
+	}
+
+	var acc model.Account
+	found, err := get(tx, bucketAccounts, []byte(by.ID), &acc)
+	switch {
+	case err != nil:
+		return err
+	case !found || !acc.Can(by.Site, by.Role):
+		return errForbidden
+	case a.ID == by.ID:
+		return errOwnAccount
+	}
+	return nil
+}
+
+// checkSites fails unless the sites the account has roles on exist.
+func checkSites(tx *bolt.Tx, a *model.Account) error {
+	for site := range a.Sites {
+		if tx.Bucket(bucketSites).Get([]byte(site)) == nil {
+			return errNotFound
+		}
+	}
+	return nil
+}
+
+// save stores the account, or deletes it if it is pending without any
+// role: it would only keep someone's email.
+func save(tx *bolt.Tx, a model.Account) error {
+	if a.Subject == "" && a.Role == model.RoleNone && len(a.Sites) == 0 {
+		return tx.Bucket(bucketAccounts).Delete([]byte(a.ID))
+	}
+	return put(tx, bucketAccounts, []byte(a.ID), a)
+}
+
+// Grant applies change by the actor to the provider's account with the
+// login, a subject or else an email, creating the account if there is
+// none. A new account for an email is pending until its first sign-in.
+// A pending account left without roles is deleted, or not created.
 func (db *DB) Grant(
+	by *Actor,
 	provider, login string,
 	byEmail bool,
 	change func(*model.Account) error,
@@ -152,10 +209,16 @@ func (db *DB) Grant(
 			return apierr.New(http.StatusConflict, apierr.AmbiguousEmail)
 		}
 
+		if err := by.authorize(tx, &acc); err != nil {
+			return err
+		}
 		if err := change(&acc); err != nil {
 			return err
 		}
-		return put(tx, bucketAccounts, []byte(acc.ID), acc)
+		if err := checkSites(tx, &acc); err != nil {
+			return err
+		}
+		return save(tx, acc)
 	})
 	return acc, err
 }
@@ -169,6 +232,99 @@ func (db *DB) Account(id string) (model.Account, bool, error) {
 		return err
 	})
 	return a, found, err
+}
+
+// Accounts returns all accounts, oldest first.
+func (db *DB) Accounts() ([]model.Account, error) {
+	var accounts []model.Account
+	err := db.bolt.View(func(tx *bolt.Tx) (err error) {
+		accounts, err = list[model.Account](tx, bucketAccounts, nil)
+		return err
+	})
+	return accounts, err
+}
+
+// UpdateAccount applies change by the actor to the account with the ID. A
+// pending account left without roles is deleted.
+func (db *DB) UpdateAccount(
+	by *Actor,
+	id string,
+	change func(*model.Account) error,
+) (model.Account, error) {
+	var acc model.Account
+	err := db.bolt.Update(func(tx *bolt.Tx) error {
+		if err := mustGet(tx, bucketAccounts, []byte(id), &acc); err != nil {
+			return err
+		}
+		if err := by.authorize(tx, &acc); err != nil {
+			return err
+		}
+		if err := change(&acc); err != nil {
+			return err
+		}
+		if err := checkSites(tx, &acc); err != nil {
+			return err
+		}
+		return save(tx, acc)
+	})
+	return acc, err
+}
+
+// DeleteAccount deletes an account and its sessions, by the actor.
+func (db *DB) DeleteAccount(by *Actor, id string) error {
+	return db.bolt.Update(func(tx *bolt.Tx) error {
+		var acc model.Account
+		if err := mustGet(tx, bucketAccounts, []byte(id), &acc); err != nil {
+			return err
+		}
+		if err := by.authorize(tx, &acc); err != nil {
+			return err
+		}
+
+		var keys [][]byte
+		sessions := tx.Bucket(bucketSessions)
+		err := sessions.ForEach(func(k, v []byte) error {
+			var s model.Session
+			if err := json.Unmarshal(v, &s); err != nil {
+				return err
+			}
+			if s.Account == id {
+				keys = append(keys, bytes.Clone(k))
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+
+		for _, k := range keys {
+			if err := sessions.Delete(k); err != nil {
+				return err
+			}
+		}
+		return tx.Bucket(bucketAccounts).Delete([]byte(id))
+	})
+}
+
+// dropSite removes the roles on a site from all accounts, deleting pending
+// accounts left without roles.
+func dropSite(tx *bolt.Tx, site string) error {
+	accounts, err := list[model.Account](tx, bucketAccounts, nil)
+	if err != nil {
+		return err
+	}
+
+	for _, a := range accounts {
+		if _, ok := a.Sites[site]; !ok {
+			continue
+		}
+
+		delete(a.Sites, site)
+		if err := save(tx, a); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // accountsFromSessions migrates schema 1, where everyone who could sign in

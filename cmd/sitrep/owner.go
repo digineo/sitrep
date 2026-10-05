@@ -11,11 +11,12 @@ import (
 	"github.com/digineo/sitrep/internal/store"
 )
 
-// grantOwner makes the account named by login an owner of the instance,
-// creating it if needed. It is the way back in when no owner can sign in.
+// grantOwner makes the account with an ID, or named by login, an owner of
+// the instance, creating it if needed. It is the way back in when no owner
+// can sign in.
 func grantOwner(args []string, stdout, stderr io.Writer) int {
 	if len(args) != 1 {
-		fmt.Fprintln(stderr, "grant-owner takes one argument: an email address, or a username for basic auth")
+		fmt.Fprintln(stderr, "grant-owner takes one argument: an account ID, an email address, or a username for basic auth")
 		return 2
 	}
 
@@ -30,24 +31,6 @@ func grantOwner(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	login, byEmail := args[0], true
-	if dir, ok := provider.(auth.Directory); ok {
-		users, err := dir.Users()
-		if err != nil {
-			fmt.Fprintln(stderr, err)
-			return 1
-		}
-
-		if !slices.Contains(users, login) {
-			fmt.Fprintf(stderr, "the %s provider has no user %q\n", cfg.Auth, login)
-			return 1
-		}
-		byEmail = false
-	} else if login, ok = auth.ParseEmail(login); !ok {
-		fmt.Fprintf(stderr, "%q is not an email address\n", args[0])
-		return 1
-	}
-
 	db, err := store.Open(cfg.DB)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
@@ -56,11 +39,44 @@ func grantOwner(args []string, stdout, stderr io.Writer) int {
 	defer func() { _ = db.Close() }()
 
 	var old model.Role
-	acc, err := db.Grant(cfg.Auth, login, byEmail, func(a *model.Account) error {
+	owner := func(a *model.Account) error {
 		old = a.Role
 		a.Role = model.RoleOwner
 		return nil
-	})
+	}
+
+	// Accounts without a verified email, e.g. from Entra ID, can only be
+	// named by their ID.
+	login := args[0]
+	acc, found, err := db.Account(login)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+
+	if found && acc.Provider == cfg.Auth {
+		acc, err = db.UpdateAccount(nil, acc.ID, owner)
+	} else {
+		byEmail := true
+		if dir, ok := provider.(auth.Directory); ok {
+			users, err := dir.Users()
+			if err != nil {
+				fmt.Fprintln(stderr, err)
+				return 1
+			}
+
+			if !slices.Contains(users, login) {
+				fmt.Fprintf(stderr, "the %s provider has no user or account %q\n", cfg.Auth, login)
+				return 1
+			}
+			byEmail = false
+		} else if login, ok = auth.ParseEmail(login); !ok {
+			fmt.Fprintf(stderr, "%q is neither an account ID nor an email address\n", args[0])
+			return 1
+		}
+
+		acc, err = db.Grant(nil, cfg.Auth, login, byEmail, owner)
+	}
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1

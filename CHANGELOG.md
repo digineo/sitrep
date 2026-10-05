@@ -9,6 +9,9 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Accounts, created at the first sign-in. The first account of the active
   auth provider becomes the instance's owner.
+- Roles: responders and maintainers per status page, admins and owners
+  for the instance. Maintainers manage the members of their status pages
+  and owners all accounts, adding them by email address or by username.
 - `sitrep grant-owner` makes an account an owner when no owner can sign
   in any more.
 - `SITREP_OIDC_GROUP` names the group whose members may sign in.
@@ -17,7 +20,10 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Single sign-on keeps the email address only if the identity provider
   verified it.
-- Upgrading makes everyone with an unexpired session an owner.
+- **Breaking:** signing in no longer grants every permission. Upgrading
+  makes everyone with an unexpired session an owner, so sign in shortly
+  before upgrading; everyone else needs an owner or a maintainer to
+  grant them a role.
 
 ### Deprecated
 

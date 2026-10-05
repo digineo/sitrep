@@ -151,8 +151,8 @@ func (db *DB) ImportSite(s *model.Site, panels []model.Panel) error {
 	})
 }
 
-// DeleteSite deletes a site, its panels and its incidents. A promoted site
-// is no longer promoted.
+// DeleteSite deletes a site, its panels, its incidents and the roles on
+// it. A promoted site is no longer promoted.
 func (db *DB) DeleteSite(id string) error {
 	return db.bolt.Update(func(tx *bolt.Tx) error {
 		var site model.Site
@@ -176,6 +176,10 @@ func (db *DB) DeleteSite(id string) error {
 			if err := deletePrefix(tx.Bucket(bucket), []byte(id+"/")); err != nil {
 				return err
 			}
+		}
+
+		if err := dropSite(tx, id); err != nil {
+			return err
 		}
 
 		if err := tx.Bucket(bucketRoutes).Delete(routeKey(site.Route)); err != nil {

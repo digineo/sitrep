@@ -60,11 +60,12 @@ func TestSignInBindsPendingAccounts(t *testing.T) {
 	assert := assert.New(t)
 
 	db, _ := openTemp(t)
+	s1, s2 := newSite(t, db, "a"), newSite(t, db, "b")
 	_, _, _, err := db.SignIn("oidc", "u-1", "Ann", "ann@example.com")
 	require.NoError(err)
 
 	grant := func(login string, change func(*model.Account)) model.Account {
-		acc, err := db.Grant("oidc", login, true, func(a *model.Account) error {
+		acc, err := db.Grant(nil, "oidc", login, true, func(a *model.Account) error {
 			change(a)
 			return nil
 		})
@@ -73,7 +74,7 @@ func TestSignInBindsPendingAccounts(t *testing.T) {
 	}
 
 	carl := grant("carl@example.com", func(a *model.Account) {
-		a.Sites = map[string]model.Role{"s-1": model.RoleMaintainer}
+		a.Sites = map[string]model.Role{s1: model.RoleMaintainer}
 	})
 	assert.Empty(carl.Subject, "provisioned by email: pending")
 
@@ -95,12 +96,12 @@ func TestSignInBindsPendingAccounts(t *testing.T) {
 	// provisioned again: the pending account merges into u-3's.
 	dora := grant("dora@example.com", func(a *model.Account) {
 		a.Sites = map[string]model.Role{
-			"s-1": model.RoleResponder,
-			"s-2": model.RoleMaintainer,
+			s1: model.RoleResponder,
+			s2: model.RoleMaintainer,
 		}
 	})
-	_, err = db.Grant("oidc", "u-3", false, func(a *model.Account) error {
-		a.Sites = map[string]model.Role{"s-1": model.RoleMaintainer}
+	_, err = db.Grant(nil, "oidc", "u-3", false, func(a *model.Account) error {
+		a.Sites = map[string]model.Role{s1: model.RoleMaintainer}
 		return nil
 	})
 	require.NoError(err)
@@ -111,11 +112,11 @@ func TestSignInBindsPendingAccounts(t *testing.T) {
 	assert.Equal(dora.ID, pending)
 	assert.NotEqual(dora.ID, acc.ID, "merged")
 	assert.Equal(map[string]model.Role{
-		"s-1": model.RoleMaintainer,
-		"s-2": model.RoleMaintainer,
+		s1: model.RoleMaintainer,
+		s2: model.RoleMaintainer,
 	}, acc.Sites, "the higher role per site wins")
 
-	_, err = db.Grant("oidc", "dora@example.com", true, func(a *model.Account) error {
+	_, err = db.Grant(nil, "oidc", "dora@example.com", true, func(a *model.Account) error {
 		assert.Equal(acc.ID, a.ID, "the pending account is gone")
 		return nil
 	})
@@ -132,7 +133,7 @@ func TestGrant(t *testing.T) {
 		return nil
 	}
 
-	ann, err := db.Grant("basic", "ann", false, owner)
+	ann, err := db.Grant(nil, "basic", "ann", false, owner)
 	require.NoError(err)
 	assert.Equal("ann", ann.Subject, "accounts named by subject are bound")
 	assert.Equal(model.RoleOwner, ann.Role)
@@ -146,13 +147,13 @@ func TestGrant(t *testing.T) {
 	require.NoError(err)
 	_, _, _, err = db.SignIn("oidc", "u-2", "Ann", "ann@example.com")
 	require.NoError(err)
-	_, err = db.Grant("oidc", "ann@example.com", true, owner)
+	_, err = db.Grant(nil, "oidc", "ann@example.com", true, owner)
 	e := apiError(t, err)
 	assert.Equal(http.StatusConflict, e.Status)
 	assert.Equal("ambiguous_email", e.Code)
 
 	failed := errors.New("failed")
-	_, err = db.Grant("basic", "bob", false, func(*model.Account) error {
+	_, err = db.Grant(nil, "basic", "bob", false, func(*model.Account) error {
 		return failed
 	})
 	assert.ErrorIs(err, failed)
@@ -205,6 +206,9 @@ func TestMigrateSessions(t *testing.T) {
 	require.NoError(err)
 	assert.False(found, "expired sessions are deleted, and grant nothing")
 
+	all, err := db.Accounts()
+	require.NoError(err)
+	require.Len(all, 2)
 	require.Len(accounts, 2)
 	ann, bob := accounts["u-1"], accounts["u-2"]
 	assert.Equal(model.RoleOwner, ann.Role)
@@ -223,4 +227,170 @@ func TestMigrateSessions(t *testing.T) {
 		return err
 	}))
 	assert.Equal(schemaVersion, version)
+}
+
+func TestUpdateAndDeleteAccount(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	db, _ := openTemp(t)
+	site := &model.Site{Route: model.Route{
+		Mode: model.RoutePath,
+		Slug: "a",
+	}}
+	require.NoError(db.CreateSite(site))
+	ann, _, _, err := db.SignIn("basic", "ann", "Ann", "")
+	require.NoError(err)
+	bob, _, _, err := db.SignIn("basic", "bob", "Bob", "")
+	require.NoError(err)
+
+	bob, err = db.UpdateAccount(nil, bob.ID, func(a *model.Account) error {
+		a.Sites = map[string]model.Role{site.ID: model.RoleMaintainer}
+		return nil
+	})
+	require.NoError(err)
+	accounts, err := db.Accounts()
+	require.NoError(err)
+	assert.Equal([]model.Account{ann, bob}, accounts, "oldest first")
+
+	failed := errors.New("failed")
+	_, err = db.UpdateAccount(nil, bob.ID, func(a *model.Account) error {
+		a.Role = model.RoleOwner
+		return failed
+	})
+	assert.ErrorIs(err, failed)
+	got, _, err := db.Account(bob.ID)
+	require.NoError(err)
+	assert.Equal(bob, got, "a failed change stores nothing")
+
+	_, err = db.UpdateAccount(nil, "nope", func(*model.Account) error { return nil })
+	assert.Equal(http.StatusNotFound, apiError(t, err).Status)
+
+	require.NoError(db.DeleteSite(site.ID))
+	got, _, err = db.Account(bob.ID)
+	require.NoError(err)
+	assert.Empty(got.Sites, "roles go with their site")
+
+	expires := time.Now().Add(time.Hour)
+	for token, account := range map[string]string{"b-1": bob.ID, "b-2": bob.ID, "a-1": ann.ID} {
+		s := model.Session{Account: account, Expires: expires}
+		require.NoError(db.CreateSession([]byte(token), s))
+	}
+
+	require.NoError(db.DeleteAccount(nil, bob.ID))
+	_, found, err := db.Account(bob.ID)
+	require.NoError(err)
+	assert.False(found)
+	for token, want := range map[string]bool{"b-1": false, "b-2": false, "a-1": true} {
+		_, _, found, err := db.Session([]byte(token))
+		require.NoError(err)
+		assert.Equal(want, found, "sessions go with their account: %s", token)
+	}
+
+	assert.Equal(http.StatusNotFound, apiError(t, db.DeleteAccount(nil, bob.ID)).Status)
+}
+
+// newSite creates a path-mode site and returns its ID.
+func newSite(t *testing.T, db *DB, slug string) string {
+	t.Helper()
+	site := &model.Site{Route: model.Route{Mode: model.RoutePath, Slug: slug}}
+	require.NoError(t, db.CreateSite(site))
+	return site.ID
+}
+
+func TestActor(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	db, _ := openTemp(t)
+	ann, _, _, err := db.SignIn("basic", "ann", "Ann", "")
+	require.NoError(err)
+	bob, err := db.Grant(nil, "basic", "bob", false, func(a *model.Account) error {
+		a.Role = model.RoleOwner
+		return nil
+	})
+	require.NoError(err)
+
+	demote := func(a *model.Account) error {
+		a.Role = model.RoleNone
+		return nil
+	}
+	byAnn := &Actor{ID: ann.ID, Role: model.RoleOwner}
+	byBob := &Actor{ID: bob.ID, Role: model.RoleOwner}
+
+	_, err = db.UpdateAccount(byAnn, ann.ID, demote)
+	assert.Equal("own_account", apiError(t, err).Code)
+	_, err = db.Grant(byAnn, "basic", "ann", false, demote)
+	assert.Equal("own_account", apiError(t, err).Code)
+	assert.Equal("own_account", apiError(t, db.DeleteAccount(byAnn, ann.ID)).Code)
+
+	// The owners demote each other at once, both allowed by the roles
+	// their requests started with: the second is no owner any more.
+	_, err = db.UpdateAccount(byAnn, bob.ID, demote)
+	require.NoError(err)
+	_, err = db.UpdateAccount(byBob, ann.ID, demote)
+	assert.Equal(http.StatusForbidden, apiError(t, err).Status)
+	assert.Equal(http.StatusForbidden, apiError(t, db.DeleteAccount(byBob, ann.ID)).Status)
+	got, _, err := db.Account(ann.ID)
+	require.NoError(err)
+	assert.Equal(model.RoleOwner, got.Role, "an owner remains")
+
+	_, err = db.Grant(byAnn, "basic", "carl", false, func(a *model.Account) error {
+		a.Sites = map[string]model.Role{"nope": model.RoleResponder}
+		return nil
+	})
+	assert.Equal(http.StatusNotFound, apiError(t, err).Status, "roles only on existing sites")
+	_, err = db.UpdateAccount(byAnn, bob.ID, func(a *model.Account) error {
+		a.Sites = map[string]model.Role{"nope": model.RoleResponder}
+		return nil
+	})
+	assert.Equal(http.StatusNotFound, apiError(t, err).Status, "roles only on existing sites")
+}
+
+func TestPendingAccountsWithoutRoles(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	db, _ := openTemp(t)
+	s1, s2 := newSite(t, db, "a"), newSite(t, db, "b")
+	setSites := func(sites map[string]model.Role) func(*model.Account) error {
+		return func(a *model.Account) error {
+			a.Sites = sites
+			return nil
+		}
+	}
+	exists := func(id string) bool {
+		_, found, err := db.Account(id)
+		require.NoError(err)
+		return found
+	}
+
+	carl, err := db.Grant(nil, "oidc", "carl@example.com", true, setSites(nil))
+	require.NoError(err)
+	assert.False(exists(carl.ID), "not created without roles")
+
+	responder := map[string]model.Role{s1: model.RoleResponder}
+	carl, err = db.Grant(nil, "oidc", "carl@example.com", true, setSites(responder))
+	require.NoError(err)
+	require.True(exists(carl.ID))
+	_, err = db.UpdateAccount(nil, carl.ID, setSites(nil))
+	require.NoError(err)
+	assert.False(exists(carl.ID), "deleted with its last role")
+
+	both := map[string]model.Role{s1: model.RoleResponder, s2: model.RoleResponder}
+	dora, err := db.Grant(nil, "oidc", "dora@example.com", true, setSites(both))
+	require.NoError(err)
+	require.NoError(db.DeleteSite(s1))
+	assert.True(exists(dora.ID), "a role remains")
+	require.NoError(db.DeleteSite(s2))
+	assert.False(exists(dora.ID), "deleted with its last site")
+
+	_, _, _, err = db.SignIn("oidc", "u-1", "Ann", "")
+	require.NoError(err)
+	bob, _, _, err := db.SignIn("oidc", "u-2", "Bob", "")
+	require.NoError(err)
+	require.Equal(model.RoleNone, bob.Role)
+	_, err = db.UpdateAccount(nil, bob.ID, setSites(nil))
+	require.NoError(err)
+	assert.True(exists(bob.ID), "signed-in accounts stay")
 }

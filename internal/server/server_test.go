@@ -25,18 +25,24 @@ import (
 	"github.com/digineo/sitrep/internal/store"
 )
 
-// testProvider signs in everyone who posts to /auth/test/login.
+// testProvider signs in everyone who posts to /auth/test/login: the
+// subject and email of the body, or Ann.
 type testProvider struct{}
 
 func (testProvider) Method() auth.Method { return auth.MethodCredentials }
 func (testProvider) Available() bool     { return true }
 func (testProvider) Routes(mux *http.ServeMux, core *auth.Core) {
 	login := func(w http.ResponseWriter, r *http.Request) {
-		err := core.Login(w, r, auth.Identity{
+		id := auth.Identity{
 			Subject:     "ann",
 			DisplayName: "Ann",
-		})
-		if err != nil {
+		}
+		if err := json.NewDecoder(r.Body).Decode(&id); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if err := core.Login(w, r, id); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}
@@ -45,6 +51,7 @@ func (testProvider) Routes(mux *http.ServeMux, core *auth.Core) {
 
 type fixture struct {
 	t       *testing.T
+	cfg     config.Config
 	db      *store.DB
 	dbPath  string
 	poller  *poller.Poller
@@ -90,6 +97,7 @@ func newFixture(t *testing.T) *fixture {
 
 	f := &fixture{
 		t:      t,
+		cfg:    cfg,
 		db:     db,
 		dbPath: path,
 		poller: p,

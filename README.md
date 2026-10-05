@@ -26,10 +26,12 @@ is available.
   imported from YAML files.
 - Light, dark and system color schemes, remembered per visitor.
 - Admin console with sign-in by single sign-on (OpenID Connect, limited to
-  an admin group) or by username and password (bcrypt or argon2id hashes,
-  with login throttling). It manages data sources, status pages with their
+  a group) or by username and password (bcrypt or argon2id hashes, with
+  login throttling). It manages data sources, status pages with their
   panels, incidents and a live preview, and instance settings for
   languages, the default color scheme, legal pages and the landing text.
+- Roles per status page and for the whole instance, managed in the
+  console.
 - No third-party requests, no tracking, no consent banner needed.
 
 ## Quick start
@@ -72,7 +74,9 @@ by that user. Its health check runs `sitrep healthcheck`, which requests
 
 ### First steps
 
-The console is at `http://status.example.com:2607/admin`. For a local try,
+The console is at `http://status.example.com:2607/admin`. Whoever signs
+in first becomes its owner, see [Accounts and roles](#accounts-and-roles).
+For a local try,
 use `sitrep.localhost` as base domain: browsers resolve every
 `*.localhost` name to your machine. Note: `SITREP_BASE_DOMAINS=localhost`
 will **not** work.
@@ -132,11 +136,13 @@ Only members of `SITREP_OIDC_GROUP` may sign in. SitRep reads
 the groups from the claim `SITREP_OIDC_GROUPS_CLAIM` of the ID token, or
 from the user info endpoint if the ID token lacks the claim. Admins are
 shown by their `name` claim, else `preferred_username`, else their subject.
-SitRep keeps the `email` claim only if `email_verified` is `true`.
+SitRep keeps the `email` claim only if `email_verified` is `true`. What
+admins may do depends on their [roles](#accounts-and-roles).
 
 - **Group changes** are checked only at sign-in. Someone removed from the
-  admin group keeps access until their session expires, at most
-  `SITREP_SESSION_TTL` after they signed in.
+  group keeps access until their session expires, at most
+  `SITREP_SESSION_TTL` after they signed in, unless an owner deletes
+  their account.
 - **Signing out** ends the SitRep session, but not the session at the
   identity provider, which may sign the admin in again without asking.
 - **Startup** does not wait for the identity provider. SitRep fetches
@@ -164,13 +170,42 @@ Notes for common identity providers:
   `SITREP_OIDC_GROUPS_CLAIM=roles` and
   `SITREP_OIDC_GROUP=sitrep-admin`. A groups claim would carry
   group object IDs, and Entra ID leaves it out entirely for users in more
-  than 200 groups, which SitRep then treats as not being a member.
+  than 200 groups, which SitRep then treats as not being a member. Entra
+  ID sends no `email_verified` claim, so accounts added by email are never
+  bound: let people sign in first, then an owner assigns their roles in
+  the user list, or `grant-owner` names their account by its ID.
 
-## Accounts
+## Accounts and roles
 
 SitRep creates an account for everyone at their first sign-in. The
 first account of the active auth provider becomes the instance's owner;
-switching providers makes the next first account an owner again.
+switching providers makes the next first account an owner again. Other
+accounts start without a role and see no status page until they get one.
+
+Roles build on each other:
+
+| Role | German | May |
+|---|---|---|
+| Responder | Redakteur | manage the incidents of a status page |
+| Maintainer | Leiter | also edit its panels and settings, export and import it, and add and remove its members |
+| Admin | Admin | do all of this on every status page, create and delete status pages, and edit data sources and the instance settings |
+| Owner | Eigentümer | also add and remove admins and owners, and delete accounts |
+
+Responders and maintainers hold their role per status page; admins and
+owners hold theirs for the instance. Nobody changes their own roles or
+deletes their own account, so an owner always remains. Maintainers can
+read every metric of the data sources their panels use, since data
+sources are shared.
+
+Maintainers add members to a status page in the console, and owners add
+admins and owners, by email address, or by username with
+`SITREP_AUTH=basic`. An account added by email is bound to whoever signs
+in first with that verified email address. A domain other than one's own
+is pointed out, as it may be a typo. The user list shows owners every
+account with its roles and last sign-in, and marks accounts that cannot
+sign in any more: those of another auth provider and, with
+`SITREP_AUTH=basic`, those no longer in the users file. Accounts are only
+deleted by owners.
 
 If no owner can sign in any more, stop the server and make an account
 an owner from the command line, by email address, or by username with
@@ -181,11 +216,15 @@ an email address is bound to the account that next signs in with it:
 ./sitrep grant-owner alice@example.com
 ```
 
+An account without a verified email address is named by its ID instead.
+The log line "created an account on first sign-in" shows it, and the
+signed-in person finds it as `id` at `/auth/session`.
+
 ## Signing in with username and password
 
 With `SITREP_AUTH=basic`, admins are listed in an htpasswd-style file, one
 `username:hash` per line. Blank lines and lines starting with `#` are
-ignored. Every user in the file is an admin. SitRep reloads the file when
+ignored. Every user in the file may sign in. SitRep reloads the file when
 it changes; a broken file keeps the previous users and logs an error.
 
 Create argon2id hashes with SitRep, or bcrypt hashes with Apache's
@@ -271,6 +310,9 @@ https:// {
 	reverse_proxy 127.0.0.1:2607
 }
 ```
+
+Everyone who can change a status page's route, maintainers included, can
+thus make Caddy request certificates for domains pointed at SitRep.
 
 Caddy passes the original `Host` header and sets the `X-Forwarded-*`
 headers by default. SitRep sends no `Strict-Transport-Security` header;
@@ -401,7 +443,8 @@ anyone:
 SitRep stores an account for everyone who signed in or was added: the
 subject, display name, the email address if the identity provider
 verified it, and the times of creation and of the last sign-in. Accounts
-are kept until they are deleted.
+are kept until they are deleted. Accounts added by email that never
+signed in are deleted once they lose their last role.
 
 Sessions only refer to the account. Signing out deletes the session.
 Sessions expire after `SITREP_SESSION_TTL`, and expired ones are deleted
@@ -414,7 +457,8 @@ They are deleted with their incident, either by an admin or by the status
 page's incident retention.
 
 Logs contain the usernames of failed sign-ins and the subjects of sign-ins
-refused by single sign-on, but no email addresses and no client
+refused by single sign-on, of new accounts, and of admins who change
+roles or delete accounts, but no email addresses and no client
 addresses.
 
 ## Development and testing

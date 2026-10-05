@@ -113,7 +113,7 @@ func TestLoginLogsPendingAccounts(t *testing.T) {
 	core.Log = log
 
 	grant := func(role model.Role) model.Account {
-		acc, err := db.Grant("fake", "ann@example.com", true, func(a *model.Account) error {
+		acc, err := db.Grant(nil, "fake", "ann@example.com", true, func(a *model.Account) error {
 			a.Role = role
 			return nil
 		})
@@ -128,7 +128,7 @@ func TestLoginLogsPendingAccounts(t *testing.T) {
 
 	// Ann's email was unverified for a while, and meanwhile provisioned
 	// again.
-	_, err = db.Grant("fake", "ann", false, func(a *model.Account) error {
+	_, err = db.Grant(nil, "fake", "ann", false, func(a *model.Account) error {
 		a.Email = ""
 		return nil
 	})

@@ -66,3 +66,35 @@ func TestLoginAndLogout(t *testing.T) {
 	body := w.Body.String()
 	assert.Contains(body, `"user":null`, "the session is gone after logout")
 }
+
+func TestLoginAs(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	db, err := store.Open(filepath.Join(t.TempDir(), "sitrep.db"))
+	require.NoError(err)
+	defer func() { _ = db.Close() }()
+
+	env := config.NewEnv(func(string) (string, bool) { return "", false })
+	p := auth.NewProvider(env, config.Config{Auth: "bypass"})
+	core := auth.NewCore(xlog.NewDiscard(), db, "bypass", p, time.Hour, false)
+	h := core.Handler()
+
+	login := func(as string) *httptest.ResponseRecorder {
+		target := "http://status.example.com/auth/bypass/login?as=" + as
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, target, nil))
+		return w
+	}
+
+	assert.Equal(http.StatusBadRequest, login("nope").Code)
+	w := login("test-responder")
+	assert.Equal(http.StatusSeeOther, w.Code)
+	acc, _, _, err := db.SignIn("bypass", "test-responder", "Test Responder", "")
+	require.NoError(err)
+	assert.Equal("owner", string(acc.Role), "the first to sign in")
+
+	users, err := core.Directory().Users()
+	require.NoError(err)
+	assert.Equal([]string{"test-admin", "test-maintainer", "test-responder"}, users)
+}

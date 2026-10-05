@@ -1,6 +1,7 @@
 // A mock OpenID provider for the e2e tests. Its authorization page offers
-// a member of the admin group, a user outside it and a cancel link; the
-// token endpoint checks PKCE and signs ID tokens with a key made at start.
+// two members of the sign-in group, a user outside it and a cancel link;
+// the token endpoint checks PKCE and signs ID tokens with a key made at
+// start.
 import {
   createHash,
   createSign,
@@ -18,12 +19,20 @@ const { privateKey, publicKey } = generateKeyPairSync(
 
 const users = {
   ann: {
-    name:   "Ann Admin",
-    groups: ["staff", "admins"],
+    name:           "Ann Admin",
+    groups:         ["staff", "admins"],
+    email:          "ann@example.com",
+    email_verified: true,
   },
   bob: {
     name:   "Bob Staff",
     groups: ["staff"],
+  },
+  carol: {
+    name:           "Carol Responder",
+    groups:         ["admins"],
+    email:          "carol@example.com",
+    email_verified: true,
   },
 }
 

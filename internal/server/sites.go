@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"slices"
 
+	"github.com/digineo/sitrep/internal/auth"
 	"github.com/digineo/sitrep/internal/httpx"
 	"github.com/digineo/sitrep/internal/model"
 	"github.com/digineo/sitrep/internal/poller"
@@ -97,6 +98,7 @@ func incidentMissing(inc model.Incident, l model.Languages) bool {
 	return missing(l, texts...)
 }
 
+// listSites lists the sites the request's account holds a role on.
 func (s *Server) listSites(w http.ResponseWriter, r *http.Request) {
 	snap, err := s.db.Snapshot()
 	if err != nil {
@@ -120,8 +122,13 @@ func (s *Server) listSites(w http.ResponseWriter, r *http.Request) {
 		incidents[inc.Site] = append(incidents[inc.Site], inc)
 	}
 
+	acc := auth.Account(r.Context())
 	sites := []siteSummary{}
 	for _, site := range snap.Sites {
+		if !acc.Can(site.ID, model.RoleResponder) {
+			continue
+		}
+
 		langs := site.Languages.Effective()
 		sum := siteSummary{
 			ID:           site.ID,

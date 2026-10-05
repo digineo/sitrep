@@ -3,7 +3,9 @@ import { defineConfig } from "@playwright/test"
 // The servers run a testauth build (make test-e2e builds it). Each project
 // gets its own server and database: "settings" and "landing" change the
 // instance settings, which the other specs rely on. Data sources point at a
-// stub of the Prometheus API, and "oidc" signs in with a mock IdP.
+// stub of the Prometheus API, and "oidc" signs in with a mock IdP. Where
+// specs sign in more than one user, the owner is made up front, since the
+// first sign-in would otherwise win.
 const binary = "../sitrep-e2e"
 const tmp = "e2e/.tmp"
 
@@ -34,6 +36,9 @@ const users = ["admin", "admin-de", "throttled", "throttled-de"]
   .map(user => "printf 'correct horse\\n' | "
     + `${binary} hash-password -user ${user} >> ${tmp}/users &&`)
   .join(" ")
+
+/** owner makes login an owner before the server starts. */
+const owner = (login: string) => `${binary} grant-owner ${login} &&`
 
 const basicEnv = {
   SITREP_AUTH:             "basic",
@@ -85,18 +90,18 @@ export default defineConfig({
       url:                 "http://127.0.0.1:26091/.well-known/openid-configuration",
       reuseExistingServer: false,
     },
-    server("bypass", 26071, { SITREP_AUTH: "bypass" }),
+    server("bypass", 26071, { SITREP_AUTH: "bypass" }, owner("test-admin")),
     server("settings", 26072, { SITREP_AUTH: "bypass" }),
     server("landing", 26074, { SITREP_AUTH: "bypass" }),
     // Behind a trusted proxy, each test signs in from its own X-Forwarded-For
     // address, so the per-address throttle does not couple the tests.
-    server("basic", 26073, basicEnv, `rm -f ${tmp}/users && ${users}`),
+    server("basic", 26073, basicEnv, `rm -f ${tmp}/users && ${users} ${owner("admin")}`),
     server("oidc", 26075, {
       SITREP_AUTH:              "oidc",
       SITREP_OIDC_ISSUER:       "http://127.0.0.1:26091",
       SITREP_OIDC_CLIENT_ID:    "sitrep",
       SITREP_OIDC_REDIRECT_URL: "http://sitrep.localhost:26075/auth/oidc/callback",
       SITREP_OIDC_GROUP:        "admins",
-    }),
+    }, owner("ann@example.com")),
   ],
 })

@@ -28,6 +28,7 @@ type Server struct {
 	db        *store.DB
 	poller    *poller.Poller
 	assets    *assets
+	dir       auth.Directory // nil if the auth provider has none
 	authAPI   http.Handler
 	adminAPI  http.Handler
 	publicAPI http.Handler
@@ -62,66 +63,103 @@ func newServer(
 		db:      db,
 		poller:  p,
 		assets:  a,
+		dir:     core.Directory(),
 		authAPI: core.Handler(),
 	}
 
-	admin := http.NewServeMux()
-	handle := func(pattern string, h http.HandlerFunc) {
-		admin.Handle(pattern, core.CSRF(h, "application/json"))
+	// Every admin route requires a role: on its site, or, without site,
+	// anywhere.
+	const (
+		anyone     = model.RoleNone
+		responder  = model.RoleResponder
+		maintainer = model.RoleMaintainer
+		admin      = model.RoleAdmin
+		owner      = model.RoleOwner
+	)
+	mux := http.NewServeMux()
+	handle := func(pattern string, role model.Role, h http.HandlerFunc) {
+		mux.Handle(pattern, s.require(role, core.CSRF(h, "application/json")))
 	}
 
-	handle("GET /api/admin/settings", s.getSettings)
-	handle("PUT /api/admin/settings", s.putSettings)
-	handle("GET /api/admin/version", getVersion)
-	handle("GET /api/admin/datasource-types", s.listTypes)
-	handle("GET /api/admin/datasources", s.listDataSources)
-	handle("POST /api/admin/datasources", s.createDataSource)
-	handle("POST /api/admin/datasources/test", s.testUnsaved)
-	handle("GET /api/admin/datasources/{id}", s.getDataSource)
-	handle("PUT /api/admin/datasources/{id}", s.putDataSource)
-	handle("DELETE /api/admin/datasources/{id}", s.deleteDataSource)
-	handle("POST /api/admin/datasources/{id}/test", s.testDataSource)
+	handle("GET /api/admin/settings", maintainer, s.getSettings)
+	handle("PUT /api/admin/settings", admin, s.putSettings)
+	handle("GET /api/admin/version", anyone, getVersion)
+	handle("GET /api/admin/directory", maintainer, s.getDirectory)
+	handle("GET /api/admin/accounts", owner, s.listAccounts)
+	handle("POST /api/admin/accounts", owner, s.createAccount)
+	handle("PUT /api/admin/accounts/{account}", owner, s.putAccount)
+	handle("DELETE /api/admin/accounts/{account}", owner, s.deleteAccount)
+	handle("GET /api/admin/datasource-types", maintainer, s.listTypes)
+	handle("GET /api/admin/datasources", maintainer, s.listDataSources)
+	handle("POST /api/admin/datasources", admin, s.createDataSource)
+	handle("POST /api/admin/datasources/test", admin, s.testUnsaved)
+	handle("GET /api/admin/datasources/{id}", maintainer, s.getDataSource)
+	handle("PUT /api/admin/datasources/{id}", admin, s.putDataSource)
+	handle("DELETE /api/admin/datasources/{id}", admin, s.deleteDataSource)
+	handle("POST /api/admin/datasources/{id}/test", admin, s.testDataSource)
 	// Routes of data source types, e.g. the Prometheus discovery proxy,
 	// which forwards form-encoded requests.
 	dsRoute := core.CSRF(
 		http.HandlerFunc(s.dataSourceRoute),
 		"application/x-www-form-urlencoded",
 	)
-	admin.Handle("/api/admin/datasources/{id}/{type}/", dsRoute)
-	handle("GET /api/admin/sites", s.listSites)
-	handle("POST /api/admin/sites", s.createSite)
-	handle("GET /api/admin/sites/{site}", s.getSite)
-	handle("PUT /api/admin/sites/{site}", s.putSite)
-	handle("DELETE /api/admin/sites/{site}", s.deleteSite)
-	handle("GET /api/admin/sites/{site}/export", s.exportSite)
+	mux.Handle("/api/admin/datasources/{id}/{type}/", s.require(maintainer, dsRoute))
+	handle("GET /api/admin/sites", anyone, s.listSites)
+	handle("POST /api/admin/sites", admin, s.createSite)
+	handle("GET /api/admin/sites/{site}", responder, s.getSite)
+	handle("PUT /api/admin/sites/{site}", maintainer, s.putSite)
+	handle("DELETE /api/admin/sites/{site}", admin, s.deleteSite)
+	handle("GET /api/admin/sites/{site}/export", maintainer, s.exportSite)
 	importYAML := core.CSRF(http.HandlerFunc(s.importSite), "application/yaml")
-	admin.Handle("POST /api/admin/sites/import", importYAML)
-	admin.Handle("PUT /api/admin/sites/{site}/import", importYAML)
-	handle("GET /api/admin/sites/{site}/preview", s.previewSite)
-	handle("GET /api/admin/sites/{site}/panels", s.listPanels)
-	handle("POST /api/admin/sites/{site}/panels", s.createPanel)
-	handle("PUT /api/admin/sites/{site}/panel-order", s.reorderPanels)
-	handle("POST /api/admin/sites/{site}/panel-preview", s.previewPanel)
-	handle("GET /api/admin/sites/{site}/panels/{panel}", s.getPanel)
-	handle("PUT /api/admin/sites/{site}/panels/{panel}", s.putPanel)
-	handle("DELETE /api/admin/sites/{site}/panels/{panel}", s.deletePanel)
-	handle("GET /api/admin/sites/{site}/incidents", s.listIncidents)
-	handle("POST /api/admin/sites/{site}/incidents", s.createIncident)
-	handle("GET /api/admin/sites/{site}/incidents/{incident}", s.getIncident)
-	handle("PUT /api/admin/sites/{site}/incidents/{incident}", s.putIncident)
-	handle("DELETE /api/admin/sites/{site}/incidents/{incident}", s.deleteIncident)
-	handle("POST /api/admin/sites/{site}/incidents/{incident}/updates", s.addUpdate)
+	mux.Handle("POST /api/admin/sites/import", s.require(admin, importYAML))
+	mux.Handle("PUT /api/admin/sites/{site}/import", s.require(maintainer, importYAML))
+	handle("GET /api/admin/sites/{site}/members", maintainer, s.listMembers)
+	handle("POST /api/admin/sites/{site}/members", maintainer, s.addMember)
+	handle("PUT /api/admin/sites/{site}/members/{account}", maintainer, s.putMember)
+	handle("DELETE /api/admin/sites/{site}/members/{account}", maintainer, s.deleteMember)
+	handle("GET /api/admin/sites/{site}/preview", responder, s.previewSite)
+	handle("GET /api/admin/sites/{site}/panels", responder, s.listPanels)
+	handle("POST /api/admin/sites/{site}/panels", maintainer, s.createPanel)
+	handle("PUT /api/admin/sites/{site}/panel-order", maintainer, s.reorderPanels)
+	handle("POST /api/admin/sites/{site}/panel-preview", maintainer, s.previewPanel)
+	handle("GET /api/admin/sites/{site}/panels/{panel}", responder, s.getPanel)
+	handle("PUT /api/admin/sites/{site}/panels/{panel}", maintainer, s.putPanel)
+	handle("DELETE /api/admin/sites/{site}/panels/{panel}", maintainer, s.deletePanel)
+	handle("GET /api/admin/sites/{site}/incidents", responder, s.listIncidents)
+	handle("POST /api/admin/sites/{site}/incidents", responder, s.createIncident)
+	handle(
+		"GET /api/admin/sites/{site}/incidents/{incident}",
+		responder,
+		s.getIncident,
+	)
+	handle(
+		"PUT /api/admin/sites/{site}/incidents/{incident}",
+		responder,
+		s.putIncident,
+	)
+	handle(
+		"DELETE /api/admin/sites/{site}/incidents/{incident}",
+		responder,
+		s.deleteIncident,
+	)
+	handle(
+		"POST /api/admin/sites/{site}/incidents/{incident}/updates",
+		responder,
+		s.addUpdate,
+	)
 	handle(
 		"PUT /api/admin/sites/{site}/incidents/{incident}/updates/{update}",
+		responder,
 		s.putUpdate,
 	)
 	handle(
 		"DELETE /api/admin/sites/{site}/incidents/{incident}/updates/{update}",
+		responder,
 		s.deleteUpdate,
 	)
-	handle("POST /api/admin/markdown", s.previewMarkdown)
-	handle("POST /api/admin/svg", s.sanitizeSVG)
-	s.adminAPI = core.Guard(admin)
+	handle("POST /api/admin/markdown", responder, s.previewMarkdown)
+	handle("POST /api/admin/svg", maintainer, s.sanitizeSVG)
+	s.adminAPI = core.Guard(mux)
 
 	public := http.NewServeMux()
 	public.HandleFunc("GET /api/public/sites/{site}", s.publicSite)

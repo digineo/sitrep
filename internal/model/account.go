@@ -19,6 +19,12 @@ const (
 
 var roles = []Role{RoleNone, RoleResponder, RoleMaintainer, RoleAdmin, RoleOwner}
 
+// The roles an account can hold on the instance and on a site.
+var (
+	InstanceRoles = []Role{RoleNone, RoleAdmin, RoleOwner}
+	SiteRoles     = []Role{RoleResponder, RoleMaintainer}
+)
+
 // Includes reports whether r grants everything other grants. Nothing
 // includes an unknown role.
 func (r Role) Includes(other Role) bool {
@@ -42,4 +48,21 @@ type Account struct {
 	Sites      map[string]Role `json:"sites,omitempty"`
 	CreatedAt  time.Time       `json:"createdAt"`
 	LastSignIn *time.Time      `json:"lastSignIn,omitempty"`
+}
+
+// Can reports whether the account holds at least role on the site, or,
+// without site, anywhere.
+func (a *Account) Can(site string, role Role) bool {
+	if a.Role.Includes(role) {
+		return true
+	}
+	if site != "" {
+		return a.Sites[site].Includes(role)
+	}
+	for _, r := range a.Sites {
+		if r.Includes(role) {
+			return true
+		}
+	}
+	return false
 }

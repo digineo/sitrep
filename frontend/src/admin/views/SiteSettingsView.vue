@@ -19,6 +19,7 @@ import { usePageTitle } from "../composables/usePageTitle"
 import { useUnsavedChanges } from "../composables/useUnsavedChanges"
 import { resolveText } from "../rules"
 import { useNotices } from "../stores/notices"
+import { useSession } from "../stores/session"
 import { exportSite, importDetail, importSite } from "../transfer"
 import type { Settings, Site } from "../types"
 
@@ -26,6 +27,7 @@ const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const notices = useNotices()
+const session = useSession()
 const { confirm } = useConfirm()
 
 const id = route.params.site as string
@@ -307,6 +309,7 @@ async function remove() {
         >
       </label>
       <SRButton
+          v-if="session.can('', 'admin')"
           variant="danger"
           @click="remove"
       >

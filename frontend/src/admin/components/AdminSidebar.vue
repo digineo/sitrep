@@ -10,6 +10,7 @@ import {
   Settings,
   Siren,
   Upload,
+  Users,
 } from "@lucide/vue"
 import { computed, inject, ref, watch } from "vue"
 import { useI18n } from "vue-i18n"
@@ -130,64 +131,77 @@ function onToggle(site: string, event: Event) {
       >
       <span>SitRep</span>
     </RouterLink>
-    <p class="menu-label">
-      {{ t("nav.global") }}
-    </p>
-    <ul class="menu-list">
-      <li>
-        <RouterLink
-            to="/settings"
-            active-class="is-active"
-        >
-          <span class="icon-text">
-            <span class="icon"><Settings aria-hidden="true" /></span>
-            <span>{{ t("nav.settings") }}</span>
-          </span>
-        </RouterLink>
-      </li>
-      <li>
-        <RouterLink
-            to="/sites/new"
-            active-class="is-active"
-        >
-          <span class="icon-text">
-            <span class="icon"><Plus aria-hidden="true" /></span>
-            <span>{{ t("nav.newSite") }}</span>
-          </span>
-        </RouterLink>
-      </li>
-      <li>
-        <label class="menu-item sr-file">
-          <span class="icon-text">
-            <span class="icon"><Upload aria-hidden="true" /></span>
-            <span>{{ t("nav.import") }}</span>
-          </span>
-          <input
-              type="file"
-              accept=".yaml,.yml"
-              class="sr-visually-hidden"
-              @change="importFile"
+    <template v-if="session.can('', 'admin')">
+      <p class="menu-label">
+        {{ t("nav.global") }}
+      </p>
+      <ul class="menu-list">
+        <li>
+          <RouterLink
+              to="/settings"
+              active-class="is-active"
           >
-        </label>
-      </li>
-      <li>
-        <RouterLink
-            to="/datasources"
-            active-class="is-active"
-        >
-          <span class="icon-text">
-            <span class="icon"><Database aria-hidden="true" /></span>
-            <span>{{ t("nav.dataSources") }}</span>
-          </span>
-          <SRStatusDot
-              v-if="unusable"
-              state="degraded"
-              :label="t('nav.unusable')"
-              class="ml-2"
-          />
-        </RouterLink>
-      </li>
-    </ul>
+            <span class="icon-text">
+              <span class="icon"><Settings aria-hidden="true" /></span>
+              <span>{{ t("nav.settings") }}</span>
+            </span>
+          </RouterLink>
+        </li>
+        <li>
+          <RouterLink
+              to="/sites/new"
+              active-class="is-active"
+          >
+            <span class="icon-text">
+              <span class="icon"><Plus aria-hidden="true" /></span>
+              <span>{{ t("nav.newSite") }}</span>
+            </span>
+          </RouterLink>
+        </li>
+        <li>
+          <label class="menu-item sr-file">
+            <span class="icon-text">
+              <span class="icon"><Upload aria-hidden="true" /></span>
+              <span>{{ t("nav.import") }}</span>
+            </span>
+            <input
+                type="file"
+                accept=".yaml,.yml"
+                class="sr-visually-hidden"
+                @change="importFile"
+            >
+          </label>
+        </li>
+        <li>
+          <RouterLink
+              to="/datasources"
+              active-class="is-active"
+          >
+            <span class="icon-text">
+              <span class="icon"><Database aria-hidden="true" /></span>
+              <span>{{ t("nav.dataSources") }}</span>
+            </span>
+            <SRStatusDot
+                v-if="unusable"
+                state="degraded"
+                :label="t('nav.unusable')"
+                class="ml-2"
+            />
+          </RouterLink>
+        </li>
+        <li v-if="session.can('', 'owner')">
+          <RouterLink
+              to="/accounts"
+              active-class="is-active"
+          >
+            <span class="icon-text">
+              <span class="icon"><Users aria-hidden="true" /></span>
+              <span>{{ t("nav.accounts") }}</span>
+            </span>
+          </RouterLink>
+        </li>
+      </ul>
+    </template>
     <template v-if="sites.length">
       <p class="menu-label">
         {{ t("nav.sites") }}
@@ -257,17 +271,30 @@ function onToggle(site: string, event: Event) {
               />
             </RouterLink>
           </li>
-          <li>
-            <RouterLink
-                :to="`/sites/${site.id}/settings`"
-                active-class="is-active"
-            >
-              <span class="icon-text">
-                <span class="icon"><Settings aria-hidden="true" /></span>
-                <span>{{ t("nav.siteSettings") }}</span>
-              </span>
-            </RouterLink>
-          </li>
+          <template v-if="session.can(site.id, 'maintainer')">
+            <li>
+              <RouterLink
+                  :to="`/sites/${site.id}/settings`"
+                  active-class="is-active"
+              >
+                <span class="icon-text">
+                  <span class="icon"><Settings aria-hidden="true" /></span>
+                  <span>{{ t("nav.siteSettings") }}</span>
+                </span>
+              </RouterLink>
+            </li>
+            <li>
+              <RouterLink
+                  :to="`/sites/${site.id}/members`"
+                  active-class="is-active"
+              >
+                <span class="icon-text">
+                  <span class="icon"><Users aria-hidden="true" /></span>
+                  <span>{{ t("nav.members") }}</span>
+                </span>
+              </RouterLink>
+            </li>
+          </template>
         </ul>
       </details>
     </template>

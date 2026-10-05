@@ -1,4 +1,5 @@
 import type { IncidentStatus, Severity } from "../shared/payload"
+import type { Role } from "./roles"
 
 export interface Languages {
   enabled: string[]
@@ -172,4 +173,31 @@ export interface DataSource {
   summary: string
   usable:  boolean
   panels:  number
+}
+
+/** Member is an account with a role on a site. */
+export interface Member {
+  id:          string
+  displayName: string
+  /** login is the email, or the username for providers with a directory. */
+  login:       string
+  role:        Role
+  /** pending accounts have not signed in yet. */
+  pending:     boolean
+}
+
+/** Account is someone who may sign in, as owners see it. */
+export interface Account {
+  id:          string
+  provider:    string
+  subject?:    string
+  email?:      string
+  displayName: string
+  role?:       Role
+  sites?:      Record<string, Role>
+  createdAt:   string
+  lastSignIn?: string
+  pending:     boolean
+  /** stale accounts cannot sign in any more. */
+  stale:       boolean
 }

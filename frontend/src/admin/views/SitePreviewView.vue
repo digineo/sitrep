@@ -30,14 +30,17 @@ import { moveBy, moveTo, ordered } from "../order"
 import { siteURL } from "../rules"
 import { useNotices } from "../stores/notices"
 import { useOverview } from "../stores/overview"
+import { useSession } from "../stores/session"
 
 const { t, locale } = useI18n()
 const route = useRoute()
 const notices = useNotices()
 const overview = useOverview()
+const session = useSession()
 const bootstrap = inject<Bootstrap>("bootstrap")!
 
 const id = route.params.site as string
+const editable = computed(() => session.can(id, "maintainer"))
 const summary = computed(() => overview.sites?.find(s => s.id === id))
 const publicURL = computed(() => summary.value && siteURL(
   summary.value.route,
@@ -261,6 +264,7 @@ onBeforeUnmount(stopListening)
         :detail="live.detail"
     />
     <RouterLink
+        v-if="editable"
         :to="`/sites/${id}/panels/new`"
         class="button is-primary ml-auto"
     >
@@ -319,6 +323,7 @@ onBeforeUnmount(stopListening)
             <span class="sr-visually-hidden">: {{ warningText(panel.id) }}</span>
           </span>
           <button
+              v-if="editable"
               type="button"
               class="button is-small sr-grip"
               :data-grip="panel.id"
@@ -330,6 +335,7 @@ onBeforeUnmount(stopListening)
             <span class="icon"><GripVertical aria-hidden="true" /></span>
           </button>
           <RouterLink
+              v-if="editable"
               :to="`/sites/${id}/panels/${panel.id}`"
               class="button is-small"
               :aria-label="t('preview.edit', { title: panel.title })"

@@ -174,7 +174,7 @@ func TestGrantOwner(t *testing.T) {
 
 	code, _, stderr = runCLI("", "grant-owner", "bob")
 	assert.Equal(1, code)
-	assert.Contains(stderr, `the basic provider has no user "bob"`)
+	assert.Contains(stderr, `the basic provider has no user or account "bob"`)
 
 	db, err := store.Open("sitrep.db")
 	require.NoError(err)
@@ -198,12 +198,28 @@ func TestGrantOwner(t *testing.T) {
 
 	code, _, stderr = runCLI("", "grant-owner", "Carl <carl@example.com>")
 	assert.Equal(1, code)
-	assert.Contains(stderr, "is not an email address")
+	assert.Contains(stderr, "is neither an account ID nor an email address")
+
+	// Dora's identity provider verifies no emails: she is named by her
+	// account's ID.
+	db, err = store.Open("sitrep.db")
+	require.NoError(err)
+	acc, _, _, err = db.SignIn("oidc", "u-1", "Carl", "carl@example.com")
+	require.NoError(err)
+	assert.Equal(model.RoleOwner, acc.Role)
+	dora, _, _, err := db.SignIn("oidc", "u-2", "Dora", "")
+	require.NoError(err)
+	require.Equal(model.RoleNone, dora.Role)
+	require.NoError(db.Close())
+
+	code, stdout, stderr = runCLI("", "grant-owner", dora.ID)
+	require.Equal(0, code, stderr)
+	assert.Equal(dora.ID+" is an owner\n", stdout)
 
 	db, err = store.Open("sitrep.db")
 	require.NoError(err)
 	defer func() { _ = db.Close() }()
-	acc, _, _, err = db.SignIn("oidc", "u-1", "Carl", "carl@example.com")
+	acc, _, _, err = db.SignIn("oidc", "u-2", "Dora", "")
 	require.NoError(err)
 	assert.Equal(model.RoleOwner, acc.Role)
 }

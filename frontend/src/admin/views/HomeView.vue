@@ -9,9 +9,11 @@ import StatusBanner from "../../shared/components/StatusBanner.vue"
 import { usePageTitle } from "../composables/usePageTitle"
 import { resolveText, routeLabel } from "../rules"
 import { useOverview } from "../stores/overview"
+import { useSession } from "../stores/session"
 
 const { t, locale } = useI18n()
 const overview = useOverview()
+const session = useSession()
 const bootstrap = inject<Bootstrap>("bootstrap")!
 usePageTitle(() => t("home.title"))
 
@@ -32,7 +34,7 @@ const sites = computed(() => {
       {{ t("home.title") }}
     </h1>
     <RouterLink
-        v-if="sites.length"
+        v-if="sites.length && session.can('', 'admin')"
         to="/sites/new"
         class="button is-primary"
     >
@@ -79,6 +81,7 @@ const sites = computed(() => {
               <span class="icon"><LayoutDashboard aria-hidden="true" /></span>
             </RouterLink>
             <RouterLink
+                v-if="session.can(site.id, 'maintainer')"
                 :to="`/sites/${site.id}/settings`"
                 class="button is-small"
                 :aria-label="t('home.settingsOf', { site: site.label })"
@@ -106,6 +109,12 @@ const sites = computed(() => {
       </div>
     </article>
   </div>
+  <p
+      v-else-if="overview.sites && !session.can('', 'admin')"
+      class="box"
+  >
+    {{ t("home.noAccess") }}
+  </p>
   <div
       v-else-if="overview.sites && overview.dataSources?.length === 0"
       class="box"
