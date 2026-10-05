@@ -33,6 +33,8 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Rendered Markdown is cached, so status pages, incidents and feeds no
+  longer render every update for every request.
 - CONNECT requests to a base domain no longer crash.
 - Localized inputs no longer disappear when the language they show is
   disabled.

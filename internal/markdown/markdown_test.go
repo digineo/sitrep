@@ -1,6 +1,7 @@
 package markdown
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 
@@ -95,4 +96,31 @@ func TestExcerpt(t *testing.T) {
 
 	got = Excerpt("äöü äöü äöü", 9)
 	assert.Equal("äöü äöü…", got, "limits count code points, not bytes")
+}
+
+func TestRenderingIsCached(t *testing.T) {
+	src := strings.Repeat("Some **bold** text with a [link](https://example.com).\n\n", 100)
+	for name, render := range map[string]func(string) string{
+		"HTML": HTML,
+		"Text": Text,
+	} {
+		want := render(src)
+		var got string
+		allocs := testing.AllocsPerRun(10, func() { got = render(src) })
+		assert.Equal(t, want, got, name)
+		assert.Zero(t, allocs, name)
+	}
+	assert.NotEqual(t, HTML(src), Text(src), "HTML and Text are cached apart")
+}
+
+func TestCacheIsBounded(t *testing.T) {
+	// Each source and its HTML take about 2 MiB.
+	for i := range maxCached >> 20 {
+		HTML(strconv.Itoa(i) + strings.Repeat("a", 1<<20))
+	}
+
+	cache.Lock()
+	defer cache.Unlock()
+	assert.LessOrEqual(t, cache.size, maxCached)
+	assert.NotEmpty(t, cache.m)
 }

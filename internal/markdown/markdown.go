@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
@@ -24,22 +25,67 @@ var md = goldmark.New(
 	),
 )
 
+// maxCached bounds the bytes of sources and results kept by cached.
+const maxCached = 64 << 20
+
+// cache keeps the results of HTML and Text by source, since every visitor
+// gets the same incidents rendered.
+var cache = struct {
+	sync.Mutex
+	m    map[cacheKey]string
+	size int // bytes of sources and results
+}{m: map[cacheKey]string{}}
+
+type cacheKey struct {
+	src  string
+	text bool // rendered by Text, else by HTML
+}
+
+// cached returns the cached result for key, or renders and caches it.
+func cached(key cacheKey, render func() string) string {
+	cache.Lock()
+	out, ok := cache.m[key]
+	cache.Unlock()
+	if ok {
+		return out
+	}
+
+	out = render()
+	n := len(key.src) + len(out)
+	cache.Lock()
+	defer cache.Unlock()
+
+	if cache.size+n > maxCached {
+		clear(cache.m)
+		cache.size = 0
+	}
+	if _, ok := cache.m[key]; !ok {
+		cache.m[key] = out
+		cache.size += n
+	}
+	return out
+}
+
 // HTML renders src.
 func HTML(src string) string {
-	var b bytes.Buffer
-	if err := md.Convert([]byte(src), &b); err != nil {
-		// Rendering into a buffer does not fail.
-		panic(err)
-	}
-	return b.String()
+	return cached(cacheKey{src: src}, func() string {
+		var b bytes.Buffer
+		if err := md.Convert([]byte(src), &b); err != nil {
+			// Rendering into a buffer does not fail.
+			panic(err)
+		}
+		return b.String()
+	})
 }
 
 // Text returns the plain text of src with whitespace collapsed.
 func Text(src string) string {
-	source := []byte(src)
-	var b bytes.Buffer
-	writeText(&b, md.Parser().Parse(text.NewReader(source)), source)
-	return strings.Join(strings.Fields(b.String()), " ")
+	return cached(cacheKey{src: src, text: true}, func() string {
+		source := []byte(src)
+		var b bytes.Buffer
+		writeText(&b, md.Parser().Parse(text.NewReader(source)), source)
+		return strings.Join(strings.Fields(b.String()), " ")
+	})
 }
 
 // Excerpt returns the plain text of src cut to limit code points, at a word
