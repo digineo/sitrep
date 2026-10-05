@@ -22,6 +22,10 @@ frontend-dist: frontend/node_modules ## Build the frontend into frontend/dist/ap
 build: frontend-dist ## Build the release binary ./sitrep
 	go build -trimpath -o sitrep ./cmd/sitrep
 
+.PHONY: docker-build
+docker-build: ## Build the Docker image sitrep
+	docker build -t sitrep .
+
 .PHONY: dev
 dev: frontend/node_modules ## Run Vite and the Go server with live reload, configured by .env.local
 	trap 'kill 0' EXIT; \

@@ -1,0 +1,12 @@
+.git
+.env
+.env.local
+*.db
+/sitrep
+/sitrep-*
+/tmp/
+/frontend/node_modules/
+/frontend/dist/app/
+/frontend/test-results/
+/frontend/playwright-report/
+/frontend/e2e/.tmp/

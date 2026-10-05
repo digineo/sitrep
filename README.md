@@ -34,6 +34,10 @@ is available.
 
 ## Quick start
 
+### From source
+
+Building needs Go and Node.js.
+
 ```sh
 make build
 ./sitrep hash-password -user admin > users   # asks for the password twice
@@ -42,6 +46,31 @@ SITREP_AUTH=basic \
 SITREP_BASIC_USERS_FILE=users \
   ./sitrep serve
 ```
+
+### With Docker
+
+Images for amd64 and arm64 are published as `ghcr.io/digineo/sitrep`:
+`latest` and `v<version>` for releases, `latest-dev` for the main branch.
+`make docker-build` builds one locally, tagged `sitrep`.
+
+```sh
+docker run --rm -it ghcr.io/digineo/sitrep hash-password -user admin
+# copy the printed line into ./users
+docker run -d -p 2607:2607 \
+  -v sitrep:/data \
+  -v ./users:/etc/sitrep/users:ro \
+  -e SITREP_BASE_DOMAINS=status.example.com \
+  -e SITREP_AUTH=basic \
+  -e SITREP_BASIC_USERS_FILE=/etc/sitrep/users \
+  ghcr.io/digineo/sitrep
+```
+
+The image runs as an unprivileged user (UID 65532) in `/data`, which holds
+the database and is read for `.env` files. Mounted files must be readable
+by that user. Its health check runs `sitrep healthcheck`, which requests
+`/healthz` at `SITREP_LISTEN`.
+
+### First steps
 
 The console is at `http://status.example.com:2607/admin`. For a local try,
 use `sitrep.localhost` as base domain: browsers resolve every

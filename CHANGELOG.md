@@ -49,3 +49,7 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   route redirects there.
 - `sitrep healthcheck`, which exits with 0 if the server's `/healthz`
   answers 200.
+- A Dockerfile for a distroless image with a health check, published for
+  amd64 and arm64 to `ghcr.io/digineo/sitrep` after CI passes: as
+  `latest-dev` from the main branch, as `latest` and the tag from release
+  tags.
