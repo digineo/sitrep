@@ -119,6 +119,29 @@ describe("SRLocalizedInput", () => {
     wrapper.unmount()
   })
 
+  it("shows the primary language once the shown one is disabled", async() => {
+    const wrapper = mount(SRLocalizedInput, {
+      props: {
+        label:     "Name",
+        languages: {
+          enabled: ["en", "de"],
+          primary: "en",
+        },
+        modelValue: {},
+      },
+      global:   { plugins: [createAppI18n("en")] },
+      attachTo: document.body,
+    })
+    await wrapper.setProps({
+      languages: {
+        enabled: ["de"],
+        primary: "de",
+      },
+    })
+    expect(wrapper.find("input").isVisible()).toBe(true)
+    wrapper.unmount()
+  })
+
   it("moves between tabs with the arrow keys", async() => {
     const wrapper = mount(SRLocalizedInput, {
       props: {

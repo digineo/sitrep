@@ -5,6 +5,11 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Localized inputs no longer disappear when the language they show is
+  disabled.
+
 ## [0.1.0] - 2026-10-05
 
 ### Added

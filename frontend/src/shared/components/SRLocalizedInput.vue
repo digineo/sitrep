@@ -37,7 +37,11 @@ defineSlots<{
 
 const { t } = useI18n()
 const id = useId()
-const active = ref(props.languages.primary)
+const selected = ref(props.languages.primary)
+// A disabled language falls back to the primary one.
+const active = computed(() => props.languages.enabled.includes(selected.value)
+  ? selected.value
+  : props.languages.primary)
 const tabs = ref<HTMLButtonElement[]>([])
 
 const value = (lang: string) => model.value?.[lang] ?? ""
@@ -65,7 +69,7 @@ function update(lang: string, v: string) {
 }
 
 async function select(lang: string, focus: "tab" | "input" | false = false) {
-  active.value = lang
+  selected.value = lang
   await nextTick()
   if (focus === "tab") {
     tabs.value[props.languages.enabled.indexOf(lang)]?.focus()
