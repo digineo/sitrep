@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"maps"
+	"net/netip"
 	"slices"
 	"sync"
 	"time"
@@ -21,7 +22,8 @@ const (
 // throttle blocks logins after too many failures. Failures are counted per
 // username and, independently, per client address, so many usernames from
 // one address lock the address and one username from many addresses locks
-// the username. Addresses are only kept as keyed hash under a secret that
+// the username. IPv6 addresses are counted per /64, which clients often
+// get as a whole. Addresses are only kept as keyed hash under a secret that
 // changes every UTC day; the change drops the address counters.
 //
 // The number of counters is capped. Expired counters are pruned at most
@@ -59,8 +61,15 @@ func (c *counter) expired(now time.Time) bool {
 		(len(c.failures) == 0 || now.Sub(c.failures[len(c.failures)-1]) >= window)
 }
 
-// addrKey returns the keyed hash of ip. The caller holds t.mu.
+// addrKey returns the keyed hash of ip, or of its /64 for IPv6. The caller
+// holds t.mu.
 func (t *throttle) addrKey(ip string, now time.Time) string {
+	if a, err := netip.ParseAddr(ip); err == nil {
+		if a = a.Unmap(); a.Is6() {
+			p, _ := a.Prefix(64)
+			ip = p.String()
+		}
+	}
 	if day := now.UTC().Format(time.DateOnly); day != t.day {
 		t.day = day
 		t.secret = make([]byte, 32)

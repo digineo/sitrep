@@ -18,6 +18,7 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- The login throttle counts IPv6 addresses per /64 network.
 - Single sign-on keeps the email address only if the identity provider
   verified it.
 - **Breaking:** signing in no longer grants every permission. Upgrading

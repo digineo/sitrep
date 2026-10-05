@@ -239,12 +239,12 @@ bcrypt needs a cost of at least 10. argon2id hashes need at least
 m=19456, t=2 and p=1, and at most m=1048576, t=10 and p=16.
 
 Failed attempts are counted per username and, independently, per client
-address. After five failures within 15 minutes for a username, or from an
-address, further attempts for that username, or from that address, are
-refused for 15 minutes. SitRep keeps addresses only as keyed hash under a
-secret that changes daily; the change resets the address counters. It
-keeps at most 10,000 counters in memory; while all are in use, attempts
-that would need a new one are refused, too.
+address, or per /64 network for IPv6. After five failures within 15 minutes
+for a username, or from an address, further attempts for that username,
+or from that address, are refused for 15 minutes. SitRep keeps addresses
+only as keyed hash under a secret that changes daily; the change resets
+the address counters. It keeps at most 10,000 counters in memory; while
+all are in use, attempts that would need a new one are refused, too.
 
 At most four password verifications run at a time; an attempt that cannot
 start one within five seconds is refused as too many attempts. Each argon2id

@@ -237,6 +237,30 @@ func TestThrottleAddressWithManyUsernames(t *testing.T) {
 	assert.False(blocked, "success drops the address counter")
 }
 
+func TestThrottleIPv6Prefix(t *testing.T) {
+	assert := assert.New(t)
+
+	th := newThrottle()
+	now := time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
+	for i := range maxFailures {
+		ip := fmt.Sprintf("2001:db8:1:2::%x", i+1)
+		assert.False(th.blocked("fresh", ip, now), ip)
+		th.fail(fmt.Sprintf("user%d", i), ip, now)
+	}
+
+	assert.Len(th.addrs, 1, "the /64 shares one counter")
+	blocked := th.blocked("fresh", "2001:db8:1:2:ffff:ffff:ffff:ffff", now)
+	assert.True(blocked, "another address of the /64 is locked")
+	blocked = th.blocked("fresh", "2001:db8:1:3::1", now)
+	assert.False(blocked, "another /64 is not")
+
+	for i := range maxFailures {
+		th.fail(fmt.Sprintf("user%d", i), fmt.Sprintf("::ffff:192.0.2.%d", i+1), now)
+	}
+	blocked = th.blocked("fresh", "192.0.2.9", now)
+	assert.False(blocked, "IPv4-mapped addresses count as IPv4")
+}
+
 func TestThrottleCap(t *testing.T) {
 	require := require.New(t)
 	assert := assert.New(t)
