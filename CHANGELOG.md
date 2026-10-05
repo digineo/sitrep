@@ -20,6 +20,7 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - The login throttle counts IPv6 addresses per /64 network.
 - Removing a user from the users file ends their sessions.
+- Deleting an account replaces its name in incidents with "System".
 - Single sign-on keeps the email address only if the identity provider
   verified it.
 - **Breaking:** signing in no longer grants every permission. Upgrading

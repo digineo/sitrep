@@ -108,6 +108,40 @@ func (db *DB) DeleteIncident(site, id string) error {
 	})
 }
 
+// replaceAuthor replaces the person with the subject by model.System in all
+// incidents.
+func replaceAuthor(tx *bolt.Tx, subject string) error {
+	incidents, err := list[model.Incident](tx, bucketIncidents, nil)
+	if err != nil {
+		return err
+	}
+
+	for _, inc := range incidents {
+		changed := false
+		replace := func(p *model.Person) {
+			if p != nil && p.Subject == subject {
+				*p = model.System
+				changed = true
+			}
+		}
+
+		replace(&inc.Author)
+		for i := range inc.Updates {
+			replace(&inc.Updates[i].Author)
+			replace(inc.Updates[i].EditedBy)
+		}
+		if !changed {
+			continue
+		}
+
+		err := put(tx, bucketIncidents, incidentKey(inc.Site, inc.ID), inc)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // PurgeIncidents deletes the incidents that their site's retention expires
 // at now, and returns the IDs of the sites that lost incidents with the
 // number of deleted incidents.

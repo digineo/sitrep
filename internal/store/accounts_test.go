@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 	"time"
+	"uuid"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -288,6 +289,38 @@ func TestUpdateAndDeleteAccount(t *testing.T) {
 	}
 
 	assert.Equal(http.StatusNotFound, apiError(t, db.DeleteAccount(nil, bob.ID)).Status)
+}
+
+func TestDeleteAccountReplacesAuthor(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	db, _ := openTemp(t)
+	bob, _, _, err := db.SignIn("basic", "bob", "Bob", "")
+	require.NoError(err)
+
+	ann := model.Person{Subject: "ann", DisplayName: "Ann"}
+	bobs := model.Person{Subject: "bob", DisplayName: "Bob"}
+	now := time.Now()
+	inc := &model.Incident{
+		Site:   newSite(t, db, "a"),
+		Author: bobs,
+		Updates: []model.Update{
+			{At: now, Status: model.StatusActive, Author: bobs, EditedBy: &ann},
+			{At: now.Add(time.Minute), Status: model.StatusResolved, Author: ann, EditedBy: &bobs},
+		},
+	}
+	require.NoError(db.CreateIncident(inc))
+
+	require.NoError(db.DeleteAccount(nil, bob.ID))
+	got, err := db.Incident(inc.Site, inc.ID)
+	require.NoError(err)
+	system := model.Person{Subject: uuid.Nil().String(), DisplayName: "System"}
+	assert.Equal(system, got.Author)
+	assert.Equal(system, got.Updates[0].Author)
+	assert.Equal(&ann, got.Updates[0].EditedBy)
+	assert.Equal(ann, got.Updates[1].Author)
+	assert.Equal(&system, got.Updates[1].EditedBy)
 }
 
 // newSite creates a path-mode site and returns its ID.

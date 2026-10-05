@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"slices"
 	"time"
+	"uuid"
 
 	"github.com/digineo/sitrep/internal/apierr"
 )
@@ -55,6 +56,12 @@ const maxMarkdown = 50000
 type Person struct {
 	Subject     string `json:"subject"`
 	DisplayName string `json:"displayName"`
+}
+
+// System stands in for the people of deleted accounts.
+var System = Person{
+	Subject:     uuid.Nil().String(),
+	DisplayName: "System",
 }
 
 // Incident is a manually managed event with a timeline of updates, kept

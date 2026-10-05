@@ -455,7 +455,8 @@ Incidents and their updates store the subject and display name of the
 admin who created them and of the admin who last edited each update. Only
 the console shows them; status pages, feeds and incidents.json never do.
 They are deleted with their incident, either by an admin or by the status
-page's incident retention.
+page's incident retention. Deleting an account replaces them with
+"System".
 
 Logs contain the usernames of failed sign-ins and the subjects of sign-ins
 refused by single sign-on, of new accounts, and of admins who change

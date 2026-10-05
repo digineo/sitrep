@@ -270,7 +270,8 @@ func (db *DB) UpdateAccount(
 	return acc, err
 }
 
-// DeleteAccount deletes an account and its sessions, by the actor.
+// DeleteAccount deletes an account and its sessions, by the actor. It
+// replaces the account's person in incidents by model.System.
 func (db *DB) DeleteAccount(by *Actor, id string) error {
 	return db.bolt.Update(func(tx *bolt.Tx) error {
 		var acc model.Account
@@ -299,6 +300,12 @@ func (db *DB) DeleteAccount(by *Actor, id string) error {
 
 		for _, k := range keys {
 			if err := sessions.Delete(k); err != nil {
+				return err
+			}
+		}
+
+		if acc.Subject != "" {
+			if err := replaceAuthor(tx, acc.Subject); err != nil {
 				return err
 			}
 		}
