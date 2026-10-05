@@ -104,23 +104,6 @@ func (e *Env) URL(name string, required bool) *url.URL {
 	return u
 }
 
-// Bool returns the variable's value as boolean, or def if it is unset.
-func (e *Env) Bool(name string, def bool) bool {
-	v, ok := e.lookup(name)
-	if ok {
-		switch strings.ToLower(v) {
-		case "true", "1", "yes", "on":
-			def = true
-		case "false", "0", "no", "off":
-			def = false
-		default:
-			e.Errorf(name, "must be one of true, false, 1, 0, yes, no, on, off")
-		}
-	}
-	e.log(name, def)
-	return def
-}
-
 // Duration returns the variable's value as duration between lo and hi, or
 // def if it is unset.
 func (e *Env) Duration(name string, def, lo, hi time.Duration) time.Duration {

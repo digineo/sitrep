@@ -53,7 +53,7 @@ type provider struct {
 	groupsClaim string
 	group       string
 	deprecated  string // warning about the group variable, if any
-	trustProxy  bool
+	trustProxy  httpx.Proxies
 	client      *http.Client  // for every request to the identity provider
 	retry       time.Duration // first wait between discovery attempts
 

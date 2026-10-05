@@ -27,7 +27,7 @@ type Core struct {
 	providerID string
 	provider   Provider
 	ttl        time.Duration
-	trustProxy bool
+	trustProxy httpx.Proxies
 }
 
 // NewCore returns a Core for the provider registered as providerID.
@@ -37,7 +37,7 @@ func NewCore(
 	providerID string,
 	provider Provider,
 	ttl time.Duration,
-	trustProxy bool,
+	trustProxy httpx.Proxies,
 ) *Core {
 	return &Core{
 		Log:        log,

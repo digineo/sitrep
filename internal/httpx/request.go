@@ -6,9 +6,43 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"slices"
 	"strconv"
 	"strings"
 )
+
+// Proxies are the peers whose X-Forwarded-* headers are trusted.
+type Proxies struct {
+	// All trusts every peer, and only the last X-Forwarded-For entry, for
+	// the deprecated SITREP_TRUST_PROXY=true.
+	All      bool
+	Prefixes []netip.Prefix
+}
+
+func (p Proxies) trusts(a netip.Addr) bool {
+	a = a.Unmap()
+	return slices.ContainsFunc(p.Prefixes, func(n netip.Prefix) bool {
+		return n.Contains(a)
+	})
+}
+
+// client returns the client address of X-Forwarded-For entries: the last
+// one that is not a trusted proxy, or, with All, the last one. An invalid
+// entry ends the search, and peer is the fallback.
+func (p Proxies) client(xff []string, peer string) string {
+	entries := strings.Split(strings.Join(xff, ","), ",")
+	for _, e := range slices.Backward(entries) {
+		a, err := netip.ParseAddr(strings.TrimSpace(e))
+		if err != nil {
+			break
+		}
+		peer = a.String()
+		if p.All || !p.trusts(a) {
+			break
+		}
+	}
+	return peer
+}
 
 // Info describes a request as the client sent it, taking trusted proxy
 // headers into account.
@@ -20,9 +54,9 @@ type Info struct {
 }
 
 // Effective returns the request's effective host, origin, scheme and client
-// address. With trustProxy, X-Forwarded-Host, X-Forwarded-Proto and
-// X-Forwarded-For are honored.
-func Effective(r *http.Request, trustProxy bool) Info {
+// address. Requests from trusted proxies have their X-Forwarded-Host,
+// X-Forwarded-Proto and X-Forwarded-For honored.
+func Effective(r *http.Request, proxies Proxies) Info {
 	raw := r.Host
 	scheme := "http"
 	ip := r.RemoteAddr
@@ -34,7 +68,7 @@ func Effective(r *http.Request, trustProxy bool) Info {
 		scheme = "https"
 	}
 
-	if trustProxy {
+	if peer, _ := netip.ParseAddr(ip); proxies.All || proxies.trusts(peer) {
 		first, _, _ := strings.Cut(r.Header.Get("X-Forwarded-Host"), ",")
 		if first = strings.TrimSpace(first); validHostPort(first) {
 			raw = first
@@ -44,13 +78,7 @@ func Effective(r *http.Request, trustProxy bool) Info {
 			scheme = "https"
 		}
 
-		if xff := r.Header.Values("X-Forwarded-For"); len(xff) > 0 {
-			last := xff[len(xff)-1]
-			addr := strings.TrimSpace(last[strings.LastIndex(last, ",")+1:])
-			if a, err := netip.ParseAddr(addr); err == nil {
-				ip = a.String()
-			}
-		}
+		ip = proxies.client(r.Header.Values("X-Forwarded-For"), ip)
 	}
 
 	host, port := splitHostPort(strings.ToLower(raw))

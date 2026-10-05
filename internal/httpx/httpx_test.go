@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"strings"
 	"testing"
 
@@ -17,34 +18,107 @@ import (
 )
 
 func TestEffective(t *testing.T) {
+	proxies := func(prefixes ...string) Proxies {
+		var p Proxies
+		for _, s := range prefixes {
+			p.Prefixes = append(p.Prefixes, netip.MustParsePrefix(s))
+		}
+		return p
+	}
+	none := Proxies{}
+	all := Proxies{All: true}
+	forwarded := map[string]string{
+		"X-Forwarded-Host":  "Example.com, other.example",
+		"X-Forwarded-Proto": "https",
+		"X-Forwarded-For":   "203.0.113.9, 198.51.100.7",
+	}
+
 	tests := []struct {
 		name    string
 		host    string
 		tls     bool
 		headers map[string]string
-		trust   bool
+		trust   Proxies
 		want    Info
 	}{
-		{"plain", "Status.Example.com:8080", false, nil, false,
-			Info{Host: "status.example.com", Origin: "http://status.example.com:8080", Scheme: "http", IP: "192.0.2.1"}},
-		{"default port and trailing dot", "example.com.:80", false, nil, false,
-			Info{Host: "example.com", Origin: "http://example.com", Scheme: "http", IP: "192.0.2.1"}},
-		{"tls", "example.com:443", true, nil, false,
-			Info{Host: "example.com", Origin: "https://example.com", Scheme: "https", IP: "192.0.2.1"}},
-		{"ipv6", "[::1]:2607", false, nil, false,
-			Info{Host: "::1", Origin: "http://[::1]:2607", Scheme: "http", IP: "192.0.2.1"}},
-		{"proxy headers ignored without trust", "internal:2607", false,
-			map[string]string{"X-Forwarded-Host": "example.com", "X-Forwarded-Proto": "https", "X-Forwarded-For": "198.51.100.7"}, false,
-			Info{Host: "internal", Origin: "http://internal:2607", Scheme: "http", IP: "192.0.2.1"}},
-		{"trusted proxy", "internal:2607", false,
-			map[string]string{"X-Forwarded-Host": "Example.com, other.example", "X-Forwarded-Proto": "https", "X-Forwarded-For": "203.0.113.9, 198.51.100.7"}, true,
-			Info{Host: "example.com", Origin: "https://example.com", Scheme: "https", IP: "198.51.100.7"}},
-		{"invalid forwarded values fall back", "internal", false,
-			map[string]string{"X-Forwarded-Host": "bad host!", "X-Forwarded-Proto": "HTTPS", "X-Forwarded-For": "unknown"}, true,
-			Info{Host: "internal", Origin: "http://internal", Scheme: "http", IP: "192.0.2.1"}},
-		{"forwarded host with invalid port", "internal", false,
-			map[string]string{"X-Forwarded-Host": "example.com:99999"}, true,
-			Info{Host: "internal", Origin: "http://internal", Scheme: "http", IP: "192.0.2.1"}},
+		{
+			name:    "plain",
+			host:    "Status.Example.com:8080",
+			tls:     false,
+			headers: nil,
+			trust:   none,
+			want:    Info{Host: "status.example.com", Origin: "http://status.example.com:8080", Scheme: "http", IP: "192.0.2.1"},
+		}, {
+			name:    "default port and trailing dot",
+			host:    "example.com.:80",
+			tls:     false,
+			headers: nil,
+			trust:   none,
+			want:    Info{Host: "example.com", Origin: "http://example.com", Scheme: "http", IP: "192.0.2.1"},
+		}, {
+			name:    "tls",
+			host:    "example.com:443",
+			tls:     true,
+			headers: nil,
+			trust:   none,
+			want:    Info{Host: "example.com", Origin: "https://example.com", Scheme: "https", IP: "192.0.2.1"},
+		}, {
+			name:    "ipv6",
+			host:    "[::1]:2607",
+			tls:     false,
+			headers: nil,
+			trust:   none,
+			want:    Info{Host: "::1", Origin: "http://[::1]:2607", Scheme: "http", IP: "192.0.2.1"},
+		}, {
+			name:    "proxy headers ignored without trust",
+			host:    "internal:2607",
+			tls:     false,
+			headers: forwarded,
+			trust:   none,
+			want:    Info{Host: "internal", Origin: "http://internal:2607", Scheme: "http", IP: "192.0.2.1"},
+		}, {
+			name:    "proxy headers ignored from untrusted peers",
+			host:    "internal:2607",
+			tls:     false,
+			headers: forwarded,
+			trust:   proxies("10.0.0.0/8", "192.0.2.2/32"),
+			want:    Info{Host: "internal", Origin: "http://internal:2607", Scheme: "http", IP: "192.0.2.1"},
+		}, {
+			name:    "trusted proxy",
+			host:    "internal:2607",
+			tls:     false,
+			headers: forwarded,
+			trust:   proxies("192.0.2.1/32"),
+			want:    Info{Host: "example.com", Origin: "https://example.com", Scheme: "https", IP: "198.51.100.7"},
+		}, {
+			name:    "trusted proxies are skipped",
+			host:    "internal:2607",
+			tls:     false,
+			headers: forwarded,
+			trust:   proxies("192.0.2.0/24", "198.51.100.0/24"),
+			want:    Info{Host: "example.com", Origin: "https://example.com", Scheme: "https", IP: "203.0.113.9"},
+		}, {
+			name:    "every peer trusted, with the last entry",
+			host:    "internal:2607",
+			tls:     false,
+			headers: forwarded,
+			trust:   all,
+			want:    Info{Host: "example.com", Origin: "https://example.com", Scheme: "https", IP: "198.51.100.7"},
+		}, {
+			name:    "invalid forwarded values fall back",
+			host:    "internal",
+			tls:     false,
+			headers: map[string]string{"X-Forwarded-Host": "bad host!", "X-Forwarded-Proto": "HTTPS", "X-Forwarded-For": "unknown"},
+			trust:   all,
+			want:    Info{Host: "internal", Origin: "http://internal", Scheme: "http", IP: "192.0.2.1"},
+		}, {
+			name:    "forwarded host with invalid port",
+			host:    "internal",
+			tls:     false,
+			headers: map[string]string{"X-Forwarded-Host": "example.com:99999"},
+			trust:   all,
+			want:    Info{Host: "internal", Origin: "http://internal", Scheme: "http", IP: "192.0.2.1"},
+		},
 	}
 	for _, tt := range tests {
 		r := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -136,7 +210,7 @@ func TestAccessLog(t *testing.T) {
 	require.NoError(err)
 
 	status := http.StatusOK
-	h := AccessLog(log, false, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	h := AccessLog(log, Proxies{}, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(status)
 	}))
 	get := func(path string) string {

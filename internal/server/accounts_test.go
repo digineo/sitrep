@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/digineo/sitrep/internal/auth"
+	"github.com/digineo/sitrep/internal/httpx"
 	"github.com/digineo/sitrep/internal/model"
 )
 
@@ -292,7 +293,7 @@ func TestDirectory(t *testing.T) {
 
 	useDirectory := func(users ...string) {
 		p := directoryProvider{users: users}
-		core := auth.NewCore(xlog.NewDiscard(), f.db, "test", p, time.Hour, false)
+		core := auth.NewCore(xlog.NewDiscard(), f.db, "test", p, time.Hour, httpx.Proxies{})
 		f.srv = newServer(xlog.NewDiscard(), f.cfg, f.db, core, f.poller, testAssets())
 	}
 

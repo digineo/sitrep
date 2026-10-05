@@ -82,6 +82,9 @@ func serve(args []string, stderr io.Writer) int {
 		slog.String("date", buildinfo.Date))
 	log.Info("configuration",
 		env.LogAttrs()...)
+	if cfg.TrustProxy.All {
+		log.Warn("SITREP_TRUST_PROXY=true is deprecated: it trusts the X-Forwarded-* headers of every client; list the proxies' addresses instead")
+	}
 
 	db, err := store.Open(cfg.DB)
 	if err != nil {

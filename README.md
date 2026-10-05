@@ -105,7 +105,7 @@ the selected auth provider are read.
 | `SITREP_SECRET_KEY` | | Base64-encoded 32-byte key for data source secrets, see [Data sources](#data-sources). Generate with `openssl rand -base64 32`. |
 | `SITREP_DEFAULT_REFRESH` | `30s` | Default poll interval, 5s to 24h. |
 | `SITREP_BASE_DOMAINS` | required | Comma-separated base domains, e.g. `status.example.com`: lowercase hostnames with at least two labels, each listed once. |
-| `SITREP_TRUST_PROXY` | `false` | Honor `X-Forwarded-Host`, `X-Forwarded-Proto` and `X-Forwarded-For`. Enable only behind a trusted proxy. |
+| `SITREP_TRUST_PROXY` | | Comma-separated IP addresses and CIDR networks of trusted reverse proxies, see [Running behind a reverse proxy](#running-behind-a-reverse-proxy). `true` is deprecated. |
 | `SITREP_AUTH` | `oidc` | Auth provider: `oidc` or `basic`. |
 | `SITREP_SESSION_TTL` | `12h` | Admin session lifetime, 5m to 30d. |
 | `SITREP_OIDC_ISSUER` | required for oidc | Issuer URL, exactly as the identity provider reports it. |
@@ -284,11 +284,19 @@ not anyone visits it.
 
 SitRep speaks plain HTTP and neither terminates TLS nor compresses
 responses; a reverse proxy in front of it does both. Set
-`SITREP_TRUST_PROXY=true` so that SitRep takes the scheme, host and
-client address from the proxy's `X-Forwarded-*` headers: it needs the
-scheme to set secure cookies and to accept the console's requests. Expose
-SitRep only to the proxy then, since anyone else could forge the
-headers.
+`SITREP_TRUST_PROXY` to the proxy's address, e.g. `127.0.0.1,::1`, so that
+SitRep takes the scheme, host and client address from the proxy's
+`X-Forwarded-*` headers: it needs the scheme to set secure cookies and to
+accept the console's requests. Requests from other addresses have these
+headers ignored. The client address is the last `X-Forwarded-For` entry
+that is not a listed proxy, so with a CDN in front of the proxy, list the
+CDN's networks, too.
+
+> [!WARNING]
+> `SITREP_TRUST_PROXY=true` is deprecated and logs a warning at startup.
+> It trusts the headers of every client, which can then forge their
+> address to evade the login throttle, and their scheme and host. Replace
+> it with the proxy's address.
 
 With [Caddy](https://caddyserver.com/), on-demand TLS gets a certificate
 for each host the first time it is visited. Before it requests one, Caddy

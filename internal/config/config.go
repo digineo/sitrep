@@ -2,10 +2,12 @@ package config
 
 import (
 	"log/slog"
+	"net/netip"
 	"slices"
 	"strings"
 	"time"
 
+	"github.com/digineo/sitrep/internal/httpx"
 	"github.com/digineo/sitrep/internal/model"
 )
 
@@ -17,7 +19,7 @@ type Config struct {
 	SecretKey      []byte
 	DefaultRefresh time.Duration
 	BaseDomains    []string
-	TrustProxy     bool
+	TrustProxy     httpx.Proxies
 	Auth           string
 	SessionTTL     time.Duration
 	LogLevel       slog.Level
@@ -37,7 +39,7 @@ func Load(env *Env) Config {
 			24*time.Hour,
 		),
 		BaseDomains: baseDomains(env),
-		TrustProxy:  env.Bool("SITREP_TRUST_PROXY", false),
+		TrustProxy:  trustProxy(env),
 		Auth:        env.String("SITREP_AUTH", "oidc"),
 		SessionTTL: env.Duration(
 			"SITREP_SESSION_TTL",
@@ -97,4 +99,33 @@ func baseDomains(env *Env) []string {
 		}
 	}
 	return domains
+}
+
+// trustProxy reads the comma-separated addresses and networks of trusted
+// proxies, or the deprecated boolean, of which true trusts every peer.
+func trustProxy(env *Env) httpx.Proxies {
+	const name = "SITREP_TRUST_PROXY"
+	v, _ := env.lookup(name)
+	env.log(name, v)
+
+	var p httpx.Proxies
+	switch strings.ToLower(v) {
+	case "", "false", "0", "no", "off":
+	case "true", "1", "yes", "on":
+		p.All = true
+	default:
+		for s := range strings.SplitSeq(v, ",") {
+			s = strings.TrimSpace(s)
+			n, err := netip.ParsePrefix(s)
+			if a, aerr := netip.ParseAddr(s); aerr == nil {
+				n, err = a.Prefix(a.BitLen())
+			}
+			if err != nil {
+				env.Errorf(name, "%q is neither an IP address nor a network in CIDR notation", s)
+				continue
+			}
+			p.Prefixes = append(p.Prefixes, n)
+		}
+	}
+	return p
 }

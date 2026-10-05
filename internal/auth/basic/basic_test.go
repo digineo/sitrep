@@ -22,6 +22,7 @@ import (
 
 	"github.com/digineo/sitrep/internal/auth"
 	"github.com/digineo/sitrep/internal/config"
+	"github.com/digineo/sitrep/internal/httpx"
 	"github.com/digineo/sitrep/internal/store"
 )
 
@@ -336,7 +337,7 @@ func newFixture(t *testing.T, users string) *fixture {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
 
-	core := auth.NewCore(xlog.NewDiscard(), db, "basic", p, time.Hour, false)
+	core := auth.NewCore(xlog.NewDiscard(), db, "basic", p, time.Hour, httpx.Proxies{})
 	return &fixture{
 		provider: p.(*provider),
 		core:     core,

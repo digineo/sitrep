@@ -16,6 +16,7 @@ import (
 
 	"github.com/digineo/sitrep/internal/auth"
 	"github.com/digineo/sitrep/internal/config"
+	"github.com/digineo/sitrep/internal/httpx"
 	"github.com/digineo/sitrep/internal/store"
 )
 
@@ -31,7 +32,7 @@ func TestLoginAndLogout(t *testing.T) {
 	p := auth.NewProvider(env, config.Config{Auth: "bypass"})
 	require.NoError(env.Err())
 
-	core := auth.NewCore(xlog.NewDiscard(), db, "bypass", p, time.Hour, false)
+	core := auth.NewCore(xlog.NewDiscard(), db, "bypass", p, time.Hour, httpx.Proxies{})
 	h := core.Handler()
 
 	target := "http://status.example.com/auth/bypass/login?return=/admin/settings"
@@ -77,7 +78,7 @@ func TestLoginAs(t *testing.T) {
 
 	env := config.NewEnv(func(string) (string, bool) { return "", false })
 	p := auth.NewProvider(env, config.Config{Auth: "bypass"})
-	core := auth.NewCore(xlog.NewDiscard(), db, "bypass", p, time.Hour, false)
+	core := auth.NewCore(xlog.NewDiscard(), db, "bypass", p, time.Hour, httpx.Proxies{})
 	h := core.Handler()
 
 	login := func(as string) *httptest.ResponseRecorder {

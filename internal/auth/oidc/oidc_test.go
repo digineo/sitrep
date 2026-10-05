@@ -24,6 +24,7 @@ import (
 
 	"github.com/digineo/sitrep/internal/auth"
 	"github.com/digineo/sitrep/internal/config"
+	"github.com/digineo/sitrep/internal/httpx"
 	"github.com/digineo/sitrep/internal/store"
 )
 
@@ -308,7 +309,7 @@ func newFixture(t *testing.T, down bool, vars ...string) *fixture {
 	p, err := validate(env)
 	require.NoError(err)
 	p.retry = 10 * time.Millisecond
-	p.trustProxy = true
+	p.trustProxy = httpx.Proxies{All: true}
 
 	db, err := store.Open(filepath.Join(t.TempDir(), "sitrep.db"))
 	require.NoError(err)
@@ -318,7 +319,7 @@ func newFixture(t *testing.T, down bool, vars ...string) *fixture {
 	logger, err := xlog.New(xlog.AsText(), xlog.WriteTo(log))
 	require.NoError(err)
 
-	core := auth.NewCore(logger, db, "oidc", p, time.Hour, true)
+	core := auth.NewCore(logger, db, "oidc", p, time.Hour, p.trustProxy)
 	f := &fixture{
 		t:       t,
 		idp:     idp,

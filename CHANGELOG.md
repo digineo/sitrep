@@ -18,6 +18,10 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- `SITREP_TRUST_PROXY` takes the IP addresses and CIDR networks of the
+  trusted proxies. Only their `X-Forwarded-*` headers are honored, and the
+  client address is the last `X-Forwarded-For` entry that is not one of
+  them.
 - The login throttle counts IPv6 addresses per /64 network.
 - Removing a user from the users file ends their sessions.
 - Deleting an account replaces its name in incidents with "System".
@@ -31,6 +35,8 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Deprecated
 
 - `SITREP_OIDC_ADMIN_GROUP`, replaced by `SITREP_OIDC_GROUP`.
+- `SITREP_TRUST_PROXY=true`, which trusts every client. List the proxies'
+  addresses instead.
 
 ### Fixed
 

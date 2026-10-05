@@ -2,6 +2,7 @@ package config
 
 import (
 	"log/slog"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/digineo/sitrep/internal/httpx"
 )
 
 func envOf(vars map[string]string) *Env {
@@ -60,24 +63,35 @@ func TestStrings(t *testing.T) {
 	assert.ErrorContains(err, "SITREP_LISTEN: must not be empty")
 }
 
-func TestBooleans(t *testing.T) {
-	for in, want := range map[string]bool{
-		"true":  true,
-		"TRUE":  true,
-		"1":     true,
-		"yes":   true,
-		"On":    true,
-		"false": false,
-		"0":     false,
-		"no":    false,
-		"OFF":   false,
+func TestTrustProxy(t *testing.T) {
+	prefixes := func(ss ...string) []netip.Prefix {
+		var out []netip.Prefix
+		for _, s := range ss {
+			out = append(out, netip.MustParsePrefix(s))
+		}
+		return out
+	}
+
+	for in, want := range map[string]httpx.Proxies{
+		"":      {},
+		"false": {},
+		"OFF":   {},
+		"true":  {All: true},
+		"1":     {All: true},
+		"yes":   {All: true},
+		"127.0.0.1": {
+			Prefixes: prefixes("127.0.0.1/32"),
+		},
+		"10.0.0.0/8, ::1, 2001:db8::/32": {
+			Prefixes: prefixes("10.0.0.0/8", "::1/128", "2001:db8::/32"),
+		},
 	} {
 		c, err := load(t, map[string]string{"SITREP_TRUST_PROXY": in})
 		require.NoError(t, err, in)
 		assert.Equal(t, want, c.TrustProxy, in)
 	}
 
-	for _, in := range []string{"", "y", "2", "enabled"} {
+	for _, in := range []string{"y", "enabled", "10.0.0.1/33", "10.0.0.1,", "proxy.local"} {
 		_, err := load(t, map[string]string{"SITREP_TRUST_PROXY": in})
 		assert.ErrorContains(t, err, "SITREP_TRUST_PROXY", in)
 	}

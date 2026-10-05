@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/digineo/sitrep/internal/config"
+	"github.com/digineo/sitrep/internal/httpx"
 	"github.com/digineo/sitrep/internal/model"
 	"github.com/digineo/sitrep/internal/store"
 )
@@ -48,7 +49,8 @@ func newCore(t *testing.T, trustProxy bool) (*Core, *store.DB) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
 	log := xlog.NewDiscard()
-	return NewCore(log, db, "fake", fakeProvider{}, time.Hour, trustProxy), db
+	proxies := httpx.Proxies{All: trustProxy}
+	return NewCore(log, db, "fake", fakeProvider{}, time.Hour, proxies), db
 }
 
 func post(path, origin string) *http.Request {

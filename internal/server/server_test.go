@@ -20,6 +20,7 @@ import (
 
 	"github.com/digineo/sitrep/internal/auth"
 	"github.com/digineo/sitrep/internal/config"
+	"github.com/digineo/sitrep/internal/httpx"
 	"github.com/digineo/sitrep/internal/model"
 	"github.com/digineo/sitrep/internal/poller"
 	"github.com/digineo/sitrep/internal/store"
@@ -81,7 +82,7 @@ func newFixture(t *testing.T) *fixture {
 		"test",
 		testProvider{},
 		time.Hour,
-		false,
+		httpx.Proxies{},
 	)
 	p := poller.New(xlog.NewDiscard(), db, testKey, 50*time.Millisecond)
 	ctx, cancel := context.WithCancel(context.Background())

@@ -36,7 +36,7 @@ const (
 
 type provider struct {
 	path       string
-	trustProxy bool
+	trustProxy httpx.Proxies
 	throttle   *throttle
 	// verified for unknown users, so timing reveals nothing
 	dummy    string

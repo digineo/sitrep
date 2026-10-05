@@ -43,7 +43,7 @@ const owner = (login: string) => `${binary} grant-owner ${login} &&`
 const basicEnv = {
   SITREP_AUTH:             "basic",
   SITREP_BASIC_USERS_FILE: `${tmp}/users`,
-  SITREP_TRUST_PROXY:      "true",
+  SITREP_TRUST_PROXY:      "127.0.0.1,::1",
 }
 
 export default defineConfig({
