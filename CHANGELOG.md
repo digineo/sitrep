@@ -31,6 +31,7 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- CONNECT requests to a base domain no longer crash.
 - Localized inputs no longer disappear when the language they show is
   disabled.
 

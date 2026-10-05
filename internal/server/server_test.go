@@ -223,6 +223,16 @@ func TestHostRouting(t *testing.T) {
 	}
 }
 
+// An authority-form CONNECT request has an empty path.
+func TestConnectWithoutPath(t *testing.T) {
+	f := newFixture(t)
+	r := httptest.NewRequest(http.MethodConnect, "status.example.com:80", nil)
+	require.Empty(t, r.URL.Path)
+	w := f.do(r)
+	assert.Equal(t, http.StatusFound, w.Code)
+	assert.Equal(t, "/", w.Header().Get("Location"))
+}
+
 func TestApexOnlyRoutes(t *testing.T) {
 	f := newFixture(t)
 	for _, path := range []string{"/auth/session", "/api/admin/settings"} {

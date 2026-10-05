@@ -291,7 +291,8 @@ func (s *Server) serveApex(
 		return
 	}
 
-	if slug, _, _ := strings.Cut(path[1:], "/"); slug != "" {
+	// The path is empty for authority-form CONNECT requests.
+	if slug, _, _ := strings.Cut(strings.TrimPrefix(path, "/"), "/"); slug != "" {
 		site, err := s.db.SiteByRoute(model.Route{
 			Mode: model.RoutePath,
 			Slug: slug,
