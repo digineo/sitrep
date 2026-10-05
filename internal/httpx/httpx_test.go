@@ -126,3 +126,28 @@ func TestWriteError(t *testing.T) {
 	}}
 	assert.Equal(want, res.Error.Fields)
 }
+
+func TestAccessLog(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	var out strings.Builder
+	log, err := xlog.New(xlog.AsText(), xlog.WriteTo(&out))
+	require.NoError(err)
+
+	status := http.StatusOK
+	h := AccessLog(log, false, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(status)
+	}))
+	get := func(path string) string {
+		out.Reset()
+		h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, path, nil))
+		return out.String()
+	}
+
+	assert.Contains(get("/"), "level=INFO")
+	assert.Empty(get("/healthz"), "successful health checks log at debug level")
+
+	status = http.StatusServiceUnavailable
+	assert.Contains(get("/healthz"), "level=INFO")
+}

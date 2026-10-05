@@ -33,8 +33,8 @@ func (s *statusRecorder) Unwrap() http.ResponseWriter {
 }
 
 // AccessLog assigns each request an ID, sends it as X-Request-Id, and logs
-// one line per request. The line never contains the client address or the
-// query string.
+// one line per request, at debug level for successful health checks. The
+// line never contains the client address or the query string.
 func AccessLog(log xlog.Logger, trustProxy bool, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -46,7 +46,11 @@ func AccessLog(log xlog.Logger, trustProxy bool, next http.Handler) http.Handler
 		}
 		ctx := context.WithValue(r.Context(), requestIDKey{}, id)
 		next.ServeHTTP(rec, r.WithContext(ctx))
-		log.Info("request",
+		logf := log.Info
+		if r.URL.Path == "/healthz" && rec.status == http.StatusOK {
+			logf = log.Debug
+		}
+		logf("request",
 			slog.String("method", r.Method),
 			slog.String("path", r.URL.Path),
 			slog.String("host", Effective(r, trustProxy).Host),
