@@ -5,6 +5,8 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-05
+
 ### Added
 
 - `sitrep serve`, configured by environment variables and dotenv files.
@@ -56,3 +58,6 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `sitrep version` prints the release tag, commit and build date, which
   `make build` and the image embed. `sitrep serve` logs them on startup,
   the console shows them below the signed-in admin.
+
+[Unreleased]: https://github.com/digineo/sitrep/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/digineo/sitrep/releases/tag/v0.1.0
