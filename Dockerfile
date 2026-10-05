@@ -9,12 +9,19 @@ RUN npx vite build
 
 FROM --platform=$BUILDPLATFORM golang:1.27 AS backend
 ARG TARGETOS TARGETARCH
+# The release tag, if any, and the commit hash; .git is not in the context.
+ARG VERSION COMMIT
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 COPY --from=frontend /src/frontend/dist/app frontend/dist/app
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -o /sitrep ./cmd/sitrep \
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath \
+		-ldflags "-s -w \
+		          -X github.com/digineo/sitrep/internal/buildinfo.Version=$VERSION \
+		          -X github.com/digineo/sitrep/internal/buildinfo.Commit=$COMMIT \
+		          -X github.com/digineo/sitrep/internal/buildinfo.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+		-o /sitrep ./cmd/sitrep \
 	&& mkdir /data
 
 FROM gcr.io/distroless/static-debian13:nonroot

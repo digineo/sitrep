@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 
+	"github.com/digineo/sitrep/internal/buildinfo"
 	"github.com/digineo/sitrep/internal/httpx"
 	"github.com/digineo/sitrep/internal/model"
 )
@@ -37,4 +38,14 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 
 	s.poller.SettingsChanged()
 	httpx.WriteJSON(w, http.StatusOK, settings)
+}
+
+// getVersion reports the build. Only admins see it, unlike the bootstrap
+// data of the admin shell, which the login screen also gets.
+func getVersion(w http.ResponseWriter, _ *http.Request) {
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{
+		"version": buildinfo.Version,
+		"commit":  buildinfo.Commit,
+		"date":    buildinfo.Date,
+	})
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/digineo/xlog/slogor"
 
 	"github.com/digineo/sitrep/internal/auth"
+	"github.com/digineo/sitrep/internal/buildinfo"
 	"github.com/digineo/sitrep/internal/config"
 	"github.com/digineo/sitrep/internal/i18n"
 	"github.com/digineo/sitrep/internal/model"
@@ -63,6 +64,10 @@ func serve(args []string, stderr io.Writer) int {
 		return 1
 	}
 
+	log.Info("build",
+		slog.String("version", buildinfo.Version),
+		slog.String("commit", buildinfo.Commit),
+		slog.String("date", buildinfo.Date))
 	log.Info("configuration",
 		env.LogAttrs()...)
 

@@ -38,7 +38,14 @@ func TestUsage(t *testing.T) {
 		assert.Contains(stderr, "Usage: sitrep", args)
 	}
 
-	code, _, _ := runCLI("", "serve", "extra")
+	code, stdout, _ := runCLI("", "version")
+	assert.Equal(0, code)
+	assert.Equal("version untagged\ncommit  unknown\nbuilt   unknown\n", stdout)
+
+	code, _, _ = runCLI("", "version", "extra")
+	assert.Equal(2, code)
+
+	code, _, _ = runCLI("", "serve", "extra")
 	assert.Equal(2, code)
 
 	code, _, _ = runCLI("", "serve", "-flag")

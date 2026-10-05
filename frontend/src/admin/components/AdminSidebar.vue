@@ -22,8 +22,10 @@ import SRButton from "../../shared/components/SRButton.vue"
 import SRStatusDot from "../../shared/components/SRStatusDot.vue"
 import ThemeSwitcher from "../../shared/components/ThemeSwitcher.vue"
 import { useLanguage } from "../../shared/composables/useLanguage"
+import { useLoad } from "../../shared/composables/useLoad"
 import { usePolling } from "../../shared/composables/usePolling"
 import { supported } from "../../shared/i18n"
+import { api } from "../api"
 import { resolveText, routeLabel } from "../rules"
 import { useNotices } from "../stores/notices"
 import { useOverview } from "../stores/overview"
@@ -56,6 +58,16 @@ const sites = computed(() => {
     }))
     .sort((a, b) => collator.compare(a.label, b.label))
 })
+// The build is shown muted below the user; empty fields are left out.
+const { value: build } = useLoad(
+  () => "",
+  signal => api<{
+    version: string
+    commit:  string
+    date:    string
+  }>("GET", "/api/admin/version", undefined, signal),
+)
+
 const unusable = computed(() => overview.dataSources?.some(ds => !ds.usable))
 
 // The current route's site opens; other sites only toggle.
@@ -290,6 +302,20 @@ function onToggle(site: string, event: Event) {
           @update:model-value="choose"
       />
     </div>
+    <p
+        v-if="build"
+        class="sr-build sr-muted is-size-7"
+    >
+      <span v-if="build.version">{{ build.version }}</span>
+      <span
+          v-if="build.commit"
+          :title="build.commit"
+      >{{ build.commit.slice(0, 7) }}</span>
+      <time
+          v-if="build.date"
+          :datetime="build.date"
+      >{{ build.date.slice(0, 10) }}</time>
+    </p>
   </div>
 </template>
 
@@ -356,5 +382,11 @@ function onToggle(site: string, event: Event) {
 .sr-sidebar-footer {
   padding: 1rem;
   border-top: 1px solid var(--bulma-border-weak);
+}
+
+.sr-build {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 </style>

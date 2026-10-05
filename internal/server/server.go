@@ -72,6 +72,7 @@ func newServer(
 
 	handle("GET /api/admin/settings", s.getSettings)
 	handle("PUT /api/admin/settings", s.putSettings)
+	handle("GET /api/admin/version", getVersion)
 	handle("GET /api/admin/datasource-types", s.listTypes)
 	handle("GET /api/admin/datasources", s.listDataSources)
 	handle("POST /api/admin/datasources", s.createDataSource)

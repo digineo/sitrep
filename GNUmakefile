@@ -4,6 +4,15 @@ GO_TAGS = "" dev testauth
 GOLANGCI_LINT = github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
 AIR           = github.com/air-verse/air@v1.67.4
 
+# Build information for the release binary and image, see internal/buildinfo.
+VERSION   = $(shell git describe --tags --exact-match 2>/dev/null)
+COMMIT    = $(shell git rev-parse HEAD)
+BUILDINFO = github.com/digineo/sitrep/internal/buildinfo
+LDFLAGS   = -s -w \
+            -X $(BUILDINFO).Version=$(VERSION) \
+            -X $(BUILDINFO).Commit=$(COMMIT) \
+            -X $(BUILDINFO).Date=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+
 .DEFAULT_GOAL := help
 
 .PHONY: help
@@ -20,11 +29,11 @@ frontend-dist: frontend/node_modules ## Build the frontend into frontend/dist/ap
 
 .PHONY: build
 build: frontend-dist ## Build the release binary ./sitrep
-	go build -trimpath -o sitrep ./cmd/sitrep
+	go build -trimpath -ldflags "$(LDFLAGS)" -o sitrep ./cmd/sitrep
 
 .PHONY: docker-build
 docker-build: ## Build the Docker image sitrep
-	docker build -t sitrep .
+	docker build --build-arg VERSION=$(VERSION) --build-arg COMMIT=$(COMMIT) -t sitrep .
 
 .PHONY: dev
 dev: frontend/node_modules ## Run Vite and the Go server with live reload, configured by .env.local

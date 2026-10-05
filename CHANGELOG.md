@@ -53,3 +53,6 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   amd64 and arm64 to `ghcr.io/digineo/sitrep` after CI passes: as
   `latest-dev` from the main branch, as `latest` and the tag from release
   tags.
+- `sitrep version` prints the release tag, commit and build date, which
+  `make build` and the image embed. `sitrep serve` logs them on startup,
+  the console shows them below the signed-in admin.
