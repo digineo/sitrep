@@ -197,7 +197,8 @@
     "svg_too_large": "The image is larger than 64 KiB, even after removing unsafe content.",
     "site_unavailable": "This status page is currently unavailable.",
     "invalid_yaml": "The file is not valid YAML or contains unknown keys.",
-    "unsupported_version": "This file has an unknown format version."
+    "unsupported_version": "This file has an unknown format version.",
+    "ambiguous_email": "Several accounts have this email address."
   },
   "panel": {
     "seriesName": "{title} #{n}",

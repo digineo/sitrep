@@ -197,7 +197,8 @@
     "svg_too_large": "Das Bild ist größer als 64 KiB, auch nach dem Entfernen unsicherer Inhalte.",
     "site_unavailable": "Diese Statusseite ist derzeit nicht verfügbar.",
     "invalid_yaml": "Die Datei ist kein gültiges YAML oder enthält unbekannte Schlüssel.",
-    "unsupported_version": "Diese Datei hat eine unbekannte Formatversion."
+    "unsupported_version": "Diese Datei hat eine unbekannte Formatversion.",
+    "ambiguous_email": "Mehrere Konten haben diese E-Mail-Adresse."
   },
   "panel": {
     "seriesName": "{title} #{n}",

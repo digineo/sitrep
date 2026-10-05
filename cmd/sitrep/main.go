@@ -17,6 +17,8 @@ Commands:
   serve            run the server, configured by SITREP_* environment variables
   hash-password    print an argon2id hash for the basic auth users file
                    flags: -user <name> prints "<name>:<hash>"
+  grant-owner      make an account an owner, by email address, or by
+                   username for basic auth; the server must be stopped
   healthcheck      exit with 0 if the server at SITREP_LISTEN is healthy
   version          print the version, commit and build date
   help             show this help
@@ -40,6 +42,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return serve(args[1:], stderr)
 	case "hash-password":
 		return hashPassword(args[1:], stdin, stdout, stderr)
+	case "grant-owner":
+		return grantOwner(args[1:], stdout, stderr)
 	case "healthcheck":
 		return healthcheck(args[1:], stderr)
 	case "version":

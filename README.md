@@ -110,7 +110,8 @@ the selected auth provider are read.
 | `SITREP_OIDC_REDIRECT_URL` | required for oidc | `https://<base domain>/auth/oidc/callback`; the host must be a base domain. |
 | `SITREP_OIDC_SCOPES` | `openid profile email` | Space-separated scopes; `openid` is always requested. |
 | `SITREP_OIDC_GROUPS_CLAIM` | `groups` | Claim with the user's groups: a list or a single string. |
-| `SITREP_OIDC_ADMIN_GROUP` | required for oidc | Group required to sign in. |
+| `SITREP_OIDC_GROUP` | required for oidc | Group required to sign in. |
+| `SITREP_OIDC_ADMIN_GROUP` | | Deprecated name of `SITREP_OIDC_GROUP`, read only if that is unset. |
 | `SITREP_BASIC_USERS_FILE` | required for basic | Users file, see below. |
 | `SITREP_LOG_LEVEL` | `info` | `debug`, `info`, `warn` or `error`. |
 | `SITREP_LOG_FORMAT` | `text` | `text`, `json` or `pretty` (colored console output). |
@@ -127,10 +128,11 @@ authorization code flow and the redirect URL
 `SITREP_OIDC_CLIENT_SECRET`; a public client works without one, since
 SitRep always uses PKCE.
 
-Only members of `SITREP_OIDC_ADMIN_GROUP` may sign in. SitRep reads
+Only members of `SITREP_OIDC_GROUP` may sign in. SitRep reads
 the groups from the claim `SITREP_OIDC_GROUPS_CLAIM` of the ID token, or
 from the user info endpoint if the ID token lacks the claim. Admins are
 shown by their `name` claim, else `preferred_username`, else their subject.
+SitRep keeps the `email` claim only if `email_verified` is `true`.
 
 - **Group changes** are checked only at sign-in. Someone removed from the
   admin group keeps access until their session expires, at most
@@ -150,7 +152,7 @@ Notes for common identity providers:
   sends no groups by default: add a "Group Membership" mapper to the
   client with the token claim name `groups`, included in the ID token.
   With "Full group path" on, groups read `/admins`; turn it off or set
-  `SITREP_OIDC_ADMIN_GROUP=/admins`.
+  `SITREP_OIDC_GROUP=/admins`.
 - **authentik:** the issuer is
   `https://<host>/application/o/<application slug>/`, with the trailing
   slash. The default `profile` scope mapping sends the group names in
@@ -160,9 +162,24 @@ Notes for common identity providers:
   rather than groups: define a role with the value `sitrep-admin` in the
   app registration, assign it to the admins, and set
   `SITREP_OIDC_GROUPS_CLAIM=roles` and
-  `SITREP_OIDC_ADMIN_GROUP=sitrep-admin`. A groups claim would carry
+  `SITREP_OIDC_GROUP=sitrep-admin`. A groups claim would carry
   group object IDs, and Entra ID leaves it out entirely for users in more
   than 200 groups, which SitRep then treats as not being a member.
+
+## Accounts
+
+SitRep creates an account for everyone at their first sign-in. The
+first account of the active auth provider becomes the instance's owner;
+switching providers makes the next first account an owner again.
+
+If no owner can sign in any more, stop the server and make an account
+an owner from the command line, by email address, or by username with
+`SITREP_AUTH=basic`. An account that does not exist yet is created, and
+an email address is bound to the account that next signs in with it:
+
+```sh
+./sitrep grant-owner alice@example.com
+```
 
 ## Signing in with username and password
 
@@ -381,11 +398,14 @@ anyone:
 
 ## Stored personal data
 
-SitRep stores the subject, display name and, if the identity provider
-sends one, the email address of signed-in admins in their session.
-Signing out deletes the session. Sessions expire after
-`SITREP_SESSION_TTL`, and expired ones are deleted at startup and
-hourly.
+SitRep stores an account for everyone who signed in or was added: the
+subject, display name, the email address if the identity provider
+verified it, and the times of creation and of the last sign-in. Accounts
+are kept until they are deleted.
+
+Sessions only refer to the account. Signing out deletes the session.
+Sessions expire after `SITREP_SESSION_TTL`, and expired ones are deleted
+at startup and hourly.
 
 Incidents and their updates store the subject and display name of the
 admin who created them and of the admin who last edited each update. Only

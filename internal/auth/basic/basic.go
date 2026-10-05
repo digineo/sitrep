@@ -6,8 +6,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -74,6 +76,15 @@ func (p *provider) Routes(mux *http.ServeMux, core *auth.Core) {
 		p.login(w, r, core)
 	}
 	mux.HandleFunc("POST /auth/basic/login", handler)
+}
+
+// Users returns the usernames of the users file, sorted. If the file
+// fails to reload, the previous users are returned with the error.
+func (p *provider) Users() ([]string, error) {
+	err := p.load()
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return slices.Sorted(maps.Keys(p.users)), err
 }
 
 // load reads the users file, unless it is unchanged since the last load.

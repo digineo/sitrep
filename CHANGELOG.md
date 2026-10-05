@@ -5,6 +5,24 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Accounts, created at the first sign-in. The first account of the active
+  auth provider becomes the instance's owner.
+- `sitrep grant-owner` makes an account an owner when no owner can sign
+  in any more.
+- `SITREP_OIDC_GROUP` names the group whose members may sign in.
+
+### Changed
+
+- Single sign-on keeps the email address only if the identity provider
+  verified it.
+- Upgrading makes everyone with an unexpired session an owner.
+
+### Deprecated
+
+- `SITREP_OIDC_ADMIN_GROUP`, replaced by `SITREP_OIDC_GROUP`.
+
 ### Fixed
 
 - Localized inputs no longer disappear when the language they show is

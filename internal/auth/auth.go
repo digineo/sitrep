@@ -9,6 +9,7 @@ package auth
 
 import (
 	"net/http"
+	"net/mail"
 	"net/url"
 	"path"
 	"slices"
@@ -32,7 +33,9 @@ const (
 type Identity struct {
 	Subject     string
 	DisplayName string
-	Email       string
+	// Email is set only if the provider verified it: provisioned accounts
+	// are matched by email.
+	Email string
 }
 
 // Provider authenticates admins.
@@ -44,6 +47,24 @@ type Provider interface {
 	// called once at startup, and may start background work such as
 	// discovering an identity provider.
 	Routes(mux *http.ServeMux, core *Core)
+}
+
+// Directory is implemented by providers that know all their users, whose
+// accounts are then named by subject instead of email.
+type Directory interface {
+	// Users returns the subjects of all users, sorted. If they cannot be
+	// reloaded, it returns the users it knows with the error.
+	Users() ([]string, error)
+}
+
+// ParseEmail returns a plain email address in lowercase, or false if s is
+// none.
+func ParseEmail(s string) (string, bool) {
+	a, err := mail.ParseAddress(s)
+	if err != nil || a.Address != s {
+		return "", false
+	}
+	return strings.ToLower(s), true
 }
 
 // Factory creates a provider from its configuration variables, recording

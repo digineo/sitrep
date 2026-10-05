@@ -45,15 +45,17 @@ func TestConfig(t *testing.T) {
 		"SITREP_OIDC_ISSUER":       "https://idp.example.com/realms/acme",
 		"SITREP_OIDC_CLIENT_ID":    "sitrep",
 		"SITREP_OIDC_REDIRECT_URL": "https://status.example.com/auth/oidc/callback",
-		"SITREP_OIDC_ADMIN_GROUP":  "admins",
+		"SITREP_OIDC_GROUP":        "admins",
 	}
 	p, err := validate(valid)
 	require.NoError(err)
 	assert.Equal([]string{"openid", "profile", "email"}, p.oauth.Scopes)
 	assert.Equal("groups", p.groupsClaim)
+	assert.Equal("admins", p.group)
+	assert.Empty(p.deprecated)
 
 	_, err = validate(map[string]string{})
-	required := []string{"ISSUER", "CLIENT_ID", "REDIRECT_URL", "ADMIN_GROUP"}
+	required := []string{"ISSUER", "CLIENT_ID", "REDIRECT_URL", "GROUP"}
 	for _, name := range required {
 		assert.ErrorContains(err, "SITREP_OIDC_"+name+": is required")
 	}
@@ -79,6 +81,18 @@ func TestConfig(t *testing.T) {
 	require.NoError(err)
 	want := []string{"openid", "groups", "email"}
 	assert.Equal(want, p.oauth.Scopes, "openid is always requested")
+
+	valid["SITREP_OIDC_ADMIN_GROUP"] = "old-admins"
+	p, err = validate(valid)
+	require.NoError(err)
+	assert.Equal("admins", p.group, "the new group variable wins")
+	assert.Contains(p.deprecated, "SITREP_OIDC_ADMIN_GROUP is deprecated and ignored")
+
+	delete(valid, "SITREP_OIDC_GROUP")
+	p, err = validate(valid)
+	require.NoError(err)
+	assert.Equal("old-admins", p.group)
+	assert.Contains(p.deprecated, "SITREP_OIDC_ADMIN_GROUP is deprecated, use SITREP_OIDC_GROUP")
 
 	valid["SITREP_OIDC_REDIRECT_URL"] = "https://other.example.com/auth/oidc/callback"
 	_, err = validate(valid)
@@ -184,15 +198,16 @@ func (m *mockIdP) token(w http.ResponseWriter, r *http.Request) {
 	}
 
 	claims := map[string]any{
-		"iss":    m.srv.URL,
-		"aud":    request.Get("client_id"),
-		"sub":    "u-1",
-		"exp":    time.Now().Add(5 * time.Minute).Unix(),
-		"iat":    time.Now().Unix(),
-		"nonce":  request.Get("nonce"),
-		"name":   "Ann Admin",
-		"email":  "ann@example.com",
-		"groups": []string{"staff", "admins"},
+		"iss":            m.srv.URL,
+		"aud":            request.Get("client_id"),
+		"sub":            "u-1",
+		"exp":            time.Now().Add(5 * time.Minute).Unix(),
+		"iat":            time.Now().Unix(),
+		"nonce":          request.Get("nonce"),
+		"name":           "Ann Admin",
+		"email":          "ann@example.com",
+		"groups":         []string{"staff", "admins"},
+		"email_verified": true,
 	}
 	if m.tamper != nil {
 		m.tamper(claims)
@@ -269,7 +284,8 @@ type fixture struct {
 
 // newFixture serves the provider's routes for the base domains
 // status.example.com, with the callback, and status.example.org. Discovery
-// has succeeded unless the identity provider is down.
+// has succeeded unless the identity provider is down. The vars are pairs
+// of names and values; an empty value unsets the variable.
 func newFixture(t *testing.T, down bool, vars ...string) *fixture {
 	require := require.New(t)
 
@@ -279,10 +295,14 @@ func newFixture(t *testing.T, down bool, vars ...string) *fixture {
 		"SITREP_OIDC_ISSUER":       idp.srv.URL,
 		"SITREP_OIDC_CLIENT_ID":    "sitrep",
 		"SITREP_OIDC_REDIRECT_URL": "https://status.example.com/auth/oidc/callback",
-		"SITREP_OIDC_ADMIN_GROUP":  "admins",
+		"SITREP_OIDC_GROUP":        "admins",
 	}
 	for i := 0; i < len(vars); i += 2 {
-		env[vars[i]] = vars[i+1]
+		if vars[i+1] == "" {
+			delete(env, vars[i])
+		} else {
+			env[vars[i]] = vars[i+1]
+		}
 	}
 
 	p, err := validate(env)
@@ -428,12 +448,12 @@ func TestSignIn(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Header.Set("X-Forwarded-Proto", "https")
 	r.AddCookie(session)
-	s, ok, err := f.core.User(r)
+	acc, ok, err := f.core.User(r)
 	require.NoError(err)
 	require.True(ok)
-	assert.Equal("u-1", s.Subject)
-	assert.Equal("Ann Admin", s.DisplayName)
-	assert.Equal("ann@example.com", s.Email)
+	assert.Equal("u-1", acc.Subject)
+	assert.Equal("Ann Admin", acc.DisplayName)
+	assert.Equal("ann@example.com", acc.Email)
 
 	replay := f.callback(query)
 	assertLoginError(t, replay, "/admin/?login-error=idp_error")
@@ -466,9 +486,41 @@ func TestSignInDisplayName(t *testing.T) {
 		r := httptest.NewRequest(http.MethodGet, "/", nil)
 		r.Header.Set("X-Forwarded-Proto", "https")
 		r.AddCookie(cookie(res, "__Host-sitrep_session"))
-		s, _, err := f.core.User(r)
+		acc, _, err := f.core.User(r)
 		require.NoError(t, err)
-		assert.Equal(t, tt.want, s.DisplayName, name)
+		assert.Equal(t, tt.want, acc.DisplayName, name)
+	}
+}
+
+func TestSignInEmailVerified(t *testing.T) {
+	f := newFixture(t, false)
+	for name, tt := range map[string]struct {
+		verified any // nil removes the claim
+		want     string
+	}{
+		"verified":   {true, "ann@example.com"},
+		"unverified": {false, ""},
+		"string":     {"true", ""},
+		"missing":    {nil, ""},
+	} {
+		f.idp.set(func() {
+			f.idp.tamper = func(c map[string]any) {
+				if tt.verified == nil {
+					delete(c, "email_verified")
+				} else {
+					c["email_verified"] = tt.verified
+				}
+			}
+		})
+
+		res := f.signIn()
+		require.Equal(t, "/admin/sites?x=1", res.Header.Get("Location"), name)
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+		r.Header.Set("X-Forwarded-Proto", "https")
+		r.AddCookie(cookie(res, "__Host-sitrep_session"))
+		acc, _, err := f.core.User(r)
+		require.NoError(t, err)
+		assert.Equal(t, tt.want, acc.Email, name)
 	}
 }
 
@@ -531,7 +583,7 @@ func TestSignInGroupsClaim(t *testing.T) {
 		t,
 		false,
 		"SITREP_OIDC_GROUPS_CLAIM", "roles",
-		"SITREP_OIDC_ADMIN_GROUP", "sitrep-admin",
+		"SITREP_OIDC_GROUP", "sitrep-admin",
 	)
 	f.idp.set(func() {
 		f.idp.tamper = func(c map[string]any) {
@@ -548,6 +600,17 @@ func TestSignInGroupsClaim(t *testing.T) {
 	})
 
 	assertLoginError(t, f.signIn(), "/admin/sites?login-error=not_member&x=1")
+}
+
+func TestSignInDeprecatedGroup(t *testing.T) {
+	f := newFixture(
+		t,
+		false,
+		"SITREP_OIDC_GROUP", "",
+		"SITREP_OIDC_ADMIN_GROUP", "admins",
+	)
+	assert.Contains(t, f.log.String(), "SITREP_OIDC_ADMIN_GROUP is deprecated")
+	assert.Equal(t, "/admin/sites?x=1", f.signIn().Header.Get("Location"))
 }
 
 func TestSignInRejectsInvalidTokens(t *testing.T) {

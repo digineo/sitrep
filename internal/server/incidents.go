@@ -89,10 +89,10 @@ func newIncidentView(inc *model.Incident) incidentView {
 
 // person returns the admin who sent the request.
 func person(r *http.Request) model.Person {
-	s := auth.Session(r.Context())
+	acc := auth.Account(r.Context())
 	return model.Person{
-		Subject:     s.Subject,
-		DisplayName: s.DisplayName,
+		Subject:     acc.Subject,
+		DisplayName: acc.DisplayName,
 	}
 }
 

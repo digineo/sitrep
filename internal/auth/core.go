@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"log/slog"
 	"mime"
 	"net/http"
 	"slices"
@@ -76,18 +77,47 @@ func (c *Core) https(r *http.Request) bool {
 	return httpx.Effective(r, c.trustProxy).Scheme == "https"
 }
 
-// Login starts a session for id and sets the session cookie.
+// Login signs in id's account, creating it on first sign-in, and starts a
+// session with the session cookie.
 func (c *Core) Login(w http.ResponseWriter, r *http.Request, id Identity) error {
+	acc, pending, created, err := c.db.SignIn(
+		c.providerID,
+		id.Subject,
+		id.DisplayName,
+		id.Email,
+	)
+	if err != nil {
+		return err
+	}
+
+	switch {
+	case created:
+		c.Log.Info("created an account on first sign-in",
+			slog.String("account", acc.ID),
+			slog.String("subject", acc.Subject),
+			slog.String("role", string(acc.Role)))
+	case pending == acc.ID:
+		c.Log.Info("bound a pending account on first sign-in",
+			slog.String("account", acc.ID),
+			slog.String("subject", acc.Subject),
+			slog.String("role", string(acc.Role)),
+			slog.Any("sites", acc.Sites))
+	case pending != "":
+		c.Log.Info("merged a pending account on sign-in",
+			slog.String("account", acc.ID),
+			slog.String("pending", pending),
+			slog.String("subject", acc.Subject),
+			slog.String("role", string(acc.Role)),
+			slog.Any("sites", acc.Sites))
+	}
+
 	raw := make([]byte, 32)
 	_, _ = rand.Read(raw)
 	token := base64.RawURLEncoding.EncodeToString(raw)
 	expires := time.Now().Add(c.ttl)
-	err := c.db.CreateSession(hashToken(token), model.Session{
-		Provider:    c.providerID,
-		Subject:     id.Subject,
-		DisplayName: id.DisplayName,
-		Email:       id.Email,
-		Expires:     expires,
+	err = c.db.CreateSession(hashToken(token), model.Session{
+		Account: acc.ID,
+		Expires: expires,
 	})
 	if err != nil {
 		return err
@@ -106,29 +136,35 @@ func (c *Core) Login(w http.ResponseWriter, r *http.Request, id Identity) error 
 	return nil
 }
 
-// User returns the request's session, if it has a valid one for the active
-// provider.
-func (c *Core) User(r *http.Request) (model.Session, bool, error) {
+// User returns the account of the request's session, if it has a
+// valid one for an account of the active provider.
+func (c *Core) User(r *http.Request) (model.Account, bool, error) {
 	cookie, err := r.Cookie(cookieName(c.https(r)))
 	if err != nil {
-		return model.Session{}, false, nil
+		return model.Account{}, false, nil
 	}
 
-	s, found, err := c.db.Session(hashToken(cookie.Value))
+	s, acc, found, err := c.db.Session(hashToken(cookie.Value))
 	if err != nil || !found || !s.Expires.After(time.Now()) ||
-		s.Provider != c.providerID {
-		return model.Session{}, false, err
+		acc == nil || acc.Provider != c.providerID {
+		return model.Account{}, false, err
 	}
-	return s, true, nil
+	return *acc, true, nil
 }
 
-type sessionKey struct{}
+// Directory returns the provider's directory, or nil if it has none.
+func (c *Core) Directory() Directory {
+	d, _ := c.provider.(Directory)
+	return d
+}
+
+type accountKey struct{}
 
 // Guard answers requests without a valid session with 401. Others reach
-// next with the session in their context.
+// next with the session's account in their context.
 func (c *Core) Guard(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		s, ok, err := c.User(r)
+		acc, ok, err := c.User(r)
 		switch {
 		case err != nil:
 			httpx.WriteError(w, r, c.Log, err)
@@ -136,16 +172,16 @@ func (c *Core) Guard(next http.Handler) http.Handler {
 			e := apierr.New(http.StatusUnauthorized, apierr.Unauthorized)
 			httpx.WriteError(w, r, c.Log, e)
 		default:
-			ctx := context.WithValue(r.Context(), sessionKey{}, s)
+			ctx := context.WithValue(r.Context(), accountKey{}, acc)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		}
 	})
 }
 
-// Session returns the session of a request that passed the guard.
-func Session(ctx context.Context) model.Session {
-	s, _ := ctx.Value(sessionKey{}).(model.Session)
-	return s
+// Account returns the account of a request that passed the guard.
+func Account(ctx context.Context) model.Account {
+	acc, _ := ctx.Value(accountKey{}).(model.Account)
+	return acc
 }
 
 // CSRF rejects requests with unsafe methods unless their Origin is the
@@ -185,19 +221,26 @@ type sessionResponse struct {
 }
 
 type sessionUser struct {
-	DisplayName string `json:"displayName"`
-	Email       string `json:"email,omitempty"`
+	ID          string                `json:"id"`
+	DisplayName string                `json:"displayName"`
+	Email       string                `json:"email,omitempty"`
+	Role        model.Role            `json:"role"`
+	Sites       map[string]model.Role `json:"sites"`
 }
 
 type sessionProvider struct {
 	ID        string `json:"id"`
 	Method    Method `json:"method"`
 	Available bool   `json:"available"`
+	// Login says how accounts are named: "username" for providers with a
+	// directory, else "email".
+	Login string `json:"login"`
 }
 
-// session reports the signed-in admin, or null, and how to sign in.
+// session reports the signed-in admin with their roles, or null, and how
+// to sign in.
 func (c *Core) session(w http.ResponseWriter, r *http.Request) {
-	s, ok, err := c.User(r)
+	acc, ok, err := c.User(r)
 	if err != nil {
 		httpx.WriteError(w, r, c.Log, err)
 		return
@@ -207,11 +250,21 @@ func (c *Core) session(w http.ResponseWriter, r *http.Request) {
 		ID:        c.providerID,
 		Method:    c.provider.Method(),
 		Available: c.provider.Available(),
+		Login:     "email",
 	}}
+	if c.Directory() != nil {
+		res.Provider.Login = "username"
+	}
 	if ok {
 		res.User = &sessionUser{
-			DisplayName: s.DisplayName,
-			Email:       s.Email,
+			ID:          acc.ID,
+			DisplayName: acc.DisplayName,
+			Email:       acc.Email,
+			Role:        acc.Role,
+			Sites:       acc.Sites,
+		}
+		if res.User.Sites == nil {
+			res.User.Sites = map[string]model.Role{}
 		}
 	}
 

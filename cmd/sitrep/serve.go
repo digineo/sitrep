@@ -28,6 +28,27 @@ import (
 	"github.com/digineo/sitrep/internal/store"
 )
 
+// loadConfig reads the configuration and creates the auth provider. It
+// reports errors to stderr.
+func loadConfig(
+	stderr io.Writer,
+) (*config.Env, config.Config, auth.Provider, bool) {
+	dotenv, err := config.ReadDotenv(".env.local", ".env")
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return nil, config.Config{}, nil, false
+	}
+
+	env := config.NewEnv(config.Lookup(dotenv))
+	cfg := config.Load(env)
+	provider := auth.NewProvider(env, cfg)
+	if err := env.Err(); err != nil {
+		fmt.Fprintf(stderr, "invalid configuration:\n%v\n", err)
+		return nil, config.Config{}, nil, false
+	}
+	return env, cfg, provider, true
+}
+
 // serve runs the server until SIGINT or SIGTERM.
 func serve(args []string, stderr io.Writer) int {
 	fs := flag.NewFlagSet("serve", flag.ContinueOnError)
@@ -44,21 +65,12 @@ func serve(args []string, stderr io.Writer) int {
 		return 2
 	}
 
-	dotenv, err := config.ReadDotenv(".env.local", ".env")
-	if err != nil {
-		fmt.Fprintln(stderr, err)
+	env, cfg, provider, ok := loadConfig(stderr)
+	if !ok {
 		return 1
 	}
 
-	env := config.NewEnv(config.Lookup(dotenv))
-	cfg := config.Load(env)
-	provider := auth.NewProvider(env, cfg)
-	if err := env.Err(); err != nil {
-		fmt.Fprintf(stderr, "invalid configuration:\n%v\n", err)
-		return 1
-	}
-
-	log, err := newLogger(cfg)
+	log, err := newLogger(cfg, os.Stdout)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1
@@ -160,7 +172,7 @@ func serve(args []string, stderr io.Writer) int {
 	return code
 }
 
-func newLogger(cfg config.Config) (xlog.Logger, error) {
+func newLogger(cfg config.Config, w io.Writer) (xlog.Logger, error) {
 	format := xlog.AsText()
 	switch cfg.LogFormat {
 	case "json":
@@ -168,7 +180,7 @@ func newLogger(cfg config.Config) (xlog.Logger, error) {
 	case "pretty":
 		format = slogor.Colorized()
 	}
-	return xlog.New(format, xlog.Leveled(cfg.LogLevel))
+	return xlog.New(format, xlog.Leveled(cfg.LogLevel), xlog.WriteTo(w))
 }
 
 // warnStartup warns about languages without a catalog that were primary,

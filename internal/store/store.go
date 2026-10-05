@@ -18,7 +18,7 @@ import (
 )
 
 // schemaVersion is the version of the database layout written by this build.
-const schemaVersion = 1
+const schemaVersion = 2
 
 var (
 	bucketMeta      = []byte("meta")
@@ -29,6 +29,7 @@ var (
 	bucketPanels    = []byte("panels")
 	bucketSources   = []byte("datasources")
 	bucketIncidents = []byte("incidents")
+	bucketAccounts  = []byte("accounts")
 
 	keySchema   = []byte("schema")
 	keyInstance = []byte("instance")
@@ -68,6 +69,7 @@ func (db *DB) init(tx *bolt.Tx) error {
 		bucketPanels,
 		bucketSources,
 		bucketIncidents,
+		bucketAccounts,
 	}
 	for _, name := range buckets {
 		if _, err := tx.CreateBucketIfNotExists(name); err != nil {
@@ -92,6 +94,11 @@ func (db *DB) init(tx *bolt.Tx) error {
 			version,
 			schemaVersion,
 		)
+	case version < 2:
+		if err := accountsFromSessions(tx); err != nil {
+			return err
+		}
+		return put(tx, bucketMeta, keySchema, schemaVersion)
 	}
 	return nil
 }

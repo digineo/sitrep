@@ -438,6 +438,32 @@ func TestReload(t *testing.T) {
 	)
 }
 
+func TestUsers(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	f := newFixture(t, "bob:"+bcryptCorrectHorse+"\nann:"+argonCorrectHorse+"\n")
+	var dir auth.Directory = f.provider
+	users, err := dir.Users()
+	require.NoError(err)
+	assert.Equal([]string{"ann", "bob"}, users)
+
+	later := time.Now().Add(time.Minute)
+	data := []byte("cat:" + bcryptCorrectHorse + "\n")
+	require.NoError(os.WriteFile(f.path, data, 0o600))
+	require.NoError(os.Chtimes(f.path, later, later))
+	users, err = dir.Users()
+	require.NoError(err)
+	assert.Equal([]string{"cat"}, users, "the file is reloaded")
+
+	later = later.Add(time.Minute)
+	require.NoError(os.WriteFile(f.path, []byte("broken"), 0o600))
+	require.NoError(os.Chtimes(f.path, later, later))
+	users, err = dir.Users()
+	assert.Error(err)
+	assert.Equal([]string{"cat"}, users, "a broken file keeps the previous users")
+}
+
 // occupySlots takes every verification slot until the test ends, and makes
 // attempts give up waiting for one quickly.
 func (f *fixture) occupySlots(t *testing.T) {

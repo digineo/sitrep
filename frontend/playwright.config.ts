@@ -96,7 +96,7 @@ export default defineConfig({
       SITREP_OIDC_ISSUER:       "http://127.0.0.1:26091",
       SITREP_OIDC_CLIENT_ID:    "sitrep",
       SITREP_OIDC_REDIRECT_URL: "http://sitrep.localhost:26075/auth/oidc/callback",
-      SITREP_OIDC_ADMIN_GROUP:  "admins",
+      SITREP_OIDC_GROUP:        "admins",
     }),
   ],
 })

@@ -60,8 +60,14 @@ placeholders differ from English or the slugs are invalid.
    `New` reads and validates the provider's own environment variables
    through the `config.Env` it receives.
 3. On successful authentication, call `core.Login` with the identity. The
-   core creates the session and sets the cookie.
+   core signs in the identity's account, creating it if needed, creates
+   the session and sets the cookie. Set the identity's email only if the
+   provider verified it: accounts added by email are bound to the first
+   identity with that email.
 4. Add one blank import to `cmd/sitrep/providers.go`.
+
+A provider that knows all its users, like `basic`, implements
+`auth.Directory`. Accounts are then added by username instead of email.
 
 The login screen calls the provider's `/auth/<id>/login`:
 

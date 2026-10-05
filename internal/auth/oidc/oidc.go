@@ -1,6 +1,6 @@
 // Package oidc signs admins in with OpenID Connect: the authorization code
-// flow with PKCE, state and nonce. Only members of the admin group may sign
-// in.
+// flow with PKCE, state and nonce. Only members of the sign-in group may
+// sign in.
 package oidc
 
 import (
@@ -51,7 +51,8 @@ type provider struct {
 	oauth       oauth2.Config // without endpoint, which discovery finds
 	redirect    *url.URL
 	groupsClaim string
-	adminGroup  string
+	group       string
+	deprecated  string // warning about the group variable, if any
 	trustProxy  bool
 	client      *http.Client  // for every request to the identity provider
 	retry       time.Duration // first wait between discovery attempts
@@ -93,8 +94,25 @@ func New(env *config.Env, cfg config.Config) auth.Provider {
 	}
 
 	p.groupsClaim = env.String("SITREP_OIDC_GROUPS_CLAIM", "groups")
-	p.adminGroup = env.Required("SITREP_OIDC_ADMIN_GROUP")
+	p.group, p.deprecated = group(env)
 	return p
+}
+
+// group reads the sign-in group from SITREP_OIDC_GROUP, or from its
+// deprecated predecessor, and returns a warning if that one is set.
+func group(env *config.Env) (string, string) {
+	const name, legacy = "SITREP_OIDC_GROUP", "SITREP_OIDC_ADMIN_GROUP"
+	g := env.String(name, "")
+	old := env.String(legacy, "")
+	switch {
+	case g == "" && old == "":
+		env.Errorf(name, "is required")
+	case g == "":
+		return old, legacy + " is deprecated, use " + name
+	case old != "":
+		return g, legacy + " is deprecated and ignored, since " + name + " is set"
+	}
+	return g, ""
 }
 
 func (p *provider) Method() auth.Method { return auth.MethodRedirect }
@@ -104,6 +122,10 @@ func (p *provider) Available() bool { return p.idp.Load() != nil }
 
 // Routes registers the login and callback routes and starts discovery.
 func (p *provider) Routes(mux *http.ServeMux, core *auth.Core) {
+	if p.deprecated != "" {
+		core.Log.Warn(p.deprecated)
+	}
+
 	go p.discover(core.Log)
 	callback := func(w http.ResponseWriter, r *http.Request) {
 		p.callback(w, r, core)
@@ -216,7 +238,7 @@ func readFlow(r *http.Request) (flow, bool) {
 }
 
 // callback completes the flow: it checks the provider's answer and the
-// admin group, then starts a session. Every failure returns to the login
+// sign-in group, then starts a session. Every failure returns to the login
 // screen with an error code.
 func (p *provider) callback(
 	w http.ResponseWriter,
@@ -246,7 +268,8 @@ func (p *provider) callback(
 	http.Redirect(w, r, ret, http.StatusSeeOther)
 }
 
-// identify returns the identity of an admin, or the error code to show.
+// identify returns the identity of an admin, with the email only if the
+// provider verified it, or the error code to show.
 func (p *provider) identify(
 	r *http.Request,
 	f flow,
@@ -314,8 +337,8 @@ func (p *provider) identify(
 		}
 	}
 
-	if !member(claims[p.groupsClaim], p.adminGroup) {
-		log.Info("denied sign-in: not a member of the admin group",
+	if !member(claims[p.groupsClaim], p.group) {
+		log.Info("denied sign-in: not a member of the sign-in group",
 			slog.String("subject", idToken.Subject))
 		return auth.Identity{}, errNotMember
 	}
@@ -328,7 +351,9 @@ func (p *provider) identify(
 	id := auth.Identity{
 		Subject:     idToken.Subject,
 		DisplayName: str("name"),
-		Email:       str("email"),
+	}
+	if verified, _ := claims["email_verified"].(bool); verified {
+		id.Email = str("email")
 	}
 	if id.DisplayName == "" {
 		id.DisplayName = str("preferred_username")

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -13,6 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/digineo/sitrep/internal/auth/basic"
+	"github.com/digineo/sitrep/internal/model"
+	"github.com/digineo/sitrep/internal/store"
 )
 
 func runCLI(stdin string, args ...string) (code int, stdout, stderr string) {
@@ -149,6 +152,60 @@ func TestServeConfigErrors(t *testing.T) {
 	} {
 		assert.Contains(t, stderr, name)
 	}
+}
+
+func TestGrantOwner(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	t.Chdir(t.TempDir())
+	t.Setenv("SITREP_BASE_DOMAINS", "status.example.com")
+	t.Setenv("SITREP_AUTH", "basic")
+	t.Setenv("SITREP_BASIC_USERS_FILE", "users")
+	require.NoError(os.WriteFile("users", []byte("ann:"+basic.Hash("pw")+"\n"), 0o600))
+
+	code, _, _ := runCLI("", "grant-owner")
+	assert.Equal(2, code)
+
+	code, stdout, stderr := runCLI("", "grant-owner", "ann")
+	require.Equal(0, code, stderr)
+	assert.Equal("ann is an owner\n", stdout)
+	assert.Contains(stderr, "made an account an owner", "logged")
+
+	code, _, stderr = runCLI("", "grant-owner", "bob")
+	assert.Equal(1, code)
+	assert.Contains(stderr, `the basic provider has no user "bob"`)
+
+	db, err := store.Open("sitrep.db")
+	require.NoError(err)
+	acc, _, _, err := db.SignIn("basic", "ann", "Ann", "")
+	require.NoError(err)
+	assert.Equal(model.RoleOwner, acc.Role)
+
+	code, _, stderr = runCLI("", "grant-owner", "ann")
+	assert.Equal(1, code, "the server holds the database")
+	assert.Contains(stderr, "in use by another process")
+	require.NoError(db.Close())
+
+	t.Setenv("SITREP_AUTH", "oidc")
+	t.Setenv("SITREP_OIDC_ISSUER", "https://idp.example.com/realms/acme")
+	t.Setenv("SITREP_OIDC_CLIENT_ID", "sitrep")
+	t.Setenv("SITREP_OIDC_REDIRECT_URL", "https://status.example.com/auth/oidc/callback")
+	t.Setenv("SITREP_OIDC_GROUP", "admins")
+	code, stdout, stderr = runCLI("", "grant-owner", "Carl@Example.com")
+	require.Equal(0, code, stderr)
+	assert.Contains(stdout, "carl@example.com is an owner from their next sign-in")
+
+	code, _, stderr = runCLI("", "grant-owner", "Carl <carl@example.com>")
+	assert.Equal(1, code)
+	assert.Contains(stderr, "is not an email address")
+
+	db, err = store.Open("sitrep.db")
+	require.NoError(err)
+	defer func() { _ = db.Close() }()
+	acc, _, _, err = db.SignIn("oidc", "u-1", "Carl", "carl@example.com")
+	require.NoError(err)
+	assert.Equal(model.RoleOwner, acc.Role)
 }
 
 func TestHealthURL(t *testing.T) {

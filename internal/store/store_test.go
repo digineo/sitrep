@@ -90,10 +90,8 @@ func TestSessions(t *testing.T) {
 	db, _ := openTemp(t)
 	now := time.Now().UTC().Truncate(time.Second)
 	live := model.Session{
-		Provider:    "basic",
-		Subject:     "ann",
-		DisplayName: "Ann",
-		Expires:     now.Add(time.Hour),
+		Account: "a-1",
+		Expires: now.Add(time.Hour),
 	}
 	require.NoError(db.CreateSession([]byte("live"), live))
 	expired := model.Session{Expires: now}
@@ -101,7 +99,7 @@ func TestSessions(t *testing.T) {
 	expired2 := model.Session{Expires: now.Add(-time.Hour)}
 	require.NoError(db.CreateSession([]byte("expired2"), expired2))
 
-	got, found, err := db.Session([]byte("live"))
+	got, _, found, err := db.Session([]byte("live"))
 	require.NoError(err)
 	assert.True(found)
 	assert.Equal(live, got)
@@ -109,13 +107,13 @@ func TestSessions(t *testing.T) {
 	n, err := db.PurgeSessions(now)
 	require.NoError(err)
 	assert.Equal(2, n)
-	_, found, _ = db.Session([]byte("expired"))
+	_, _, found, _ = db.Session([]byte("expired"))
 	assert.False(found)
-	_, found, _ = db.Session([]byte("live"))
+	_, _, found, _ = db.Session([]byte("live"))
 	assert.True(found)
 
 	require.NoError(db.DeleteSession([]byte("live")))
-	_, found, _ = db.Session([]byte("live"))
+	_, _, found, _ = db.Session([]byte("live"))
 	assert.False(found)
 }
 

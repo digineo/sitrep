@@ -17,15 +17,26 @@ func (db *DB) CreateSession(hash []byte, s model.Session) error {
 	})
 }
 
-// Session returns the session stored under hash, whether expired or not.
-func (db *DB) Session(hash []byte) (model.Session, bool, error) {
+// Session returns the session stored under hash, whether expired or not,
+// and its account, or nil if the account is gone.
+func (db *DB) Session(hash []byte) (model.Session, *model.Account, bool, error) {
 	var s model.Session
+	var acc *model.Account
 	var found bool
 	err := db.bolt.View(func(tx *bolt.Tx) (err error) {
 		found, err = get(tx, bucketSessions, hash, &s)
-		return err
+		if err != nil || !found {
+			return err
+		}
+
+		var a model.Account
+		if ok, err := get(tx, bucketAccounts, []byte(s.Account), &a); err != nil || !ok {
+			return err
+		}
+		acc = &a
+		return nil
 	})
-	return s, found, err
+	return s, acc, found, err
 }
 
 // DeleteSession deletes the session stored under hash, if any.

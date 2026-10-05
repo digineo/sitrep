@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"net/http"
@@ -101,6 +102,43 @@ func TestLoginCookie(t *testing.T) {
 	}
 }
 
+func TestLoginLogsPendingAccounts(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	core, db := newCore(t, false)
+	var logs bytes.Buffer
+	log, err := xlog.New(xlog.AsText(), xlog.WriteTo(&logs))
+	require.NoError(err)
+	core.Log = log
+
+	grant := func(role model.Role) model.Account {
+		acc, err := db.Grant("fake", "ann@example.com", true, func(a *model.Account) error {
+			a.Role = role
+			return nil
+		})
+		require.NoError(err)
+		return acc
+	}
+
+	ann := grant(model.RoleAdmin)
+	login(t, core)
+	assert.Contains(logs.String(),
+		`msg="bound a pending account on first sign-in" account=`+ann.ID+` subject=ann role=admin`)
+
+	// Ann's email was unverified for a while, and meanwhile provisioned
+	// again.
+	_, err = db.Grant("fake", "ann", false, func(a *model.Account) error {
+		a.Email = ""
+		return nil
+	})
+	require.NoError(err)
+	pending := grant(model.RoleOwner)
+	login(t, core)
+	assert.Contains(logs.String(),
+		`msg="merged a pending account on sign-in" account=`+ann.ID+` pending=`+pending.ID+` subject=ann role=owner`)
+}
+
 func TestSessionsStoreOnlyTheHash(t *testing.T) {
 	require := require.New(t)
 	assert := assert.New(t)
@@ -108,11 +146,11 @@ func TestSessionsStoreOnlyTheHash(t *testing.T) {
 	core, db := newCore(t, false)
 	c := login(t, core)
 
-	_, found, err := db.Session([]byte(c.Value))
+	_, _, found, err := db.Session([]byte(c.Value))
 	require.NoError(err)
 	assert.False(found)
 
-	_, found, err = db.Session(hashToken(c.Value))
+	_, _, found, err = db.Session(hashToken(c.Value))
 	require.NoError(err)
 	assert.True(found)
 }
@@ -122,9 +160,9 @@ func TestGuard(t *testing.T) {
 	assert := assert.New(t)
 
 	core, db := newCore(t, false)
-	var session model.Session
+	var acc model.Account
 	next := func(w http.ResponseWriter, r *http.Request) {
-		session = Session(r.Context())
+		acc = Account(r.Context())
 		w.WriteHeader(http.StatusTeapot)
 	}
 
@@ -147,7 +185,7 @@ func TestGuard(t *testing.T) {
 
 	c := login(t, core)
 	assert.Equal(http.StatusTeapot, request(c).Code)
-	assert.NotEmpty(session.Subject, "the session reaches the handler")
+	assert.Equal("ann", acc.Subject, "the account reaches the handler")
 
 	forged := &http.Cookie{
 		Name:  c.Name,
@@ -165,30 +203,35 @@ func TestGuard(t *testing.T) {
 		"the HTTPS cookie name is not accepted over HTTP",
 	)
 
-	s := model.Session{
-		Provider: "fake",
-		Expires:  time.Now().Add(-time.Second),
+	session := func(token, account string, expires time.Time) *http.Cookie {
+		s := model.Session{
+			Account: account,
+			Expires: expires,
+		}
+		require.NoError(db.CreateSession(hashToken(token), s))
+		return &http.Cookie{
+			Name:  c.Name,
+			Value: token,
+		}
 	}
-	require.NoError(db.CreateSession(hashToken("expired"), s))
-	expired := &http.Cookie{
-		Name:  c.Name,
-		Value: "expired",
-	}
+
+	expired := session("expired", acc.ID, time.Now().Add(-time.Second))
 	assert.Equal(http.StatusUnauthorized, request(expired).Code)
 
-	s = model.Session{
-		Provider: "basic",
-		Expires:  time.Now().Add(time.Hour),
-	}
-	require.NoError(db.CreateSession(hashToken("other"), s))
-	other := &http.Cookie{
-		Name:  c.Name,
-		Value: "other",
-	}
+	gone := session("gone", "deleted", time.Now().Add(time.Hour))
+	assert.Equal(
+		http.StatusUnauthorized,
+		request(gone).Code,
+		"sessions of deleted accounts are rejected",
+	)
+
+	bob, _, _, err := db.SignIn("basic", "bob", "Bob", "")
+	require.NoError(err)
+	other := session("other", bob.ID, time.Now().Add(time.Hour))
 	assert.Equal(
 		http.StatusUnauthorized,
 		request(other).Code,
-		"sessions of another provider are rejected",
+		"accounts of another provider are rejected",
 	)
 }
 
@@ -289,14 +332,30 @@ func TestSessionEndpoint(t *testing.T) {
 		ID:        "fake",
 		Method:    MethodCredentials,
 		Available: true,
+		Login:     "email",
 	}}
 	assert.Equal(want, get(nil))
 
-	user := &sessionUser{
+	user := get(login(t, core)).User
+	require.NotNil(user)
+	assert.NotEmpty(user.ID)
+	user.ID = ""
+	assert.Equal(&sessionUser{
 		DisplayName: "Ann",
 		Email:       "ann@example.com",
-	}
-	assert.Equal(user, get(login(t, core)).User)
+		Role:        model.RoleOwner,
+		Sites:       map[string]model.Role{},
+	}, user, "the first account is the owner")
+
+	core.provider = directoryProvider{}
+	assert.Equal("username", get(nil).Provider.Login)
+}
+
+// directoryProvider is a fakeProvider that lists its users.
+type directoryProvider struct{ fakeProvider }
+
+func (directoryProvider) Users() ([]string, error) {
+	return []string{"ann"}, nil
 }
 
 func TestLogout(t *testing.T) {
@@ -324,7 +383,7 @@ func TestLogout(t *testing.T) {
 	assert.Equal("sitrep_session", cleared[0].Name)
 	assert.Equal(-1, cleared[0].MaxAge)
 
-	_, found, err := db.Session(hashToken(c.Value))
+	_, _, found, err := db.Session(hashToken(c.Value))
 	require.NoError(err)
 	assert.False(found)
 }

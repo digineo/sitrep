@@ -104,4 +104,5 @@ var (
 	SiteUnavailable      = code("site_unavailable")
 	InvalidYAML          = code("invalid_yaml")
 	UnsupportedVersion   = code("unsupported_version")
+	AmbiguousEmail       = code("ambiguous_email")
 )
