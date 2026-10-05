@@ -1,21 +1,21 @@
 # SitRep
 
-SitRep is a self-hosted, multi-tenant server for public status pages. It
-ships as one binary with the web frontend and an embedded database file.
+SitRep is a self-hosted public status page server. It ships as single binary
+with the web frontend and an embedded database file. An optional Dockerfile
+is available.
 
 ## Features
 
 - One instance serves many status pages, reachable below a base domain
-  path, as subdomain or on their own domain.
-- Fully localized: German and English ship with the binary, adding a
-  language means adding one catalog file. Visitors get their language from
-  the URL, their earlier choice or their browser.
+  path, as subdomain, or on their own domain.
+- Fully localized UI: German and English ship with the binary, adding a
+  language means adding one catalog file (contributions welcome).
 - Panels fed by Prometheus queries: single values, up/down states by
   thresholds, and charts. SitRep polls the data sources and serves
   visitors from memory; visitors never cause queries.
 - Incidents and maintenance with a timeline of updates written in Markdown,
   shown on the status page, shaded in charts, in an archive, in an Atom
-  feed per language and as JSON for other websites.
+  feed per language and as JSON for other websites to embed.
 - Status pages refresh themselves and fetch only what changed.
 - Imprint and privacy statement per status page or for the whole instance,
   as Markdown text or link, and a landing page text or a status page as
@@ -40,12 +40,13 @@ make build
 SITREP_BASE_DOMAINS=status.example.com \
 SITREP_AUTH=basic \
 SITREP_BASIC_USERS_FILE=users \
-./sitrep serve
+  ./sitrep serve
 ```
 
 The console is at `http://status.example.com:2607/admin`. For a local try,
 use `sitrep.localhost` as base domain: browsers resolve every
-`*.localhost` name to your machine.
+`*.localhost` name to your machine. Note: `SITREP_BASE_DOMAINS=localhost`
+will **not** work.
 
 ## Configuration
 
