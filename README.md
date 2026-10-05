@@ -226,6 +226,7 @@ With `SITREP_AUTH=basic`, admins are listed in an htpasswd-style file, one
 `username:hash` per line. Blank lines and lines starting with `#` are
 ignored. Every user in the file may sign in. SitRep reloads the file when
 it changes; a broken file keeps the previous users and logs an error.
+Removing a user from the file ends their sessions.
 
 Create argon2id hashes with SitRep, or bcrypt hashes with Apache's
 `htpasswd`:

@@ -137,7 +137,8 @@ func (c *Core) Login(w http.ResponseWriter, r *http.Request, id Identity) error 
 }
 
 // User returns the account of the request's session, if it has a
-// valid one for an account of the active provider.
+// valid one for an account of the active provider that its directory, if
+// any, still lists.
 func (c *Core) User(r *http.Request) (model.Account, bool, error) {
 	cookie, err := r.Cookie(cookieName(c.https(r)))
 	if err != nil {
@@ -148,6 +149,17 @@ func (c *Core) User(r *http.Request) (model.Account, bool, error) {
 	if err != nil || !found || !s.Expires.After(time.Now()) ||
 		acc == nil || acc.Provider != c.providerID {
 		return model.Account{}, false, err
+	}
+
+	if d := c.Directory(); d != nil {
+		users, err := d.Users()
+		if err != nil {
+			c.Log.Error("reloading the auth provider's users failed, using the previous ones",
+				xlog.Error(err))
+		}
+		if !slices.Contains(users, acc.Subject) {
+			return model.Account{}, false, nil
+		}
 	}
 	return *acc, true, nil
 }

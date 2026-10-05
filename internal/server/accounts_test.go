@@ -296,12 +296,18 @@ func TestDirectory(t *testing.T) {
 		f.srv = newServer(xlog.NewDiscard(), f.cfg, f.db, core, f.poller, testAssets())
 	}
 
-	// The signed-in account, Ann, is not listed.
+	// The signed-in account, Ann, is listed, but not Dan.
+	f.grant("dan", model.RoleNone, nil)
+	useDirectory("ann")
+	stale := map[string]bool{}
+	for _, a := range decode[[]accountView](t, f.admin("GET", "/api/admin/accounts", nil), 200) {
+		stale[a.Subject] = a.Stale
+	}
+	assert.Equal(map[string]bool{"ann": false, "dan": true}, stale)
+
 	useDirectory()
 	w = f.admin("GET", "/api/admin/directory", nil)
-	assert.JSONEq(`[]`, w.Body.String(), "an empty directory, unlike none")
-	accounts := decode[[]accountView](t, f.admin("GET", "/api/admin/accounts", nil), 200)
-	assert.True(accounts[0].Stale, "not in the empty directory")
+	assert.Equal(http.StatusUnauthorized, w.Code, "unlisted accounts are signed out")
 
 	useDirectory("ann", "bob")
 	assert.Equal([]string{"ann", "bob"}, decode[[]string](t, f.admin("GET", "/api/admin/directory", nil), 200))

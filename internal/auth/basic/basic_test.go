@@ -462,6 +462,28 @@ func TestReload(t *testing.T) {
 	)
 }
 
+func TestRemovalEndsSessions(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	f := newFixture(t, "ann:"+argonCorrectHorse+"\nbob:"+bcryptCorrectHorse+"\n")
+	w := f.attempt("ann", "correct horse")
+	require.Equal(http.StatusNoContent, w.Code)
+	r := httptest.NewRequest(http.MethodGet, "http://status.example.com/auth/session", nil)
+	r.AddCookie(w.Result().Cookies()[0])
+	_, ok, err := f.core.User(r)
+	require.NoError(err)
+	require.True(ok)
+
+	later := time.Now().Add(time.Minute)
+	data := []byte("bob:" + bcryptCorrectHorse + "\n")
+	require.NoError(os.WriteFile(f.path, data, 0o600))
+	require.NoError(os.Chtimes(f.path, later, later))
+	_, ok, err = f.core.User(r)
+	require.NoError(err)
+	assert.False(ok, "the session ends with the removal from the users file")
+}
+
 func TestUsers(t *testing.T) {
 	require := require.New(t)
 	assert := assert.New(t)
