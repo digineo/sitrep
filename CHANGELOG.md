@@ -5,6 +5,8 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-05
+
 ### Added
 
 - Accounts, created at the first sign-in. The first account of the active
@@ -100,5 +102,6 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `make build` and the image embed. `sitrep serve` logs them on startup,
   the console shows them below the signed-in admin.
 
-[Unreleased]: https://github.com/digineo/sitrep/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/digineo/sitrep/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/digineo/sitrep/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/digineo/sitrep/releases/tag/v0.1.0
