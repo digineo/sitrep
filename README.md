@@ -4,6 +4,11 @@ SitRep is a self-hosted public status page server. It ships as single binary
 with the web frontend and an embedded database file. An optional Dockerfile
 is available.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/status-page-dark.png">
+  <img alt="A status page with an ongoing incident, upcoming maintenance, service states, values and charts" src="docs/screenshots/status-page.png">
+</picture>
+
 ## Features
 
 - One instance serves many status pages, reachable below a base domain
@@ -33,6 +38,11 @@ is available.
 - Roles per status page and for the whole instance, managed in the
   console.
 - No third-party requests, no tracking, no consent banner needed.
+
+<p>
+  <img alt="The console's incident editor with the timeline and a Markdown preview" src="docs/screenshots/console-incident.png" width="49%">
+  <img alt="The console's panel editor with a PromQL query and a chart preview" src="docs/screenshots/console-panel.png" width="49%">
+</p>
 
 ## Quick start
 

@@ -63,6 +63,12 @@ test-e2e: frontend-dist ## Run the Playwright tests against a testauth build
 	go build -tags testauth -o sitrep-e2e ./cmd/sitrep
 	cd frontend && npx playwright test
 
+.PHONY: screenshots
+screenshots: frontend-dist ## Take the README screenshots into docs/screenshots
+	go build -tags testauth -o sitrep-e2e ./cmd/sitrep
+	cd frontend && npx playwright test -c playwright.screenshots.config.ts
+	optipng -o7 -quiet docs/screenshots/*.png
+
 .PHONY: lint
 lint: frontend/node_modules ## Run go vet and golangci-lint for every build variant, then ESLint and vue-tsc
 	for tags in $(GO_TAGS); do \

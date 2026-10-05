@@ -41,6 +41,11 @@ password; release builds never do. It signs in `test-admin`, or with
 | `make test-e2e` | Playwright tests against a `testauth` build, a stub of the Prometheus API (`frontend/e2e/prometheus.ts`) and a mock OpenID provider (`frontend/e2e/idp.ts`); install the browser once with `cd frontend && npx playwright install chromium` |
 | `make test` | all of the above |
 
+`make screenshots` retakes the README screenshots in `docs/screenshots`
+from made-up data, see `frontend/e2e/screenshots`, and compresses them
+with `optipng`. Run it after visible changes to the status page or the
+console.
+
 ## Adding a language
 
 Add `locales/<code>.json`, where the code is a lowercase tag like `fr` or
