@@ -47,3 +47,5 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the base domains and the hosts of existing status pages.
 - A status page can be promoted to start page of the base domains; its own
   route redirects there.
+- `sitrep healthcheck`, which exits with 0 if the server's `/healthz`
+  answers 200.

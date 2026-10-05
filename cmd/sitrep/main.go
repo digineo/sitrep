@@ -14,6 +14,7 @@ Commands:
   serve            run the server, configured by SITREP_* environment variables
   hash-password    print an argon2id hash for the basic auth users file
                    flags: -user <name> prints "<name>:<hash>"
+  healthcheck      exit with 0 if the server at SITREP_LISTEN is healthy
   help             show this help
 `
 
@@ -35,6 +36,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return serve(args[1:], stderr)
 	case "hash-password":
 		return hashPassword(args[1:], stdin, stdout, stderr)
+	case "healthcheck":
+		return healthcheck(args[1:], stderr)
 	}
 
 	fmt.Fprintf(stderr, "unknown command %q\n\n%s", args[0], usage)

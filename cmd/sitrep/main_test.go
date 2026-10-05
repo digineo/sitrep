@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os/exec"
 	"strings"
 	"testing"
@@ -140,4 +142,52 @@ func TestServeConfigErrors(t *testing.T) {
 	} {
 		assert.Contains(t, stderr, name)
 	}
+}
+
+func TestHealthURL(t *testing.T) {
+	assert := assert.New(t)
+
+	for listen, want := range map[string]string{
+		":2607":          "http://127.0.0.1:2607/healthz",
+		"0.0.0.0:2607":   "http://127.0.0.1:2607/healthz",
+		"[::]:2607":      "http://127.0.0.1:2607/healthz",
+		"10.0.0.1:80":    "http://10.0.0.1:80/healthz",
+		"[::1]:2607":     "http://[::1]:2607/healthz",
+		"localhost:2607": "http://localhost:2607/healthz",
+	} {
+		got, err := healthURL(listen)
+		assert.NoError(err, listen)
+		assert.Equal(want, got, listen)
+	}
+
+	_, err := healthURL("2607")
+	assert.Error(err)
+}
+
+func TestHealthcheck(t *testing.T) {
+	assert := assert.New(t)
+	t.Chdir(t.TempDir())
+
+	status := http.StatusOK
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal("/healthz", r.URL.Path)
+		w.WriteHeader(status)
+	}))
+	t.Setenv("SITREP_LISTEN", srv.Listener.Addr().String())
+
+	code, stdout, stderr := runCLI("", "healthcheck")
+	assert.Equal(0, code, stderr)
+	assert.Empty(stdout)
+
+	status = http.StatusServiceUnavailable
+	code, _, stderr = runCLI("", "healthcheck")
+	assert.Equal(1, code)
+	assert.Contains(stderr, "503")
+
+	srv.Close()
+	code, _, _ = runCLI("", "healthcheck")
+	assert.Equal(1, code)
+
+	code, _, _ = runCLI("", "healthcheck", "extra")
+	assert.Equal(2, code)
 }
