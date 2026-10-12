@@ -109,6 +109,11 @@ test("opens, updates and resolves an incident", async({ page }) => {
   const recent = page.locator("section")
     .filter({ has: page.getByRole("heading", { name: "Recent incidents" }) })
   await expect(recent).toContainText("Fixed.")
+  // Success colors take white text, on a darker shade.
+  await expect(page.locator(".notification.is-success"))
+    .toHaveCSS("color", "rgb(255, 255, 255)")
+  await expect(recent.locator(".tag.is-success"))
+    .toHaveCSS("background-color", "rgb(38, 126, 85)")
 
   const feed = await text(page, `/${slug}/feed.atom`)
   expect(feed).toContain("<title>Database outage: Resolved</title>")

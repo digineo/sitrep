@@ -165,6 +165,18 @@
   background: #8892a0;
 }
 
+// Bulma puts black text on the success color, which looks muddy on light
+// pages. A darker shade takes white text, at a contrast of 5:1.
+.notification.is-success {
+  --bulma-notification-background-l: 32%;
+  --bulma-notification-color-l: 100%;
+}
+
+.tag.is-success {
+  --bulma-tag-background-l: 32%;
+  --bulma-tag-color-l: 100%;
+}
+
 .sr-muted,
 .sr-band-muted {
   color: var(--bulma-text-weak);

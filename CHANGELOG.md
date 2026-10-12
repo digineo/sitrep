@@ -5,6 +5,10 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Success notifications and tags use a darker green with white text.
+
 ## [0.2.0] - 2026-10-05
 
 ### Added
