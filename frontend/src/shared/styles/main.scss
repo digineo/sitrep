@@ -253,9 +253,13 @@
   }
 }
 
+// Bulma gives textareas a fixed and a maximum height, which beat sizing by
+// content.
 .textarea.sr-autogrow {
   field-sizing: content;
+  height: auto;
   min-height: 4.5em;
+  max-height: none;
 }
 
 .sr-back {

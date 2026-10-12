@@ -47,7 +47,11 @@ test("opens, updates and resolves an incident", async({ page }) => {
   await page.getByRole("button", { name: "1 hour ago" }).click()
   await expect(page.getByRole("radio", { name: "Active" })).toBeChecked()
   await page.getByText("Major", { exact: true }).click()
-  await page.getByRole("textbox", { name: "Description" }).fill("Writes **fail**.")
+  // The description grows with its text, without scrolling.
+  const description = page.getByRole("textbox", { name: "Description" })
+  await description.fill("line\n".repeat(50))
+  expect(await description.evaluate(e => e.scrollHeight - e.clientHeight)).toBe(0)
+  await description.fill("Writes **fail**.")
   await expect(page.getByRole("region", { name: "Preview" }))
     .toContainText("Writes fail.")
   await page.getByRole("button", { name: "Create incident" }).click()
