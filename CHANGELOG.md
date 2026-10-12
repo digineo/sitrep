@@ -11,6 +11,7 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The logo on status pages links to the overview.
 - The author and the controls of an incident's updates sit at their top
   right.
+- The status dots in the console's sidebar sit at the right of their items.
 - Forms in the console are wider on large screens.
 
 ## [0.2.0] - 2026-10-05

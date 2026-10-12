@@ -185,7 +185,7 @@ function onToggle(site: string, event: Event) {
                 v-if="unusable"
                 state="degraded"
                 :label="t('nav.unusable')"
-                class="ml-2"
+                class="ml-auto"
             />
           </RouterLink>
         </li>
@@ -250,7 +250,7 @@ function onToggle(site: string, event: Event) {
               <SRStatusDot
                   :state="site.status.incidents"
                   :label="t('nav.status', { status: t(`status.${site.status.incidents}`) })"
-                  class="ml-2"
+                  class="ml-auto"
               />
             </RouterLink>
           </li>
@@ -267,7 +267,7 @@ function onToggle(site: string, event: Event) {
                   v-if="site.availability !== 'paused'"
                   :state="site.status.panels"
                   :label="t('nav.status', { status: t(`status.${site.status.panels}`) })"
-                  class="ml-2"
+                  class="ml-auto"
               />
             </RouterLink>
           </li>
@@ -365,6 +365,7 @@ function onToggle(site: string, event: Event) {
 .menu-list a,
 .menu-list .menu-item {
   display: flex;
+  gap: 0.5rem;
   align-items: center;
 }
 
