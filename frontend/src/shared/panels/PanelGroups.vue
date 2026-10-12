@@ -40,6 +40,7 @@ const charts = byType("timeseries")
         :data
         :timezone
         class="block"
+        data-panel-group
     >
       <template
           v-if="$slots.actions"
@@ -55,6 +56,7 @@ const charts = byType("timeseries")
   <div
       v-if="stats.length"
       class="sr-stat-grid block"
+      data-panel-group
   >
     <PanelBoundary
         v-for="panel in stats"
@@ -78,6 +80,7 @@ const charts = byType("timeseries")
   <div
       v-if="charts.length"
       class="sr-chart-grid block"
+      data-panel-group
   >
     <PanelBoundary
         v-for="panel in charts"

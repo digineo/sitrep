@@ -15,6 +15,8 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Forms in the console are wider on large screens.
 - In the console's preview, the controls of status panels sit at the right
   of their rows.
+- Moving a panel in the console's preview outlines it, and fades the
+  incidents and the panels of other types while dragging.
 
 ### Fixed
 

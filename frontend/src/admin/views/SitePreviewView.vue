@@ -160,8 +160,6 @@ async function onGripKey(event: KeyboardEvent, panel: PanelInfo) {
   document.querySelector<HTMLElement>(`[data-grip="${panel.id}"]`)?.focus()
 }
 
-// Dragging a grip moves its panel live onto other panels of its group.
-// Moving elements loses pointer capture, so the window follows the pointer.
 /** warningText joins the texts of a panel's warnings. */
 function warningText(panel: string): string {
   return (payload.value?.panels?.[panel]?.warnings ?? [])
@@ -172,23 +170,34 @@ function warningText(panel: string): string {
     .join(" ")
 }
 
+// Dragging a grip moves its panel live onto other panels of its group. The
+// drag starts with the first move, so that a click changes nothing. Moving
+// elements loses pointer capture, so the window follows the pointer.
+let grabbed = ""
+let before = ""
+
 function onGripDown(event: PointerEvent, panel: PanelInfo) {
   if (event.button !== 0) {
     return
   }
 
   event.preventDefault()
-  dragging.value = panel.id
-  order.value = panels.value.map(p => p.id)
+  grabbed = panel.id
   window.addEventListener("pointermove", onDragMove)
   window.addEventListener("pointerup", onDragEnd)
   window.addEventListener("pointercancel", cancelDrag)
 }
 
 function onDragMove(event: PointerEvent) {
+  if (!dragging.value) {
+    dragging.value = grabbed
+    order.value = panels.value.map(p => p.id)
+    before = order.value.join()
+  }
+
   const element = document.elementFromPoint(event.clientX, event.clientY)
   const target = element?.closest<HTMLElement>("[data-panel-id]")?.dataset.panelId
-  if (dragging.value && target && target !== dragging.value) {
+  if (target && target !== dragging.value) {
     order.value = moveTo(panels.value, dragging.value, target)
   }
 }
@@ -203,7 +212,9 @@ function onDragEnd() {
   stopListening()
   if (dragging.value) {
     dragging.value = null
-    void store(order.value!)
+    if (order.value!.join() !== before) {
+      void store(order.value!)
+    }
   }
 }
 
@@ -272,7 +283,11 @@ onBeforeUnmount(stopListening)
       <span>{{ t("preview.addPanel") }}</span>
     </RouterLink>
   </div>
-  <template v-if="payload?.site">
+  <div
+      v-if="payload?.site"
+      class="block"
+      :class="{ 'sr-dragging': dragging }"
+  >
     <StatusBanner :status="payload.status" />
     <template v-if="payload.incidents">
       <IncidentList
@@ -281,6 +296,7 @@ onBeforeUnmount(stopListening)
           :incidents="payload.incidents.ongoing"
           :timezone="payload.site.timezone"
           :to="incidentLink"
+          class="sr-incidents"
       />
       <IncidentList
           v-if="payload.incidents.upcoming.length"
@@ -288,6 +304,7 @@ onBeforeUnmount(stopListening)
           :incidents="payload.incidents.upcoming"
           :timezone="payload.site.timezone"
           :to="incidentLink"
+          class="sr-incidents"
       />
     </template>
     <p
@@ -302,7 +319,6 @@ onBeforeUnmount(stopListening)
         :timezone="payload.site.timezone"
         :spans="payload.incidents?.spans"
         :incident-link
-        :class="{ 'sr-dragging': dragging }"
     >
       <template #actions="{ panel }">
         <span class="sr-panel-actions">
@@ -326,6 +342,7 @@ onBeforeUnmount(stopListening)
               v-if="editable"
               type="button"
               class="button is-small sr-grip"
+              :class="{ 'is-link sr-held': dragging === panel.id }"
               :data-grip="panel.id"
               :aria-label="t('preview.move', { title: panel.title })"
               :title="t('preview.moveHint')"
@@ -352,8 +369,9 @@ onBeforeUnmount(stopListening)
         :incidents="payload.incidents.finished.slice(0, 5)"
         :timezone="payload.site.timezone"
         :to="incidentLink"
+        class="sr-incidents"
     />
-  </template>
+  </div>
   <p
       class="sr-visually-hidden"
       aria-live="polite"
@@ -396,5 +414,17 @@ onBeforeUnmount(stopListening)
 
 .sr-dragging .sr-grip {
   cursor: grabbing;
+}
+
+/* The held panel, and the panel whose grip has the keyboard focus, stand
+   out. While dragging, the incidents and the groups the panel cannot move
+   into fade. */
+:deep([data-panel-id]:has(.sr-held, .sr-grip:focus-visible)) {
+  outline: 2px solid var(--bulma-link);
+}
+
+.sr-dragging .sr-incidents,
+.sr-dragging :deep([data-panel-group]:not(:has(.sr-held))) {
+  opacity: 0.4;
 }
 </style>

@@ -100,14 +100,43 @@ test("orders panels by keyboard and by dragging", async({ page }) => {
     })
   }
 
+  await createPanel(page, site.id, {
+    type:       "status",
+    title:      { en: "S" },
+    datasource: ds.id,
+    query:      "1",
+  })
+  await admin(page, "POST", `/api/admin/sites/${site.id}/incidents`, {
+    title:  { en: "Slow API" },
+    update: {
+      status:      "active",
+      description: { en: "Slow." },
+    },
+  })
+
   await page.goto(`/admin/sites/${site.id}`)
   const titles = page.locator(".sr-stat h3")
+  const panel = (title: string) => page.locator(".sr-stat").filter({ hasText: title })
+  const statusGroup = page.locator("table[data-panel-group]")
+  const saves: string[] = []
+  page.on("request", (req) => {
+    if (req.url().endsWith("/panel-order")) {
+      saves.push(req.method())
+    }
+  })
   await expect(titles).toHaveText(["A", "B", "C"])
+
+  // A click on a grip neither starts a drag nor saves.
+  await page.getByRole("button", { name: "Move panel A" }).hover()
+  await page.mouse.down()
+  await expect(statusGroup).toHaveCSS("opacity", "1")
+  await page.mouse.up()
 
   await page.getByRole("button", { name: "Move panel B" }).focus()
   await page.keyboard.press("ArrowUp")
   await expect(titles).toHaveText(["B", "A", "C"])
   await expect(page.getByRole("button", { name: "Move panel B" })).toBeFocused()
+  await expect(panel("B")).toHaveCSS("outline-style", "solid")
   await expect(page.getByText("B moved to position 1 of 3")).toBeAttached()
 
   const grip = page.getByRole("button", { name: "Move panel C" })
@@ -116,11 +145,18 @@ test("orders panels by keyboard and by dragging", async({ page }) => {
   await page.mouse.down()
   const box = (await target.boundingBox())!
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 5 })
+  // The held panel stands out; the incidents and the groups it cannot
+  // move into fade.
+  await expect(panel("C")).toHaveCSS("outline-style", "solid")
+  await expect(statusGroup).toHaveCSS("opacity", "0.4")
+  await expect(page.locator(".sr-incidents")).toHaveCSS("opacity", "0.4")
   await page.mouse.up()
   await expect(titles).toHaveText(["C", "B", "A"])
+  await expect(statusGroup).toHaveCSS("opacity", "1")
 
   await page.reload()
   await expect(titles).toHaveText(["C", "B", "A"])
+  expect(saves).toEqual(["PUT", "PUT"])
 })
 
 test("redirects to the language of multi-language sites", async({ page }) => {
