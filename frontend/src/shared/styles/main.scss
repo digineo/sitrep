@@ -62,8 +62,12 @@
   }
 }
 
+:root {
+  --sr-form-width: 80rem;
+}
+
 .sr-form {
-  max-width: 60rem;
+  max-width: var(--sr-form-width);
 }
 
 // On wider screens, forms put the labels beside their controls: a field's

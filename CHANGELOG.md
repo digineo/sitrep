@@ -9,6 +9,7 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Success notifications and tags use a darker green with white text.
 - The logo on status pages links to the overview.
+- Forms in the console are wider on large screens.
 
 ## [0.2.0] - 2026-10-05
 
