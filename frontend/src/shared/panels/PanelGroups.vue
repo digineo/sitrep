@@ -41,7 +41,10 @@ const charts = byType("timeseries")
         :timezone
         class="block"
     >
-      <template #actions="{ panel }">
+      <template
+          v-if="$slots.actions"
+          #actions="{ panel }"
+      >
         <slot
             name="actions"
             :panel

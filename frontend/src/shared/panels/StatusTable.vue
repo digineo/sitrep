@@ -35,10 +35,6 @@ function state(d?: PanelData) {
                 :fetched-at="data[panel.id]!.fetchedAt!"
                 :timezone
             />
-            <slot
-                name="actions"
-                :panel
-            />
           </span>
           <span
               v-if="panel.description"
@@ -61,6 +57,15 @@ function state(d?: PanelData) {
             {{ t(`status.${state(data[panel.id])}`) }}
           </span>
         </td>
+        <td
+            v-if="$slots.actions"
+            class="sr-actions"
+        >
+          <slot
+              name="actions"
+              :panel
+          />
+        </td>
       </tr>
     </tbody>
   </table>
@@ -76,6 +81,13 @@ th {
 }
 
 .sr-state {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* The controls of all rows line up at the right. */
+.sr-actions {
+  width: 1%;
   text-align: right;
   white-space: nowrap;
 }

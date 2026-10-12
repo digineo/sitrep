@@ -13,6 +13,8 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   right.
 - The status dots in the console's sidebar sit at the right of their items.
 - Forms in the console are wider on large screens.
+- In the console's preview, the controls of status panels sit at the right
+  of their rows.
 
 ### Fixed
 

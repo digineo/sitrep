@@ -44,7 +44,11 @@ test("creates a status page with panels and shows it", async({ page }) => {
   await addPanel(page, ds.name, "Status: up or down by thresholds", "API", "1")
   await page.getByRole("button", { name: "Add rule" }).click()
   await page.getByRole("button", { name: "Save" }).click()
-  await expect(page.getByRole("row", { name: /API/ })).toContainText("Operational")
+  const row = page.getByRole("row", { name: /API/ })
+  await expect(row).toContainText("Operational")
+  // The controls follow the status.
+  await expect(row.getByRole("cell").last().getByRole("link", { name: "Edit panel API" }))
+    .toBeVisible()
 
   await addPanel(page, ds.name, "Stat: a single value", "Latency", "1234.5")
   await page.getByLabel("Decimals").fill("1")
@@ -73,7 +77,9 @@ test("creates a status page with panels and shows it", async({ page }) => {
   await expect(
     page.getByRole("status").filter({ hasText: "All systems operational" }),
   ).toBeVisible()
-  await expect(page.getByRole("row", { name: /API/ })).toContainText("Operational")
+  await expect(row).toContainText("Operational")
+  // Without controls, there is no cell for them.
+  await expect(row.locator("td")).toHaveCount(2)
   await expect(page.locator("[data-panel-id]").filter({ hasText: "Latency" }))
     .toContainText("1,234.5 ms")
   await expect(page.getByRole("img", { name: "Load, last 1 hour: Load 1.00" }))
