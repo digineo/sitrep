@@ -11,6 +11,8 @@ defineProps<{
 }>()
 
 defineSlots<{
+  /** actions renders controls in the head, after the tags. */
+  actions?: () => unknown
   /** default adds content below the description. */
   default?: () => unknown
 }>()
@@ -26,6 +28,7 @@ const { locale } = useI18n()
           :status="update.status"
           :severity="update.severity"
       />
+      <slot name="actions" />
     </div>
     <!-- eslint-disable vue/no-v-html -- server-rendered Markdown -->
     <div

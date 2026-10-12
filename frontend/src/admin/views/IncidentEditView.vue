@@ -388,28 +388,32 @@ const history = computed(() => (incident.value?.updates ?? [])
             :update="{ ...update, html: resolve(update.html) }"
             :timezone="site.timezone"
         >
-          <p class="is-size-7 sr-muted">
-            {{ t("incidentEditor.author", { name: update.author.displayName }) }}
-            <template v-if="update.editedBy && update.editedBy.subject !== update.author.subject">
-              · {{ t("incidentEditor.editedBy", { name: update.editedBy.displayName }) }}
-            </template>
-          </p>
-          <div class="buttons are-small mt-2">
-            <SRButton
-                :aria-label="t('incidentEditor.editUpdate', { time: time(update) })"
-                @click="edit(update)"
-            >
-              <span class="icon"><Pencil aria-hidden="true" /></span>
-            </SRButton>
-            <SRButton
-                :aria-label="t('incidentEditor.deleteUpdate', { time: time(update) })"
-                :disabled="!deletable(incident.updates, index)"
-                :aria-describedby="deletable(incident.updates, index) ? undefined : `locked-${update.id}`"
-                @click="removeUpdate(update)"
-            >
-              <span class="icon"><Trash2 aria-hidden="true" /></span>
-            </SRButton>
-          </div>
+          <template #actions>
+            <div class="sr-update-actions">
+              <p class="is-size-7 sr-muted">
+                {{ t("incidentEditor.author", { name: update.author.displayName }) }}
+                <template v-if="update.editedBy && update.editedBy.subject !== update.author.subject">
+                  · {{ t("incidentEditor.editedBy", { name: update.editedBy.displayName }) }}
+                </template>
+              </p>
+              <div class="buttons are-small">
+                <SRButton
+                    :aria-label="t('incidentEditor.editUpdate', { time: time(update) })"
+                    @click="edit(update)"
+                >
+                  <span class="icon"><Pencil aria-hidden="true" /></span>
+                </SRButton>
+                <SRButton
+                    :aria-label="t('incidentEditor.deleteUpdate', { time: time(update) })"
+                    :disabled="!deletable(incident.updates, index)"
+                    :aria-describedby="deletable(incident.updates, index) ? undefined : `locked-${update.id}`"
+                    @click="removeUpdate(update)"
+                >
+                  <span class="icon"><Trash2 aria-hidden="true" /></span>
+                </SRButton>
+              </div>
+            </div>
+          </template>
           <p
               v-if="!deletable(incident.updates, index)"
               :id="`locked-${update.id}`"
@@ -433,5 +437,18 @@ const history = computed(() => (incident.value?.updates ?? [])
 
 .sr-editing {
   outline: 2px solid var(--bulma-link);
+}
+
+/* The history ends where the forms above end, past its left margin. */
+.sr-timeline {
+  max-width: calc(var(--sr-form-width) - 0.375rem);
+}
+
+.sr-update-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-left: auto;
+  font-weight: normal;
 }
 </style>
