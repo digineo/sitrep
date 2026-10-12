@@ -52,6 +52,10 @@ test("brands the header with a color and a logo", async({ page }) => {
   expect(served).not.toContain("alert")
   await expect(page.getByRole("contentinfo")).toHaveCount(0)
 
+  await page.goto(`/${slug}/incidents`)
+  await header.locator("img").click()
+  await expect(page).toHaveURL(`/${slug}/`)
+
   await page.goto(`/admin/sites/${site.id}/settings`)
   await page.getByRole("checkbox", { name: "No brand color" }).check()
   await page.getByRole("button", { name: "Remove logo" }).click()

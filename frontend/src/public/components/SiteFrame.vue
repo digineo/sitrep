@@ -80,12 +80,19 @@ watchEffect(() => {
     >
       <div class="container px-4 sr-header">
         <div class="sr-brand">
-          <img
+          <!-- The title links to the overview, too, for keyboards and screen readers. -->
+          <RouterLink
               v-if="site?.logo"
-              :src="site.logo"
-              alt=""
-              class="sr-logo"
+              :to="overview"
+              tabindex="-1"
+              aria-hidden="true"
           >
+            <img
+                :src="site.logo"
+                alt=""
+                class="sr-logo"
+            >
+          </RouterLink>
           <div>
             <h1 class="title is-3 mb-1">
               <RouterLink
@@ -186,6 +193,7 @@ watchEffect(() => {
 }
 
 .sr-logo {
+  display: block;
   width: auto;
   max-width: 12rem;
   height: 3.25rem;
