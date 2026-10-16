@@ -13,6 +13,11 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   above each axis. The color picker offers a dark, a base and a light shade
   of each palette hue, and custom colors.
 
+### Changed
+
+- On large screens, the previews of the panel editor and their buttons sit
+  beside the form and stay in view while scrolling it.
+
 ## [0.2.1] - 2026-10-12
 
 ### Changed

@@ -275,364 +275,399 @@ const widgetData = computed<PanelData>(() => ({
   <h1 class="title">
     {{ panelId ? t("panelEditor.edit") : t("panelEditor.new") }}
   </h1>
-  <form
-      v-if="site"
-      class="sr-form"
-      @submit.prevent="save"
-  >
-    <SRField
-        v-slot="{ id, describedby, invalid }"
-        :label="t('panelEditor.dataSource')"
-        :error="error('datasource')"
+  <div class="sr-panel-editor">
+    <form
+        v-if="site"
+        class="sr-form block"
+        @submit.prevent="save"
     >
-      <div class="select">
-        <select
-            :id
-            v-model="form.datasource"
-            required
-            :aria-describedby="describedby"
-            :aria-invalid="invalid"
-        >
-          <option
-              value=""
-              disabled
-          >
-            {{ t("panelEditor.chooseDataSource") }}
-          </option>
-          <option
-              v-for="ds in sources"
-              :key="ds.id"
-              :value="ds.id"
-          >
-            {{ ds.name }}
-          </option>
-        </select>
-      </div>
-    </SRField>
-    <SRField
-        v-slot="{ id, describedby, invalid }"
-        :label="t('panelEditor.type')"
-        :error="error('type')"
-    >
-      <div class="select">
-        <select
-            :id
-            v-model="form.type"
-            required
-            :aria-describedby="describedby"
-            :aria-invalid="invalid"
-        >
-          <option
-              value=""
-              disabled
-          >
-            {{ t("panelEditor.chooseType") }}
-          </option>
-          <option
-              v-for="type in panelTypes"
-              :key="type"
-              :value="type"
-          >
-            {{ t(`panelEditor.types.${type}`) }}
-          </option>
-        </select>
-      </div>
-    </SRField>
-    <SRLocalizedInput
-        v-model="form.title"
-        :label="t('panelEditor.title')"
-        :languages
-        required
-        :maxlength="200"
-        :errors="localizedErrors(errors, 'title', t)"
-    />
-    <SRLocalizedInput
-        v-model="form.description"
-        :label="t('panelEditor.description')"
-        :languages
-        multiline
-        :maxlength="2000"
-        :errors="localizedErrors(errors, 'description', t)"
-    />
-    <SRField
-        v-slot="{ id, labelId, describedby, invalid }"
-        :label="t('panelEditor.query')"
-        :error="error('query')"
-    >
-      <QueryEditor
-          :id
-          :key="form.datasource"
-          v-model="form.query"
-          :editor="sourceType?.editor"
-          :datasource="form.datasource"
-          :label-id
-          :describedby
-          :invalid
-      />
-    </SRField>
-    <SRField
-        v-slot="{ id, describedby, invalid }"
-        :label="t('panelEditor.refresh')"
-        :help="t('panelEditor.refreshHelp', { default: bootstrap.defaultRefresh })"
-        :error="error('refresh')"
-    >
-      <input
-          :id
-          v-model="form.refresh"
-          class="input"
-          :placeholder="bootstrap.defaultRefresh"
-          :aria-describedby="describedby"
-          :aria-invalid="invalid"
-      >
-    </SRField>
-
-    <SRField
-        v-if="form.type === 'stat' || form.type === 'status'"
-        v-slot="{ id, describedby, invalid }"
-        :label="t('panelEditor.reduce')"
-        :help="t('panelEditor.reduceHelp')"
-        :error="error('reduce')"
-    >
-      <div class="select">
-        <select
-            :id
-            v-model="form.reduce"
-            :aria-describedby="describedby"
-            :aria-invalid="invalid"
-        >
-          <option
-              v-for="r in ['first', 'last', 'sum', 'avg', 'min', 'max']"
-              :key="r"
-              :value="r"
-          >
-            {{ t(`panelEditor.reducers.${r}`) }}
-          </option>
-        </select>
-      </div>
-    </SRField>
-    <ThresholdsField
-        v-if="form.type === 'status'"
-        v-model="form.thresholds!"
-        :errors
-    />
-    <template v-if="form.type === 'timeseries'">
       <SRField
           v-slot="{ id, describedby, invalid }"
-          :label="t('panelEditor.range')"
-          :help="t('panelEditor.rangeHelp')"
-          :error="error('range')"
-      >
-        <input
-            :id
-            v-model="form.range"
-            class="input"
-            required
-            placeholder="1h"
-            :aria-describedby="describedby"
-            :aria-invalid="invalid"
-        >
-      </SRField>
-      <SRField
-          v-slot="{ id, describedby, invalid }"
-          :label="t('panelEditor.step')"
-          :help="t('panelEditor.stepHelp')"
-          :error="error('step')"
-      >
-        <input
-            :id
-            v-model="form.step"
-            class="input"
-            :aria-describedby="describedby"
-            :aria-invalid="invalid"
-        >
-      </SRField>
-      <SRField
-          v-slot="{ id, describedby }"
-          :label="t('panelEditor.style')"
+          :label="t('panelEditor.dataSource')"
+          :error="error('datasource')"
       >
         <div class="select">
           <select
               :id
-              v-model="form.style"
+              v-model="form.datasource"
+              required
               :aria-describedby="describedby"
+              :aria-invalid="invalid"
           >
-            <option value="line">
-              {{ t("panelEditor.styles.line") }}
+            <option
+                value=""
+                disabled
+            >
+              {{ t("panelEditor.chooseDataSource") }}
             </option>
-            <option value="area">
-              {{ t("panelEditor.styles.area") }}
+            <option
+                v-for="ds in sources"
+                :key="ds.id"
+                :value="ds.id"
+            >
+              {{ ds.name }}
             </option>
           </select>
         </div>
       </SRField>
-      <div class="field">
-        <label class="checkbox">
-          <input
-              v-model="form.minZero"
-              type="checkbox"
-          >
-          {{ t("panelEditor.minZero") }}
-        </label>
-      </div>
-    </template>
-    <template v-if="form.type === 'stat' || form.type === 'timeseries'">
       <SRField
           v-slot="{ id, describedby, invalid }"
-          :label="t('panelEditor.decimals')"
-          :error="error('decimals')"
+          :label="t('panelEditor.type')"
+          :error="error('type')"
+      >
+        <div class="select">
+          <select
+              :id
+              v-model="form.type"
+              required
+              :aria-describedby="describedby"
+              :aria-invalid="invalid"
+          >
+            <option
+                value=""
+                disabled
+            >
+              {{ t("panelEditor.chooseType") }}
+            </option>
+            <option
+                v-for="type in panelTypes"
+                :key="type"
+                :value="type"
+            >
+              {{ t(`panelEditor.types.${type}`) }}
+            </option>
+          </select>
+        </div>
+      </SRField>
+      <SRLocalizedInput
+          v-model="form.title"
+          :label="t('panelEditor.title')"
+          :languages
+          required
+          :maxlength="200"
+          :errors="localizedErrors(errors, 'title', t)"
+      />
+      <SRLocalizedInput
+          v-model="form.description"
+          :label="t('panelEditor.description')"
+          :languages
+          multiline
+          :maxlength="2000"
+          :errors="localizedErrors(errors, 'description', t)"
+      />
+      <SRField
+          v-slot="{ id, labelId, describedby, invalid }"
+          :label="t('panelEditor.query')"
+          :error="error('query')"
+      >
+        <QueryEditor
+            :id
+            :key="form.datasource"
+            v-model="form.query"
+            :editor="sourceType?.editor"
+            :datasource="form.datasource"
+            :label-id
+            :describedby
+            :invalid
+        />
+      </SRField>
+      <SRField
+          v-slot="{ id, describedby, invalid }"
+          :label="t('panelEditor.refresh')"
+          :help="t('panelEditor.refreshHelp', { default: bootstrap.defaultRefresh })"
+          :error="error('refresh')"
       >
         <input
             :id
-            v-model.number="form.decimals"
-            class="input sr-short"
-            type="number"
-            min="0"
-            max="6"
-            step="1"
-            :placeholder="form.type === 'timeseries' ? '2' : '0'"
+            v-model="form.refresh"
+            class="input"
+            :placeholder="bootstrap.defaultRefresh"
             :aria-describedby="describedby"
             :aria-invalid="invalid"
         >
       </SRField>
-      <SRLocalizedInput
-          v-model="form.unit"
-          :label="t('panelEditor.unit')"
-          :languages
-          :maxlength="32"
-          :errors="localizedErrors(errors, 'unit', t)"
-      />
-    </template>
-    <SRLocalizedInput
-        v-if="form.type === 'timeseries'"
-        v-model="form.legend"
-        :label="t('panelEditor.legend')"
-        :help="t('panelEditor.legendHelp', { example: '{{ instance }}' })"
-        :languages
-        :maxlength="200"
-        :errors="localizedErrors(errors, 'legend', t)"
-    />
-    <OverridesField
-        v-if="form.type === 'timeseries'"
-        v-model="form.overrides!"
-        :errors
-        :languages
-        :unit="form.unit"
-        :decimals="widget.decimals!"
-    />
 
-    <div
-        v-if="previewError"
-        class="notification is-danger"
-        role="alert"
-    >
-      {{ t("panelEditor.previewFailed", { error: previewError }) }}
-    </div>
-    <div class="field is-grouped is-grouped-multiline">
-      <SRButton
-          type="submit"
-          variant="primary"
-          :loading="saving"
+      <SRField
+          v-if="form.type === 'stat' || form.type === 'status'"
+          v-slot="{ id, describedby, invalid }"
+          :label="t('panelEditor.reduce')"
+          :help="t('panelEditor.reduceHelp')"
+          :error="error('reduce')"
       >
-        {{ t("common.save") }}
-      </SRButton>
-      <RouterLink
-          :to="`/sites/${siteId}`"
-          class="button"
-      >
-        {{ t("common.cancel") }}
-      </RouterLink>
-      <button
-          type="button"
-          class="button"
-          :class="{ 'is-link is-light': showData }"
-          :aria-pressed="showData"
-          @click="showData = !showData"
-      >
-        {{ t("panelEditor.dataPreview") }}
-      </button>
-      <button
-          type="button"
-          class="button"
-          :class="{ 'is-link is-light': showWidget }"
-          :aria-pressed="showWidget"
-          @click="showWidget = !showWidget"
-      >
-        {{ t("panelEditor.widgetPreview") }}
-      </button>
-      <div
-          v-if="(showData || showWidget) && languages.enabled.length > 1"
-          class="select"
-      >
-        <select
-            v-model="previewLang"
-            :aria-label="t('preview.language')"
-        >
-          <option
-              v-for="l in languages.enabled"
-              :key="l"
-              :value="l"
-              :lang="l"
+        <div class="select">
+          <select
+              :id
+              v-model="form.reduce"
+              :aria-describedby="describedby"
+              :aria-invalid="invalid"
           >
-            {{ endonym(l) }}
-          </option>
-        </select>
+            <option
+                v-for="r in ['first', 'last', 'sum', 'avg', 'min', 'max']"
+                :key="r"
+                :value="r"
+            >
+              {{ t(`panelEditor.reducers.${r}`) }}
+            </option>
+          </select>
+        </div>
+      </SRField>
+      <ThresholdsField
+          v-if="form.type === 'status'"
+          v-model="form.thresholds!"
+          :errors
+      />
+      <template v-if="form.type === 'timeseries'">
+        <SRField
+            v-slot="{ id, describedby, invalid }"
+            :label="t('panelEditor.range')"
+            :help="t('panelEditor.rangeHelp')"
+            :error="error('range')"
+        >
+          <input
+              :id
+              v-model="form.range"
+              class="input"
+              required
+              placeholder="1h"
+              :aria-describedby="describedby"
+              :aria-invalid="invalid"
+          >
+        </SRField>
+        <SRField
+            v-slot="{ id, describedby, invalid }"
+            :label="t('panelEditor.step')"
+            :help="t('panelEditor.stepHelp')"
+            :error="error('step')"
+        >
+          <input
+              :id
+              v-model="form.step"
+              class="input"
+              :aria-describedby="describedby"
+              :aria-invalid="invalid"
+          >
+        </SRField>
+        <SRField
+            v-slot="{ id, describedby }"
+            :label="t('panelEditor.style')"
+        >
+          <div class="select">
+            <select
+                :id
+                v-model="form.style"
+                :aria-describedby="describedby"
+            >
+              <option value="line">
+                {{ t("panelEditor.styles.line") }}
+              </option>
+              <option value="area">
+                {{ t("panelEditor.styles.area") }}
+              </option>
+            </select>
+          </div>
+        </SRField>
+        <div class="field">
+          <label class="checkbox">
+            <input
+                v-model="form.minZero"
+                type="checkbox"
+            >
+            {{ t("panelEditor.minZero") }}
+          </label>
+        </div>
+      </template>
+      <template v-if="form.type === 'stat' || form.type === 'timeseries'">
+        <SRField
+            v-slot="{ id, describedby, invalid }"
+            :label="t('panelEditor.decimals')"
+            :error="error('decimals')"
+        >
+          <input
+              :id
+              v-model.number="form.decimals"
+              class="input sr-short"
+              type="number"
+              min="0"
+              max="6"
+              step="1"
+              :placeholder="form.type === 'timeseries' ? '2' : '0'"
+              :aria-describedby="describedby"
+              :aria-invalid="invalid"
+          >
+        </SRField>
+        <SRLocalizedInput
+            v-model="form.unit"
+            :label="t('panelEditor.unit')"
+            :languages
+            :maxlength="32"
+            :errors="localizedErrors(errors, 'unit', t)"
+        />
+      </template>
+      <SRLocalizedInput
+          v-if="form.type === 'timeseries'"
+          v-model="form.legend"
+          :label="t('panelEditor.legend')"
+          :help="t('panelEditor.legendHelp', { example: '{{ instance }}' })"
+          :languages
+          :maxlength="200"
+          :errors="localizedErrors(errors, 'legend', t)"
+      />
+      <OverridesField
+          v-if="form.type === 'timeseries'"
+          v-model="form.overrides!"
+          :errors
+          :languages
+          :unit="form.unit"
+          :decimals="widget.decimals!"
+      />
+
+      <div class="field is-grouped is-grouped-multiline">
+        <SRButton
+            type="submit"
+            variant="primary"
+            :loading="saving"
+        >
+          {{ t("common.save") }}
+        </SRButton>
+        <RouterLink
+            :to="`/sites/${siteId}`"
+            class="button"
+        >
+          {{ t("common.cancel") }}
+        </RouterLink>
+        <SRButton
+            v-if="panelId"
+            variant="danger"
+            class="ml-auto"
+            @click="remove"
+        >
+          {{ t("panelEditor.delete") }}
+        </SRButton>
       </div>
-      <SRButton
-          v-if="panelId"
-          variant="danger"
-          class="ml-auto"
-          @click="remove"
-      >
-        {{ t("panelEditor.delete") }}
-      </SRButton>
-    </div>
-  </form>
-  <section
-      v-if="showData && preview?.data"
-      class="box"
-      :aria-label="t('panelEditor.dataPreview')"
-  >
-    <p
-        v-for="w in preview.warnings"
-        :key="w.code"
-        class="notification is-warning"
+    </form>
+    <div
+        v-if="site"
+        class="sr-panel-previews"
     >
-      {{ t(`warnings.${w.code}`, { count: w.count, size: formatMiB(w.size ?? 0, locale) }) }}
-    </p>
-    <JsonTree
-        :value="preview.data"
-        name="data"
-        open
-    />
-  </section>
-  <section
-      v-if="showWidget && preview?.data"
-      :aria-label="t('panelEditor.widgetPreview')"
-      class="block"
-  >
-    <StatusTable
-        v-if="form.type === 'status'"
-        :panels="[widget]"
-        :data="{ preview: widgetData }"
-        :timezone="site!.timezone"
-    />
-    <StatPanel
-        v-else-if="form.type === 'stat'"
-        :panel="widget"
-        :data="widgetData"
-        :timezone="site!.timezone"
-    />
-    <TimeseriesPanel
-        v-else
-        :panel="widget"
-        :data="widgetData"
-        :timezone="site!.timezone"
-    />
-  </section>
+      <div class="field is-grouped is-grouped-multiline">
+        <button
+            type="button"
+            class="button"
+            :class="{ 'is-link is-light': showData }"
+            :aria-pressed="showData"
+            @click="showData = !showData"
+        >
+          {{ t("panelEditor.dataPreview") }}
+        </button>
+        <button
+            type="button"
+            class="button"
+            :class="{ 'is-link is-light': showWidget }"
+            :aria-pressed="showWidget"
+            @click="showWidget = !showWidget"
+        >
+          {{ t("panelEditor.widgetPreview") }}
+        </button>
+        <div
+            v-if="(showData || showWidget) && languages.enabled.length > 1"
+            class="select"
+        >
+          <select
+              v-model="previewLang"
+              :aria-label="t('preview.language')"
+          >
+            <option
+                v-for="l in languages.enabled"
+                :key="l"
+                :value="l"
+                :lang="l"
+            >
+              {{ endonym(l) }}
+            </option>
+          </select>
+        </div>
+      </div>
+      <div
+          v-if="previewError"
+          class="notification is-danger"
+          role="alert"
+      >
+        {{ t("panelEditor.previewFailed", { error: previewError }) }}
+      </div>
+      <section
+          v-if="showData && preview?.data"
+          class="box"
+          :aria-label="t('panelEditor.dataPreview')"
+      >
+        <p
+            v-for="w in preview.warnings"
+            :key="w.code"
+            class="notification is-warning"
+        >
+          {{ t(`warnings.${w.code}`, { count: w.count, size: formatMiB(w.size ?? 0, locale) }) }}
+        </p>
+        <JsonTree
+            :value="preview.data"
+            name="data"
+            open
+        />
+      </section>
+      <section
+          v-if="showWidget && preview?.data"
+          :aria-label="t('panelEditor.widgetPreview')"
+          class="block"
+      >
+        <StatusTable
+            v-if="form.type === 'status'"
+            :panels="[widget]"
+            :data="{ preview: widgetData }"
+            :timezone="site!.timezone"
+        />
+        <StatPanel
+            v-else-if="form.type === 'stat'"
+            :panel="widget"
+            :data="widgetData"
+            :timezone="site!.timezone"
+        />
+        <TimeseriesPanel
+            v-else
+            :panel="widget"
+            :data="widgetData"
+            :timezone="site!.timezone"
+        />
+      </section>
+    </div>
+  </div>
 </template>
 
 <style scoped>
 .sr-short {
   width: 8rem;
+}
+
+/* On large screens, the previews sit beside the form and stay in view while
+   scrolling it. */
+@media (width >= 1408px) {
+  .sr-panel-editor {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+  }
+
+  .sr-panel-editor > * {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  /* The padding leaves room for the shadows of the boxes, which scrolling
+     would clip; the margin evens it out. */
+  .sr-panel-previews {
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 2rem);
+    padding: 1rem;
+    margin: -1rem;
+    overflow-y: auto;
+  }
 }
 </style>
