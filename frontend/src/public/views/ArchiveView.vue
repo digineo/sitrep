@@ -61,7 +61,7 @@ useHead({
   title: computed(() => siteData.value
     ? t("page.title", {
       view: t("incidents.all"),
-      site: siteData.value.site.name,
+      site: t("page.site", { site: siteData.value.site.name }),
     })
     : ""),
 })

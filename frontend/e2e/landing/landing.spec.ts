@@ -116,7 +116,7 @@ test("promotes a status page to start page", async({ page }) => {
   )).toBeVisible()
 
   await page.goto("/")
-  await expect(page).toHaveTitle(`${slug} en`)
+  await expect(page).toHaveTitle(`${slug} en · Status`)
   await expect(page.getByRole("heading", {
     level: 1,
     name:  `${slug} en`,

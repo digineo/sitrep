@@ -69,7 +69,7 @@ test("creates a status page with panels and shows it", async({ page }) => {
   ).toBeVisible()
 
   await page.goto(`/${slug}/`)
-  await expect(page).toHaveTitle("Shop")
+  await expect(page).toHaveTitle("Shop · Status")
   await expect(page.getByRole("heading", {
     level: 1,
     name:  "Shop",

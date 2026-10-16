@@ -27,7 +27,7 @@ test("sets the legal pages of a status page", async({ page }) => {
     .toHaveAttribute("href", `${stub}/api/v1/status/flags`)
   await footer.getByRole("link", { name: "Imprint" }).click()
   await expect(page).toHaveURL(`/${slug}/en/imprint`)
-  await expect(page).toHaveTitle(`Imprint · ${slug} en`)
+  await expect(page).toHaveTitle(`Imprint · ${slug} en · Status`)
   await expect(page.getByRole("heading", {
     level: 2,
     name:  "Imprint",

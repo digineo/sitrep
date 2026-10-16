@@ -28,7 +28,7 @@ const { value: page, error } = useLoad(
 )
 const title = computed(() => t(`legal.${kind.value}.title`))
 const owner = computed(() => site
-  ? siteData.value?.site.name ?? unavailable.value?.name ?? ""
+  ? t("page.site", { site: siteData.value?.site.name ?? unavailable.value?.name ?? "" })
   : t("page.landing"))
 useHead({
   title: computed(() => t("page.title", {

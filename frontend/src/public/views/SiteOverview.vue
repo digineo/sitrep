@@ -12,7 +12,11 @@ import { pagePath } from "../urls"
 
 const { t, locale } = useI18n()
 const bootstrap = inject<Bootstrap>("bootstrap")!
-useHead({ title: computed(() => siteData.value?.site.name ?? "") })
+useHead({
+  title: computed(() => siteData.value
+    ? t("page.site", { site: siteData.value.site.name })
+    : ""),
+})
 
 const incidentLink = (id: string) => pagePath(
   {

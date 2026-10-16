@@ -34,12 +34,15 @@ const overview = computed(() => pagePath({ kind: "overview" }, locale.value, mul
 useHead({
   title: computed(() => {
     const view = notFound.value ? t("incidents.notFound") : incident.value?.title
-    return view && siteData.value
+    const site = siteData.value
+      ? t("page.site", { site: siteData.value.site.name })
+      : ""
+    return view && site
       ? t("page.title", {
         view,
-        site: siteData.value.site.name,
+        site,
       })
-      : siteData.value?.site.name ?? ""
+      : site
   }),
 })
 </script>

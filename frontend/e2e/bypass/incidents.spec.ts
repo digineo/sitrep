@@ -94,7 +94,7 @@ test("opens, updates and resolves an incident", async({ page }) => {
     level: 2,
     name:  "Database outage",
   })).toBeVisible()
-  await expect(page).toHaveTitle(`Database outage · ${slug} en`)
+  await expect(page).toHaveTitle(`Database outage · ${slug} en · Status`)
 
   await page.goto(`/admin/sites/${site.id}/incidents`)
   await page.getByRole("link", { name: /Database outage/ }).click()

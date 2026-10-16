@@ -17,6 +17,7 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - On large screens, the previews of the panel editor and their buttons sit
   beside the form and stay in view while scrolling it.
+- The titles of status pages end in "· Status".
 
 ## [0.2.1] - 2026-10-12
 
