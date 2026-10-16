@@ -327,6 +327,24 @@
     "primary": "Primär",
     "missing": "Fehlt"
   },
+  "colorPicker": {
+    "auto": "Automatisch",
+    "custom": "Benutzerdefiniert",
+    "customValue": "Benutzerdefiniert, {color}",
+    "hues": {
+      "blue": "Blau",
+      "amber": "Bernstein",
+      "green": "Grün",
+      "magenta": "Magenta",
+      "cyan": "Türkis",
+      "violet": "Violett"
+    },
+    "shades": {
+      "dark": "{hue}, dunkel",
+      "base": "{hue}",
+      "light": "{hue}, hell"
+    }
+  },
   "dataSources": {
     "title": "Datenquellen",
     "new": "Neue Datenquelle",

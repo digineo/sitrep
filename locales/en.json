@@ -327,6 +327,24 @@
     "primary": "Primary",
     "missing": "Missing"
   },
+  "colorPicker": {
+    "auto": "Automatic",
+    "custom": "Custom",
+    "customValue": "Custom, {color}",
+    "hues": {
+      "blue": "Blue",
+      "amber": "Amber",
+      "green": "Green",
+      "magenta": "Magenta",
+      "cyan": "Cyan",
+      "violet": "Violet"
+    },
+    "shades": {
+      "dark": "{hue}, dark",
+      "base": "{hue}",
+      "light": "{hue}, light"
+    }
+  },
   "dataSources": {
     "title": "Data sources",
     "new": "New data source",
