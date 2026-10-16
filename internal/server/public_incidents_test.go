@@ -214,7 +214,7 @@ func TestPublicIncidents(t *testing.T) {
 
 	w = f.get("status.example.com", "/shop/de/incidents/"+old.ID)
 	assert.Equal(http.StatusOK, w.Code)
-	assert.Contains(w.Body.String(), "<title>Alt · Site de</title>")
+	assert.Contains(w.Body.String(), "<title>Alt · Site de · Status</title>")
 	assert.Contains(w.Body.String(), `<link rel="alternate" type="application/atom+xml" href="http://status.example.com/shop/de/feed.atom">`)
 	for _, path := range []string{
 		"/shop/de/incidents/" + uuid.NewV7().String(),

@@ -65,7 +65,7 @@ func TestLegalShells(t *testing.T) {
 	require.Equal(http.StatusOK, w.Code)
 	assert.Contains(
 		w.Body.String(),
-		"<title>Impressum · Site de</title>",
+		"<title>Impressum · Site de · Status</title>",
 		"inherited",
 	)
 	assert.Contains(
@@ -99,7 +99,7 @@ func TestLegalShells(t *testing.T) {
 	)
 	w = f.get("status.example.com", "/shop/en/privacy")
 	assert.Equal(http.StatusNotFound, w.Code)
-	assert.Contains(w.Body.String(), "<title>Page not found · Site en</title>")
+	assert.Contains(w.Body.String(), "<title>Page not found · Site en · Status</title>")
 
 	w = f.get("status.example.com", "/de/impressum")
 	require.Equal(http.StatusOK, w.Code)

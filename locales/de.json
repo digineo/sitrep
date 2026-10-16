@@ -18,6 +18,7 @@
   },
   "page": {
     "title": "{view} · {site}",
+    "site": "{site} · Status",
     "notFound": "Seite nicht gefunden",
     "landing": "Statusseiten",
     "admin": "SitRep-Verwaltung",

@@ -379,8 +379,10 @@ func (s *Server) serveSite(
 		return
 	}
 
-	name := site.Name.Resolve(res.lang, langs)
 	c := i18n.Get(res.lang)
+	name := c.T("page.site", map[string]string{
+		"site": site.Name.Resolve(res.lang, langs),
+	})
 	status := http.StatusOK
 	title := ""
 	legal := res.page.kind == pageImprint || res.page.kind == pagePrivacy

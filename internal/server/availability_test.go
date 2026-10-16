@@ -41,7 +41,7 @@ func TestUnavailableSite(t *testing.T) {
 			} {
 				w := f.get("status.example.com", path)
 				assert.Equal(http.StatusServiceUnavailable, w.Code, path)
-				assert.Contains(w.Body.String(), "<title>Site en</title>", path)
+				assert.Contains(w.Body.String(), "<title>Site en · Status</title>", path)
 				assert.NotContains(w.Body.String(), "application/atom+xml", path)
 				assert.Equal("site", parseBootstrap(t, w.Body.String()).Mode)
 			}
