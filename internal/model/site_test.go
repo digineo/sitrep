@@ -221,11 +221,13 @@ func TestSiteBranding(t *testing.T) {
 	s := validSite()
 	s.BrandColor = " #A0B1C2 "
 	s.Logo = "\n<!-- logo --><svg xmlns=\"http://www.w3.org/2000/svg\" onload=\"x()\"><script/><rect/></svg>\n"
+	s.LogoOnly = true
 	s.Normalize()
 	require.NoError(s.Validate(bases))
 	assert.Equal("#a0b1c2", s.BrandColor)
 	want := `<svg xmlns="http://www.w3.org/2000/svg"><rect></rect></svg>`
 	assert.Equal(want, s.Logo, "sanitized on save")
+	assert.True(s.LogoOnly)
 
 	s.Logo = "<svg xmlns=\"http://www.w3.org/2000/svg\"><path d=\"" +
 		strings.Repeat("M", 70000) + "\"/></svg>"
@@ -236,6 +238,7 @@ func TestSiteBranding(t *testing.T) {
 	s.Logo = "  "
 	s.Normalize()
 	assert.Empty(s.Logo)
+	assert.False(s.LogoOnly, "nothing to show without a logo")
 }
 
 func TestSiteAvailability(t *testing.T) {

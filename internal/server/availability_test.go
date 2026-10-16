@@ -29,6 +29,7 @@ func TestUnavailableSite(t *testing.T) {
 			site.Availability = availability
 			site.BrandColor = "#112233"
 			site.Logo = testLogo
+			site.LogoOnly = true
 			site.AllowedOrigins = []string{"https://www.example.com"}
 			put := f.admin(http.MethodPut, "/api/admin/sites/"+id, site)
 			require.Equal(http.StatusOK, put.Code)
@@ -76,6 +77,7 @@ func TestUnavailableSite(t *testing.T) {
 				Theme:      "system",
 				BrandColor: "#112233",
 				Logo:       logoURL(&site),
+				LogoOnly:   true,
 				Legal: legalLinks{
 					Imprint: &legalLink{Mode: "text"},
 					Privacy: &legalLink{

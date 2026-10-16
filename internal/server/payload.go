@@ -36,6 +36,7 @@ type siteBasics struct {
 	Theme      string     `json:"theme"` // the effective default
 	BrandColor string     `json:"brandColor,omitempty"`
 	Logo       string     `json:"logo,omitempty"` // URL
+	LogoOnly   bool       `json:"logoOnly,omitempty"`
 	Legal      legalLinks `json:"legal"`
 	Languages  []string   `json:"languages"`
 }
@@ -51,6 +52,7 @@ func newSiteBasics(
 		Theme:      site.Theme,
 		BrandColor: site.BrandColor,
 		Logo:       logoURL(site),
+		LogoOnly:   site.LogoOnly,
 		Legal:      newLegalLinks(site, settings, lang),
 		Languages:  langs.Enabled,
 	}

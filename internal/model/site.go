@@ -75,8 +75,10 @@ type Site struct {
 	// BrandColor colors the header and footer of the site, as "#rrggbb".
 	BrandColor string `json:"brandColor,omitempty" yaml:"brandColor,omitempty"`
 	// Logo is the sanitized SVG source of the site's logo.
-	Logo  string `json:"logo,omitempty" yaml:"logo,omitempty"`
-	Legal Legal  `json:"legal" yaml:"legal"`
+	Logo string `json:"logo,omitempty" yaml:"logo,omitempty"`
+	// LogoOnly shows the logo in place of the name in the header.
+	LogoOnly bool  `json:"logoOnly" yaml:"logoOnly,omitempty"`
+	Legal    Legal `json:"legal" yaml:"legal"`
 	// AllowedOrigins may read incidents.json from other sites (CORS).
 	AllowedOrigins []string `json:"allowedOrigins" yaml:"allowedOrigins"`
 	// IncidentRetentionDays deletes finished incidents that long after
@@ -102,9 +104,10 @@ func (s *Site) Online() bool {
 }
 
 // Normalize trims the texts, fills defaults, drops the fields the route
-// and legal page modes do not use, sanitizes the logo and writes allowed
-// origins in canonical form, without blank entries and duplicates. A logo
-// that cannot be sanitized stays as it is, for Validate to report.
+// and legal page modes do not use, sanitizes the logo, drops LogoOnly
+// without a logo and writes allowed origins in canonical form, without
+// blank entries and duplicates. A logo that cannot be sanitized stays as it
+// is, for Validate to report.
 func (s *Site) Normalize() {
 	s.Name = s.Name.Normalize()
 	s.BrandColor = strings.ToLower(strings.TrimSpace(s.BrandColor))
@@ -112,6 +115,7 @@ func (s *Site) Normalize() {
 	if logo, code := SanitizeLogo(s.Logo); code == "" {
 		s.Logo = logo
 	}
+	s.LogoOnly = s.LogoOnly && s.Logo != ""
 
 	s.Legal = s.Legal.normalize(LegalInherit)
 
