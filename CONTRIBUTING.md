@@ -112,3 +112,18 @@ Secret fields are encrypted by the core; the type receives them in plain
 text when it evaluates or tests. A change of any `url` field discards the
 stored secrets, so the type can rely on a secret only ever going to the URL
 it was entered for.
+
+## Releasing
+
+Note changes in the `Unreleased` section of the [CHANGELOG](CHANGELOG.md),
+then run on a clean, up-to-date `main` (with Python 3.11+ and a git signing
+key):
+
+```sh
+scripts/release.py 0.3.0
+```
+
+This shows the CHANGELOG diff which moves the unreleased entries into a
+section for 0.3.0, and asks before it commits that to `main`, tags it as
+a signed `v0.3.0`, and pushes both. CI then publishes the image for the
+tag.
