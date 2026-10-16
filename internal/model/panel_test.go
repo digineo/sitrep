@@ -35,6 +35,12 @@ func TestPanelNormalize(t *testing.T) {
 		Style:   "area",
 		MinZero: true,
 		Legend:  Text{"en": "{{job}}"},
+		Overrides: []Override{{
+			Label: "job",
+			Value: "api",
+			Unit:  Text{"en": " req/min ", "de": " "},
+			Color: " #AABBCC ",
+		}},
 	}
 	common := Panel{
 		ID:         "id",
@@ -78,6 +84,13 @@ func TestPanelNormalize(t *testing.T) {
 	want.Decimals = intPtr(3)
 	want.Unit = Text{"en": "ms"}
 	want.Legend = Text{"en": "{{job}}"}
+	want.Overrides = []Override{{
+		Label: "job",
+		Value: "api",
+		Unit:  Text{"en": "req/min"},
+		Axis:  "left",
+		Color: "#aabbcc",
+	}}
 	assert.Equal(want, ts)
 
 	defaults := Panel{Type: PanelStat}
@@ -158,6 +171,38 @@ func TestPanelValidate(t *testing.T) {
 		{"step too short", PanelTimeseries, func(p *Panel) { p.Step = "0s" }, map[string]string{"step": "out_of_range"}},
 		{"style", PanelTimeseries, func(p *Panel) { p.Style = "bars" }, map[string]string{"style": "invalid_value"}},
 		{"legend", PanelTimeseries, func(p *Panel) { p.Legend = Text{"en": strings.Repeat("x", 201)} }, map[string]string{"legend.en": "too_long"}},
+		{"override", PanelTimeseries, func(p *Panel) {
+			p.Overrides = []Override{{Label: "job", Decimals: 6, Axis: "right", Color: "#2f6feb"}}
+		}, nil},
+		{"invalid override", PanelTimeseries, func(p *Panel) {
+			p.Overrides = []Override{
+				{Label: "job", Axis: "left"},
+				{
+					Label:    "1job",
+					Value:    strings.Repeat("x", 201),
+					Unit:     Text{"en": strings.Repeat("x", 33)},
+					Decimals: 7,
+					Axis:     "top",
+					Color:    "blue",
+				},
+				{Decimals: -1, Axis: "left"},
+			}
+		}, map[string]string{
+			"overrides[1].label":    "invalid_value",
+			"overrides[1].value":    "too_long",
+			"overrides[1].unit.en":  "too_long",
+			"overrides[1].decimals": "out_of_range",
+			"overrides[1].axis":     "invalid_value",
+			"overrides[1].color":    "invalid_value",
+			"overrides[2].label":    "required",
+			"overrides[2].decimals": "out_of_range",
+		}},
+		{"too many overrides", PanelTimeseries, func(p *Panel) {
+			p.Overrides = make([]Override, 21)
+			for i := range p.Overrides {
+				p.Overrides[i] = Override{Label: "job", Axis: "left"}
+			}
+		}, map[string]string{"overrides": "too_long"}},
 	}
 	for _, tt := range tests {
 		p := valid(tt.typ)
@@ -168,4 +213,17 @@ func TestPanelValidate(t *testing.T) {
 	p := valid(PanelStat)
 	p.Title = nil
 	assert.NoError(t, p.Validate(langs, false), "previews need no title")
+}
+
+func TestPanelOverride(t *testing.T) {
+	assert := assert.New(t)
+
+	p := Panel{Overrides: []Override{
+		{Label: "job", Value: "api", Decimals: 1},
+		{Label: "job", Value: "api", Decimals: 2},
+		{Label: "env", Value: "", Decimals: 3},
+	}}
+	assert.Equal(&p.Overrides[0], p.Override(map[string]string{"job": "api"}), "the first match wins")
+	assert.Equal(&p.Overrides[2], p.Override(map[string]string{"job": "web"}), "a missing label is empty")
+	assert.Nil(p.Override(map[string]string{"job": "web", "env": "prod"}))
 }

@@ -3,6 +3,7 @@ package model
 import (
 	"cmp"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -33,11 +34,14 @@ var (
 	thresholdOps    = []string{"<", "<=", ">", ">=", "==", "!="}
 	thresholdStates = []string{StateOperational, StateDegraded, StateDown}
 	styles          = []string{"line", "area"}
+	axes            = []string{"left", "right"}
+	labelName       = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 )
 
 // Limits of panel options.
 const (
 	maxThresholds = 20
+	maxOverrides  = 20
 	maxDecimals   = 6
 	maxPoints     = 11000 // range / step
 )
@@ -71,6 +75,8 @@ type Panel struct {
 	Style   string `json:"style,omitempty" yaml:"style,omitempty"`
 	MinZero bool   `json:"minZero,omitempty" yaml:"minZero,omitempty"`
 	Legend  Text   `json:"legend,omitempty" yaml:"legend,omitempty"`
+	// timeseries; the first matching override applies
+	Overrides []Override `json:"overrides,omitempty" yaml:"overrides,omitempty"`
 }
 
 // Threshold maps values matching "value <op> Value" to State.
@@ -97,6 +103,27 @@ func (t Threshold) Matches(v float64) bool {
 		return v != t.Value
 	}
 	return false
+}
+
+// Override sets the presentation of the series whose label Label has the
+// value Value. A missing label has the empty value.
+type Override struct {
+	Label    string `json:"label"`
+	Value    string `json:"value"`
+	Unit     Text   `json:"unit,omitempty" yaml:"unit,omitempty"`
+	Decimals int    `json:"decimals"`
+	Axis     string `json:"axis"`                                   // left or right
+	Color    string `json:"color,omitempty" yaml:"color,omitempty"` // "#rrggbb", empty for the palette's
+}
+
+// Override returns the first override matching a series' labels, or nil.
+func (p *Panel) Override(labels map[string]string) *Override {
+	for i, o := range p.Overrides {
+		if labels[o.Label] == o.Value {
+			return &p.Overrides[i]
+		}
+	}
+	return nil
 }
 
 // Normalize trims texts, fills defaults, writes durations in canonical form
@@ -131,6 +158,12 @@ func (p *Panel) Normalize() {
 		p.Decimals = orDefault(o.Decimals, 2)
 		p.Unit = o.Unit.Normalize()
 		p.Legend = o.Legend.Normalize()
+		for _, ov := range o.Overrides {
+			ov.Unit = ov.Unit.Normalize()
+			ov.Axis = cmp.Or(ov.Axis, "left")
+			ov.Color = strings.ToLower(strings.TrimSpace(ov.Color))
+			p.Overrides = append(p.Overrides, ov)
+		}
 	}
 }
 
@@ -210,6 +243,37 @@ func (p *Panel) Validate(l Languages, requireTitle bool) error {
 	}
 
 	validateText(&f, "legend", p.Legend, l, false, maxLegend)
+
+	if len(p.Overrides) > maxOverrides {
+		f.Add("overrides", apierr.TooLong)
+	}
+
+	for i, o := range p.Overrides {
+		path := fmt.Sprintf("overrides[%d]", i)
+		switch {
+		case o.Label == "":
+			f.Add(path+".label", apierr.Required)
+		case !labelName.MatchString(o.Label):
+			f.Add(path+".label", apierr.InvalidValue)
+		}
+
+		if utf8.RuneCountInString(o.Value) > maxLegend {
+			f.Add(path+".value", apierr.TooLong)
+		}
+
+		validateText(&f, path+".unit", o.Unit, l, false, maxUnit)
+		if o.Decimals < 0 || o.Decimals > maxDecimals {
+			f.Add(path+".decimals", apierr.OutOfRange)
+		}
+
+		if !slices.Contains(axes, o.Axis) {
+			f.Add(path+".axis", apierr.InvalidValue)
+		}
+
+		if o.Color != "" && !colorPattern.MatchString(o.Color) {
+			f.Add(path+".color", apierr.InvalidValue)
+		}
+	}
 	return f.Err()
 }
 
