@@ -219,9 +219,14 @@ func panelData(
 			times[i] = t.Unix()
 		}
 
+		// Unit, Decimals, Axis and Color are those of the matching override.
 		type series struct {
-			Name   string     `json:"name"`
-			Values []*float64 `json:"values"`
+			Name     string     `json:"name"`
+			Values   []*float64 `json:"values"`
+			Unit     *string    `json:"unit,omitempty"`
+			Decimals *int       `json:"decimals,omitempty"`
+			Axis     string     `json:"axis,omitempty"`
+			Color    string     `json:"color,omitempty"`
 		}
 
 		names := d.Names(p, lang, l)
@@ -230,6 +235,13 @@ func panelData(
 			out[i] = series{
 				Name:   names[i],
 				Values: s.Values,
+			}
+			if o := p.Override(s.Labels); o != nil {
+				unit := o.Unit.Resolve(lang, l)
+				out[i].Unit = &unit
+				out[i].Decimals = &o.Decimals
+				out[i].Axis = o.Axis
+				out[i].Color = o.Color
 			}
 		}
 		return map[string]any{

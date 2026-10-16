@@ -728,11 +728,25 @@ func TestPanelAPI(t *testing.T) {
 	assert.Equal(int64(2), p.Revision)
 	assert.Equal(1, p.Order)
 
+	f.createPanel(site, obj{
+		"type": "timeseries",
+		"title": obj{
+			"en": "C",
+			"de": "C",
+		},
+		"datasource": ds,
+		"query":      "1",
+		"range":      "1h",
+		"overrides": []obj{{
+			"label": "name",
+			"unit":  obj{"en": "req/min"},
+		}},
+	})
 	w = f.admin(http.MethodGet, "/api/admin/sites", nil)
 	sites := decode[[]siteSummary](t, w, http.StatusOK)
 	for _, s := range sites {
 		if s.ID == site {
-			assert.Equal(1, s.Missing, "panel A lacks German")
+			assert.Equal(2, s.Missing, "panel A and the override of C lack German")
 		}
 	}
 
@@ -924,6 +938,15 @@ func TestPublicPayload(t *testing.T) {
 		"refresh":    "1d",
 		"range":      "2h",
 		"legend":     obj{"en": "{{ name }}"},
+		"unit":       obj{"en": "ms"},
+		"overrides": []obj{{
+			"label":    "name",
+			"value":    "series-1",
+			"unit":     obj{"de": "Anfragen/min"},
+			"decimals": 0,
+			"axis":     "right",
+			"color":    "#a27303",
+		}},
 	})
 
 	f.awaitFresh(site)
@@ -955,6 +978,7 @@ func TestPublicPayload(t *testing.T) {
 				ID:       chart,
 				Type:     "timeseries",
 				Title:    "Load",
+				Unit:     "ms",
 				Decimals: &two,
 				Style:    "line",
 				Range:    7200,
@@ -972,11 +996,15 @@ func TestPublicPayload(t *testing.T) {
 			"values": []any{1.0, 1.0, 1.0},
 		},
 		obj{
-			"name":   "series-1",
-			"values": []any{2.0, 2.0, 2.0},
+			"name":     "series-1",
+			"values":   []any{2.0, 2.0, 2.0},
+			"unit":     "Anfragen/min",
+			"decimals": 0.0,
+			"axis":     "right",
+			"color":    "#a27303",
 		},
 	}
-	assert.Equal(series, data["series"])
+	assert.Equal(series, data["series"], "overrides match by label")
 	assert.Empty(p.Panels[stat].Error)
 
 	p, _ = f.publicPayload(site, "?lang=fr")

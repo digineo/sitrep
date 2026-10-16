@@ -144,7 +144,12 @@ func (s *Server) listSites(w http.ResponseWriter, r *http.Request) {
 		}
 
 		for _, p := range panels[site.ID] {
-			if missing(langs, p.Title, p.Description, p.Unit, p.Legend) {
+			texts := []model.Text{p.Title, p.Description, p.Unit, p.Legend}
+			for _, o := range p.Overrides {
+				texts = append(texts, o.Unit)
+			}
+
+			if missing(langs, texts...) {
 				sum.Missing++
 			}
 		}

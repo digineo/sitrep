@@ -118,6 +118,20 @@ func (f *fixture) fullSite(main, instant string) string {
 		"decimals":   3,
 		"unit":       obj{"en": "%"},
 		"legend":     obj{"en": "{{ instance }}"},
+		"overrides": []obj{
+			{
+				"label":    "instance",
+				"value":    "db",
+				"unit":     obj{"en": "req/min"},
+				"decimals": 0,
+				"axis":     "right",
+				"color":    "#a27303",
+			},
+			{
+				"label":    "instance",
+				"decimals": 1,
+			},
+		},
 	})
 	return id
 }
