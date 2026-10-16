@@ -54,6 +54,8 @@ export interface Site {
   brandColor?:           string
   /** logo is the sanitized SVG source of the logo. */
   logo?:                 string
+  /** logoOnly shows the logo in place of the name in the header. */
+  logoOnly:              boolean
   legal:                 Legal
   allowedOrigins:        string[]
   /**

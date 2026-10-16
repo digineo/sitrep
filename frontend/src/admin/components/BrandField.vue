@@ -20,6 +20,7 @@ const color = defineModel<string | undefined>("color", { required: true })
  * upload.
  */
 const logo = defineModel<string | undefined>("logo", { required: true })
+const logoOnly = defineModel<boolean>("logoOnly", { required: true })
 
 const { t } = useI18n()
 const fileId = useId()
@@ -118,6 +119,16 @@ async function upload(event: Event) {
       >
         {{ t("brand.remove") }}
       </SRButton>
+      <label
+          v-if="logo"
+          class="checkbox"
+      >
+        <input
+            v-model="logoOnly"
+            type="checkbox"
+        >
+        {{ t("brand.logoOnly") }}
+      </label>
     </div>
     <p
         :id="`${fileId}-help`"
@@ -145,13 +156,22 @@ async function upload(event: Event) {
         :style="band"
     >
       <img
-          v-if="logoURL"
+          v-if="logoURL && !logoOnly"
           :src="logoURL"
           alt=""
           class="sr-logo"
       >
       <div>
-        <p class="title is-4 mb-1">
+        <img
+            v-if="logoURL && logoOnly"
+            :src="logoURL"
+            :alt="name"
+            class="sr-logo mb-1"
+        >
+        <p
+            v-else
+            class="title is-4 mb-1"
+        >
           {{ name }}
         </p>
         <p class="sr-band-muted">
@@ -196,6 +216,7 @@ async function upload(event: Event) {
 }
 
 .sr-logo {
+  display: block;
   width: auto;
   max-width: 12rem;
   height: 3.25rem;

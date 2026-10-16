@@ -587,6 +587,7 @@
     "logoHelp": "An SVG file of at most 64 KiB. It is sanitized when saved: scripts, links and external resources are removed.",
     "upload": "Upload SVG file",
     "remove": "Remove logo",
+    "logoOnly": "Show the logo instead of the name",
     "preview": "Preview of the header"
   },
   "legalPage": {

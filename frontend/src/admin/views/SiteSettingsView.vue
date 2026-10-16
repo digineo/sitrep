@@ -236,6 +236,7 @@ async function remove() {
     <BrandField
         v-model:color="form.brandColor"
         v-model:logo="form.logo"
+        v-model:logo-only="form.logoOnly"
         :name="title"
         :errors
     />

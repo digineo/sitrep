@@ -62,6 +62,34 @@ test("brands the header with a color and a logo", async({ page }) => {
   await expect(preview).toHaveCount(0)
 })
 
+test("shows the logo instead of the name", async({ page }) => {
+  await signIn(page)
+  const slug = unique("logoonly")
+  const site = await createSite(page, slug)
+  await page.goto(`/admin/sites/${site.id}/settings`)
+  const logoOnly = page.getByRole("checkbox", {
+    name: "Show the logo instead of the name",
+  })
+  await expect(logoOnly).toHaveCount(0)
+  await page.getByLabel("Upload SVG file").setInputFiles({
+    name:     "logo.svg",
+    mimeType: "image/svg+xml",
+    buffer:   Buffer.from(logo),
+  })
+  await logoOnly.check()
+  await expect(page.locator(".sr-preview").getByRole("img"))
+    .toHaveAccessibleName(`${slug} en`)
+  await page.getByRole("button", { name: "Save" }).click()
+  await expect(page.getByText("Status page saved.")).toBeVisible()
+
+  await page.goto(`/${slug}/`)
+  await expect(page).toHaveTitle(`${slug} en · Status`)
+  const heading = page.getByRole("heading", { level: 1 })
+  await expect(heading).toHaveAccessibleName(`${slug} en`)
+  await expect(heading.getByRole("img")).toBeVisible()
+  await expect(page.getByRole("banner").locator("img")).toHaveCount(1)
+})
+
 test("rejects a logo that is not an SVG image", async({ page }) => {
   await signIn(page)
   const site = await createSite(page, unique("nologo"))

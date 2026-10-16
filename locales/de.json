@@ -587,6 +587,7 @@
     "logoHelp": "Eine SVG-Datei mit höchstens 64 KiB. Sie wird beim Speichern bereinigt: Skripte, Links und externe Ressourcen werden entfernt.",
     "upload": "SVG-Datei hochladen",
     "remove": "Logo entfernen",
+    "logoOnly": "Logo statt des Namens anzeigen",
     "preview": "Vorschau des Kopfbereichs"
   },
   "legalPage": {

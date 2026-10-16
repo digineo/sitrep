@@ -12,6 +12,7 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   right axis next to response times. Charts with two axes name the series
   above each axis. The color picker offers a dark, a base and a light shade
   of each palette hue, and custom colors.
+- A status page can show its logo in place of its name in the header.
 
 ### Changed
 
