@@ -19,6 +19,11 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   beside the form and stay in view while scrolling it.
 - The titles of status pages end in "· Status".
 
+### Fixed
+
+- The title of a status page's not-found page names the status page, not
+  the landing page.
+
 ## [0.2.1] - 2026-10-12
 
 ### Changed

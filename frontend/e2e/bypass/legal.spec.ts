@@ -73,6 +73,7 @@ test("hides legal pages in mode none", async({ page }) => {
     level: 1,
     name:  "Page not found",
   })).toBeVisible()
+  await expect(page).toHaveTitle(`Page not found · ${slug} en · Status`)
 
   const none = unique("none")
   const other = await createSite(page, none)

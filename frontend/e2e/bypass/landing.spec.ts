@@ -49,6 +49,7 @@ test("answers unknown paths with a not-found view", async({ page }) => {
     level: 1,
     name:  "Page not found",
   })).toBeVisible()
+  await expect(page).toHaveTitle("Page not found · Status pages")
   await page.getByRole("link", { name: "Back to the overview" }).click()
   await expect(page).toHaveURL("/en/")
 })

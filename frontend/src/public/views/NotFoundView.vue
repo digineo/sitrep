@@ -4,6 +4,7 @@ import { computed, inject } from "vue"
 import { useI18n } from "vue-i18n"
 
 import { type Bootstrap } from "../../shared/bootstrap"
+import { siteData, unavailable } from "../siteData"
 import { pagePath } from "../urls"
 
 const { t, locale } = useI18n()
@@ -11,7 +12,9 @@ const bootstrap = inject<Bootstrap>("bootstrap")!
 useHead({
   title: computed(() => t("page.title", {
     view: t("page.notFound"),
-    site: t("page.landing"),
+    site: bootstrap.mode === "site"
+      ? t("page.site", { site: siteData.value?.site.name ?? unavailable.value?.name ?? "" })
+      : t("page.landing"),
   })),
 })
 const multi = bootstrap.languages.length > 1
