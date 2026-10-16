@@ -123,6 +123,17 @@ export interface Threshold {
   state: "operational" | "degraded" | "down"
 }
 
+/** Override sets the options of the series whose label has the value. */
+export interface Override {
+  label:    string
+  value:    string
+  unit?:    Text
+  decimals: number
+  axis:     "left" | "right"
+  /** color is "#rrggbb"; without, the series takes the palette's. */
+  color?:   string
+}
+
 export interface Panel {
   id?:          string
   type:         PanelType
@@ -140,6 +151,7 @@ export interface Panel {
   style?:       "line" | "area"
   minZero?:     boolean
   legend?:      Text
+  overrides?:   Override[]
 }
 
 export interface Field {

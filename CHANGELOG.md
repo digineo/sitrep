@@ -5,6 +5,14 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Overrides for chart series: series whose label has a given value get
+  their own unit, decimals, axis and color, e.g. requests per minute on a
+  right axis next to response times. Charts with two axes name the series
+  above each axis. The color picker offers a dark, a base and a light shade
+  of each palette hue, and custom colors.
+
 ## [0.2.1] - 2026-10-12
 
 ### Changed

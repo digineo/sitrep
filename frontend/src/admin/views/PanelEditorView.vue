@@ -17,6 +17,7 @@ import TimeseriesPanel from "../../shared/panels/TimeseriesPanel.vue"
 import type { PanelData, PanelInfo, Warning } from "../../shared/payload"
 import { api, errorCode, fieldErrors, localizedErrors } from "../api"
 import JsonTree from "../components/JsonTree.vue"
+import OverridesField from "../components/OverridesField.vue"
 import QueryEditor from "../components/QueryEditor.vue"
 import ThresholdsField from "../components/ThresholdsField.vue"
 import { usePageTitle } from "../composables/usePageTitle"
@@ -45,6 +46,7 @@ const form = ref<Panel>({
   datasource: "",
   query:      "",
   thresholds: [],
+  overrides:  [],
 })
 const errors = ref<Record<string, string>>({})
 const saving = ref(false)
@@ -80,6 +82,7 @@ onMounted(async() => {
     if (panelId) {
       form.value = {
         thresholds: [],
+        overrides:  [],
         ...await api<Panel>("GET", `/api/admin/sites/${siteId}/panels/${panelId}`),
       }
     } else if (sources.value.length === 1) {
@@ -139,13 +142,14 @@ function body(): Panel {
     default:
       return {
         ...common,
-        range:   f.range,
-        step:    f.step || undefined,
-        style:   f.style,
-        minZero: f.minZero,
+        range:     f.range,
+        step:      f.step || undefined,
+        style:     f.style,
+        minZero:   f.minZero,
         decimals,
-        unit:    f.unit,
-        legend:  f.legend,
+        unit:      f.unit,
+        legend:    f.legend,
+        overrides: f.overrides,
       }
   }
 }
@@ -160,6 +164,7 @@ async function save() {
     const path = `/api/admin/sites/${siteId}/panels`
     form.value = {
       thresholds: [],
+      overrides:  [],
       ...panelId
         ? await api<Panel>("PUT", `${path}/${panelId}`, body())
         : await api<Panel>("POST", path, body()),
@@ -505,6 +510,14 @@ const widgetData = computed<PanelData>(() => ({
         :languages
         :maxlength="200"
         :errors="localizedErrors(errors, 'legend', t)"
+    />
+    <OverridesField
+        v-if="form.type === 'timeseries'"
+        v-model="form.overrides!"
+        :errors
+        :languages
+        :unit="form.unit"
+        :decimals="widget.decimals!"
     />
 
     <div

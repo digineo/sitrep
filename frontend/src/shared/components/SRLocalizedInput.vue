@@ -18,6 +18,8 @@ const props = defineProps<{
   errors?:    Record<string, string | undefined>
   /** hideLabel leaves the label to assistive technology. */
   hideLabel?: boolean
+  /** small shrinks the label and the input, for rows of controls. */
+  small?:     boolean
 }>()
 
 /**
@@ -125,7 +127,7 @@ function attrs(lang: string): Record<string, unknown> {
     <label
         :id="`${id}-label`"
         class="label"
-        :class="{ 'sr-visually-hidden': hideLabel }"
+        :class="{ 'sr-visually-hidden': hideLabel, 'is-small': small }"
         :for="`${id}-${active}`"
     >{{ label }}</label>
     <div
@@ -188,7 +190,7 @@ function attrs(lang: string): Record<string, unknown> {
           :is="multiline ? 'textarea' : 'input'"
           v-else
           v-bind="attrs(lang)"
-          :class="multiline ? 'textarea sr-autogrow' : 'input'"
+          :class="[multiline ? 'textarea sr-autogrow' : 'input', { 'is-small': small }]"
           :value="value(lang)"
           @input="update(lang, ($event.target as HTMLInputElement).value)"
       />
