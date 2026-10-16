@@ -1,5 +1,5 @@
 import { severityColors } from "./incidents"
-import type { SeriesData, Span } from "./payload"
+import type { Axis, SeriesData, Span } from "./payload"
 
 /** palette holds the series colors, legible on light and dark backgrounds. */
 export const palette = [
@@ -71,6 +71,41 @@ export function tooltipPosition(
     left: Math.max(0, left),
     top:  Math.max(0, top),
   }
+}
+
+/**
+ * axes returns the y-axes the series use, left first, with the names of
+ * their series. An axis shows the unit its series share, or none if their
+ * units differ; unit is the panel's.
+ */
+export function axes(data: SeriesData, unit = ""): {
+  side:  Axis
+  unit:  string
+  names: string[]
+}[] {
+  return (["left", "right"] as const).flatMap((side) => {
+    const on = data.series.filter(s => (s.axis ?? "left") === side)
+    const units = new Set(on.map(s => s.unit ?? unit))
+    return on.length
+      ? [{
+        side,
+        unit:  units.size === 1 ? [...units][0]! : "",
+        names: on.map(s => s.name),
+      }]
+      : []
+  })
+}
+
+/**
+ * sameLayout reports whether b charts the same series as a on the same
+ * axes in the same colors, so that its data can be updated in place.
+ */
+export function sameLayout(a: SeriesData, b: SeriesData): boolean {
+  return a.series.length === b.series.length && a.series.every((x, i) => {
+    const y = b.series[i]!
+    return x.name === y.name && x.axis === y.axis && x.unit === y.unit
+      && x.color === y.color
+  })
 }
 
 /** toggled returns the hidden series names with name toggled. */

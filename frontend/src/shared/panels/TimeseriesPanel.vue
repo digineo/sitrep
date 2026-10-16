@@ -15,11 +15,13 @@ import { useI18n } from "vue-i18n"
 import { type RouteLocationRaw, useRouter } from "vue-router"
 
 import {
+  axes,
   type Band,
   bands,
   bandsAt,
   fractionDigits,
   latest,
+  sameLayout,
   seriesColor,
   toggled,
   tooltipPosition,
@@ -27,7 +29,7 @@ import {
 } from "../chart"
 import StaleTag from "../components/StaleTag.vue"
 import { formatDateTime, formatNumber, formatRange, formatTick } from "../format"
-import type { PanelData, PanelInfo, SeriesData, Span } from "../payload"
+import type { PanelData, PanelInfo, Series, SeriesData, Span } from "../payload"
 
 const props = defineProps<{
   panel:         PanelInfo
@@ -73,11 +75,21 @@ const hasData = computed(
 )
 const decimals = computed(() => props.panel.decimals ?? 2)
 
-function format(v: number | null | undefined): string {
-  const unit = props.panel.unit ? ` ${props.panel.unit}` : ""
+/** colorOf returns the color of the i-th series x. */
+const colorOf = (x: Series, i: number) => x.color ?? seriesColor(i)
+
+/** yAxes are the y-axes in use, whose names show when there are several. */
+const yAxes = computed(
+  () => series.value ? axes(series.value, props.panel.unit) : [],
+)
+
+/** format formats a value of s with the unit and decimals of s. */
+function format(v: number | null | undefined, s: Series): string {
+  const unit = s.unit ?? props.panel.unit
   return v === null || v === undefined
     ? "-"
-    : formatNumber(v, locale.value, decimals.value) + unit
+    : formatNumber(v, locale.value, s.decimals ?? decimals.value)
+      + (unit ? ` ${unit}` : "")
 }
 
 const summary = computed(() => t("panel.chartSummary", {
@@ -85,7 +97,10 @@ const summary = computed(() => t("panel.chartSummary", {
   range:  formatRange(props.panel.range ?? 0, locale.value),
   values: series.value
     ? latest(series.value)
-      .map((v, i) => `${series.value!.series[i]!.name} ${format(v)}`)
+      .map((v, i) => {
+        const s = series.value!.series[i]!
+        return `${s.name} ${format(v, s)}`
+      })
       .join(", ")
     : "",
 }))
@@ -109,6 +124,8 @@ const axis = {
 function options(s: SeriesData): uPlot.Options {
   const lang = locale.value
   const span = (props.panel.range ?? 0) || (s.times.at(-1)! - s.times[0]!)
+  const range = (_u: uPlot, min: number, max: number) =>
+    yRange(min, max, !!props.panel.minZero)
   return {
     width:  wrapper.value!.clientWidth,
     height: 220,
@@ -128,10 +145,8 @@ function options(s: SeriesData): uPlot.Options {
     },
     tzDate: ts => uPlot.tzDate(new Date(ts * 1000), props.timezone),
     scales: {
-      y: {
-        range: (_u, min, max) =>
-          yRange(min, max, !!props.panel.minZero),
-      },
+      left:  { range },
+      right: { range },
     },
     axes: [
       {
@@ -140,24 +155,27 @@ function options(s: SeriesData): uPlot.Options {
           v => formatTick(new Date(v * 1000), lang, props.timezone, span),
         ),
       },
-      {
+      ...axes(s, props.panel.unit).map(({ side, unit }, i) => ({
         ...axis,
-        size: (_u, values) =>
+        scale: side,
+        side:  side === "left" ? 3 : 1,
+        grid:  i === 0 ? axis.grid : { show: false },
+        size:  (_u: uPlot, values: string[] | undefined) =>
           16 + 7 * Math.max(0, ...(values ?? []).map(v => v.length)),
-        values: (_u, splits) => {
+        values: (_u: uPlot, splits: number[]) => {
           const digits = splits.length > 1
             ? fractionDigits(Math.abs(splits[1]! - splits[0]!))
             : 0
-          const unit = props.panel.unit ? ` ${props.panel.unit}` : ""
-          return splits.map(v => formatNumber(v, lang, digits) + unit)
+          return splits.map(v => formatNumber(v, lang, digits) + (unit ? ` ${unit}` : ""))
         },
-      },
+      })),
     ],
     series: [{}, ...s.series.map((x, i) => ({
       label:    x.name,
-      stroke:   seriesColor(i),
+      scale:    x.axis ?? "left",
+      stroke:   colorOf(x, i),
       width:    2,
-      fill:     props.panel.style === "area" ? `${seriesColor(i)}33` : undefined,
+      fill:     props.panel.style === "area" ? `${colorOf(x, i)}33` : undefined,
       show:     !hidden.value.includes(x.name),
       spanGaps: false,
     }))],
@@ -216,9 +234,9 @@ async function showTooltip(u: uPlot) {
   const rows = s.series.flatMap((x, i) => hidden.value.includes(x.name)
     ? []
     : [{
-      color: seriesColor(i),
+      color: colorOf(x, i),
       name:  x.name,
-      value: format(x.values[idx]),
+      value: format(x.values[idx], x),
     }])
   const incidents = hits.map(b => t("panel.incident", { title: b.title }))
   tooltip.value = {
@@ -264,9 +282,7 @@ function create() {
 // New data of the same series is updated in place, so that an open
 // tooltip and hidden series survive the refresh.
 watch(series, (next, prev) => {
-  const same = plot && next && prev && next.series.length === prev.series.length
-    && next.series.every((x, i) => x.name === prev.series[i]!.name)
-  if (same) {
+  if (plot && next && prev && sameLayout(prev, next)) {
     plot!.setData(aligned(next))
   } else {
     void nextTick(create)
@@ -332,6 +348,15 @@ onBeforeUnmount(() => {
         @mouseleave="tooltip = null"
     >
       <div
+          v-if="yAxes.length > 1"
+          class="sr-axis-names sr-muted"
+      >
+        <span
+            v-for="a in yAxes"
+            :key="a.side"
+        >{{ a.names.join(", ") }}</span>
+      </div>
+      <div
           ref="canvas"
           role="img"
           :aria-label="summary"
@@ -380,7 +405,7 @@ onBeforeUnmount(() => {
       >
         <span
             class="sr-key"
-            :style="{ background: seriesColor(i) }"
+            :style="{ background: colorOf(s, i) }"
         />
         <span>{{ s.name }}</span>
       </button>
@@ -404,6 +429,13 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   height: 220px;
+}
+
+.sr-axis-names {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  font-size: 0.75rem;
 }
 
 .sr-tooltip {

@@ -49,13 +49,23 @@ export interface StatusData {
   state: State
 }
 
+export type Axis = "left" | "right"
+
+/** Series is one line of a chart; a matching override sets its options. */
+export interface Series {
+  name:      string
+  values:    (number | null)[]
+  unit?:     string
+  decimals?: number
+  axis?:     Axis
+  /** color is "#rrggbb"; without, the series takes the palette's. */
+  color?:    string
+}
+
 export interface SeriesData {
   /** times are Unix seconds, shared by all series. */
   times:  number[]
-  series: {
-    name:   string
-    values: (number | null)[]
-  }[]
+  series: Series[]
 }
 
 /** Warning is a hint about a panel's data, e.g. dropped series. */

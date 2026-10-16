@@ -1,16 +1,19 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  axes,
   bands,
   bandsAt,
   fractionDigits,
   latest,
   palette,
+  sameLayout,
   seriesColor,
   toggled,
   tooltipPosition,
   yRange,
 } from "./chart"
+import type { Series, SeriesData } from "./payload"
 
 describe("chart helpers", () => {
   it("starts the y-axis at zero unless values are negative", () => {
@@ -20,6 +23,75 @@ describe("chart helpers", () => {
     expect(yRange(5, 5, false)).toEqual([4.75, 5.25])
     expect(yRange(0, 0, true)).toEqual([0, 0.05])
     expect(yRange(null, null, true)).toEqual([0, 1])
+  })
+
+  it("shows the axes in use with the unit their series share", () => {
+    const data = (...series: Partial<Series>[]): SeriesData => ({
+      times:  [],
+      series: series.map(s => ({
+        name:   "x",
+        values: [],
+        ...s,
+      })),
+    })
+    expect(axes(data({}, { unit: "ms" }), "ms")).toEqual([{
+      side:  "left",
+      unit:  "ms",
+      names: ["x", "x"],
+    }])
+    expect(axes(data({}, { unit: "s" }), "ms")).toEqual([{
+      side:  "left",
+      unit:  "",
+      names: ["x", "x"],
+    }])
+    expect(axes(data(
+      {
+        name: "Requests",
+        axis: "right",
+        unit: "",
+      },
+      {
+        name: "p95",
+        axis: "left",
+        unit: "s",
+      },
+      {
+        name: "p99",
+        unit: "s",
+      },
+    ), "ms")).toEqual([
+      {
+        side:  "left",
+        unit:  "s",
+        names: ["p95", "p99"],
+      },
+      {
+        side:  "right",
+        unit:  "",
+        names: ["Requests"],
+      },
+    ])
+  })
+
+  it("updates series in place only with the same axes, units and colors", () => {
+    const data = (s: Partial<Series>): SeriesData => ({
+      times:  [1],
+      series: [{
+        name:   "a",
+        values: [1],
+        ...s,
+      }],
+    })
+    expect(sameLayout(data({}), data({ values: [2] }))).toBe(true)
+    expect(sameLayout(data({}), data({ decimals: 1 }))).toBe(true)
+    expect(sameLayout(data({}), data({ name: "b" }))).toBe(false)
+    expect(sameLayout(data({}), data({ axis: "right" }))).toBe(false)
+    expect(sameLayout(data({}), data({ unit: "" }))).toBe(false)
+    expect(sameLayout(data({}), data({ color: "#a27303" }))).toBe(false)
+    expect(sameLayout(data({}), {
+      times:  [1],
+      series: [],
+    })).toBe(false)
   })
 
   it("uses as many fraction digits as the tick spacing needs", () => {
