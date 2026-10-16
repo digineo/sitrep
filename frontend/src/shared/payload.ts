@@ -32,6 +32,8 @@ export interface SiteBasics {
   brandColor?: string
   /** logo is the URL of the site's logo. */
   logo?:       string
+  /** logoOnly shows the logo in place of the name in the header. */
+  logoOnly?:   boolean
   legal:       LegalLinks
   languages:   string[]
 }

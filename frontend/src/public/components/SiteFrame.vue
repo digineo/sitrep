@@ -82,7 +82,7 @@ watchEffect(() => {
         <div class="sr-brand">
           <!-- The title links to the overview, too, for keyboards and screen readers. -->
           <RouterLink
-              v-if="site?.logo"
+              v-if="site?.logo && !site.logoOnly"
               :to="overview"
               tabindex="-1"
               aria-hidden="true"
@@ -99,7 +99,15 @@ watchEffect(() => {
                   :to="overview"
                   class="has-text-inherit"
               >
-                {{ site?.name }}
+                <img
+                    v-if="site?.logoOnly"
+                    :src="site.logo"
+                    :alt="site.name"
+                    class="sr-logo"
+                >
+                <template v-else>
+                  {{ site?.name }}
+                </template>
               </RouterLink>
             </h1>
             <p
