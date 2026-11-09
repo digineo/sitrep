@@ -83,6 +83,27 @@ type feedPrevious struct {
 	At, Time, Label, Excerpt string
 }
 
+var teaserContent = template.Must(template.New("teaser").Parse(`<p>{{.Excerpt}}</p>
+<p><a href="{{.Link}}" target="_blank" rel="noopener">{{.Label}}</a></p>
+`))
+
+// postmortemID returns the ID of the incident's postmortem in feeds.
+func postmortemID(incident string) string {
+	return uuidV5(uuid.MustParse(incident), "postmortem").String()
+}
+
+// postmortemTeaser renders an excerpt of the postmortem src with a link to
+// the incident page at link, for feeds that leave out the full text.
+func postmortemTeaser(c *i18n.Catalog, src, link string) (string, error) {
+	var b strings.Builder
+	err := teaserContent.Execute(&b, map[string]string{
+		"Excerpt": markdown.Excerpt(src, maxExcerptLength),
+		"Link":    link,
+		"Label":   c.T("feed.readPostmortem", nil),
+	})
+	return b.String(), err
+}
+
 // updateLabel names what an update set: its status, or else its severity.
 func updateLabel(c *i18n.Catalog, u model.Update) string {
 	if u.Status != "" {
@@ -108,7 +129,7 @@ func formatTime(c *i18n.Catalog, t time.Time, loc *time.Location) string {
 }
 
 // serveFeed answers the Atom feed of a site's public incidents in lang:
-// one entry per update, newest first.
+// one entry per update and per postmortem, newest first.
 func (s *Server) serveFeed(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -134,20 +155,25 @@ func (s *Server) serveFeed(
 
 	type item struct {
 		inc *model.Incident
-		i   int
+		i   int // the update's index, or -1 for the postmortem
+		id  string
+		at  time.Time
 	}
 	var items []item
 	for _, inc := range incidents {
-		if inc.Public(now) {
-			for i := range inc.Updates {
-				items = append(items, item{&inc, i})
-			}
+		if !inc.Public(now) {
+			continue
+		}
+		for i, u := range inc.Updates {
+			items = append(items, item{&inc, i, u.ID, u.At})
+		}
+		if inc.PostmortemAt != nil && inc.Postmortem.Resolve(lang, langs) != "" {
+			items = append(items, item{&inc, -1, postmortemID(inc.ID), *inc.PostmortemAt})
 		}
 	}
 
 	slices.SortStableFunc(items, func(a, b item) int {
-		ua, ub := a.inc.Updates[a.i], b.inc.Updates[b.i]
-		return cmp.Or(ub.At.Compare(ua.At), cmp.Compare(ub.ID, ua.ID))
+		return cmp.Or(b.at.Compare(a.at), cmp.Compare(b.id, a.id))
 	})
 
 	items = items[:min(len(items), maxFeedEntries)]
@@ -172,15 +198,41 @@ func (s *Server) serveFeed(
 		},
 	}
 	if len(items) > 0 {
-		feed.Updated = items[0].inc.Updates[items[0].i].At
+		feed.Updated = items[0].at
 	}
 
 	for _, it := range items {
-		u := it.inc.Updates[it.i]
 		link := url(page{
 			kind: pageIncident,
 			id:   it.inc.ID,
 		})
+		entry := atomEntry{
+			ID:        "urn:uuid:" + it.id,
+			Published: it.at,
+			Updated:   it.at,
+			Link: atomLink{
+				Rel:  "alternate",
+				Type: "text/html",
+				Href: link,
+			},
+			Content: atomContent{Type: "html"},
+		}
+		title := it.inc.Title.Resolve(lang, langs) + ": "
+
+		if it.i < 0 {
+			src := it.inc.Postmortem.Resolve(lang, langs)
+			body, err := postmortemTeaser(c, src, link)
+			if err != nil {
+				httpx.WriteError(w, r, s.log, err)
+				return
+			}
+			entry.Title = title + c.T("incidents.postmortem", nil)
+			entry.Content.Body = body
+			feed.Entries = append(feed.Entries, entry)
+			continue
+		}
+
+		u := it.inc.Updates[it.i]
 		desc := u.Description.Resolve(lang, langs)
 		data := struct {
 			Description              template.HTML
@@ -210,21 +262,9 @@ func (s *Server) serveFeed(
 			return
 		}
 
-		feed.Entries = append(feed.Entries, atomEntry{
-			ID:        "urn:uuid:" + u.ID,
-			Title:     it.inc.Title.Resolve(lang, langs) + ": " + updateLabel(c, u),
-			Published: u.At,
-			Updated:   u.At,
-			Link: atomLink{
-				Rel:  "alternate",
-				Type: "text/html",
-				Href: link,
-			},
-			Content: atomContent{
-				Type: "html",
-				Body: content.String(),
-			},
-		})
+		entry.Title = title + updateLabel(c, u)
+		entry.Content.Body = content.String()
+		feed.Entries = append(feed.Entries, entry)
 	}
 
 	out, err := xml.MarshalIndent(feed, "", "  ")
@@ -239,13 +279,16 @@ func (s *Server) serveFeed(
 	_, _ = w.Write(out)
 }
 
-// serveIncidentsJSON answers the public incidents of a site in lang. Sites
-// listed in the site's allowed origins may read it cross-origin.
+// serveIncidentsJSON answers the public incidents of a site in lang. A
+// postmortem is listed as an update with an excerpt and a link to the
+// incident. Sites listed in the site's allowed origins may read it
+// cross-origin.
 func (s *Server) serveIncidentsJSON(
 	w http.ResponseWriter,
 	r *http.Request,
+	info httpx.Info,
 	site *model.Site,
-	lang string,
+	base, lang string,
 ) {
 	incidents, err := s.db.Incidents(site.ID)
 	if err != nil {
@@ -261,13 +304,31 @@ func (s *Server) serveIncidentsJSON(
 	}
 
 	langs := site.Languages.Effective()
+	multi := len(langs.Enabled) > 1
+	c := i18n.Get(lang)
 	now := time.Now()
 	byActivity(incidents)
 	list := []publicIncident{}
 	for _, inc := range incidents {
-		if inc.Public(now) {
-			list = append(list, newPublicIncident(&inc, lang, langs))
+		if !inc.Public(now) {
+			continue
 		}
+
+		p := newPublicIncident(&inc, lang, langs)
+		if p.Postmortem != nil {
+			link := info.Origin + base + pagePath(page{
+				kind: pageIncident,
+				id:   inc.ID,
+			}, lang, multi)
+			src := inc.Postmortem.Resolve(lang, langs)
+			html, err := postmortemTeaser(c, src, link)
+			if err != nil {
+				httpx.WriteError(w, r, s.log, err)
+				return
+			}
+			p.listPostmortem(html)
+		}
+		list = append(list, p)
 	}
 
 	h.Set("Cache-Control", "public, max-age=60")

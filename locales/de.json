@@ -69,6 +69,7 @@
       "critical": "Kritisch"
     },
     "severityLabel": "Schweregrad: {label}",
+    "postmortem": "Nachbetrachtung",
     "pagination": "Seiten",
     "newer": "Neuere",
     "older": "Ältere",
@@ -506,7 +507,8 @@
   },
   "feed": {
     "previous": "Frühere Meldungen",
-    "view": "Vorfall ansehen"
+    "view": "Vorfall ansehen",
+    "readPostmortem": "Nachbetrachtung lesen"
   },
   "format": {
     "dateTime": "{day}.{month}.{year}, {hour}:{minute} {offset}"

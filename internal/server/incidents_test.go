@@ -3,8 +3,10 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
+	"uuid"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,8 +25,9 @@ func (f *fixture) createIncident(site string, title obj, update obj) incidentVie
 	return decode[incidentView](f.t, w, http.StatusCreated)
 }
 
-// createFinished creates an incident of site that was resolved ago.
-func (f *fixture) createFinished(site string, title obj, ago time.Duration) {
+// createFinished creates an incident of site that was resolved ago and
+// returns it.
+func (f *fixture) createFinished(site string, title obj, ago time.Duration) incidentView {
 	f.t.Helper()
 	inc := f.createIncident(site, title, obj{
 		"status":      "active",
@@ -32,11 +35,12 @@ func (f *fixture) createFinished(site string, title obj, ago time.Duration) {
 		"description": obj{"en": "x"},
 	})
 	path := "/api/admin/sites/" + site + "/incidents/" + inc.ID + "/updates"
-	f.admin(http.MethodPost, path, obj{
+	w := f.admin(http.MethodPost, path, obj{
 		"status":      "resolved",
 		"at":          at(-ago),
 		"description": obj{"en": "x"},
 	})
+	return decode[incidentView](f.t, w, http.StatusOK)
 }
 
 // at formats a time relative to now for API requests.
@@ -181,6 +185,58 @@ func TestIncidentAPI(t *testing.T) {
 	w = f.admin(http.MethodDelete, base+"/"+inc.ID, nil)
 	assert.Equal(http.StatusNoContent, w.Code)
 	w = f.admin(http.MethodDelete, base+"/"+inc.ID, nil)
+	assert.Equal(http.StatusNotFound, w.Code)
+}
+
+func TestPostmortemAPI(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	f := newFixture(t)
+	site := f.createSite("shop", "en", "de")
+	inc := f.createFinished(site, obj{"en": "Outage"}, time.Hour)
+	path := "/api/admin/sites/" + site + "/incidents/" + inc.ID
+	postmortem := path + "/postmortem"
+
+	w := f.admin(http.MethodPut, postmortem, obj{
+		"postmortem": obj{"en": strings.Repeat("x", 50001)},
+	})
+	want := map[string]string{"postmortem.en": "too_long"}
+	assert.Equal(want, fieldCodes(t, w, http.StatusBadRequest))
+
+	before := time.Now().Add(-time.Second)
+	w = f.admin(http.MethodPut, postmortem, obj{
+		"postmortem": obj{"en": " Analysis "},
+	})
+	inc = decode[incidentView](t, w, http.StatusOK)
+	assert.Equal(model.Text{"en": "Analysis"}, inc.Postmortem)
+	assert.Equal(model.Text{"en": "<p>Analysis</p>\n"}, inc.PostmortemExcerpt)
+	require.NotNil(inc.PostmortemAt)
+	assert.True(inc.PostmortemAt.After(before), "saved now")
+	assert.Equal(*inc.PostmortemAt, inc.LastActivity, "the latest activity")
+	saved := *inc.PostmortemAt
+
+	both := model.Text{
+		"en": "Analysis",
+		"de": "Analyse",
+	}
+	w = f.admin(http.MethodPut, postmortem, obj{"postmortem": both})
+	inc = decode[incidentView](t, w, http.StatusOK)
+	assert.Equal(both, inc.Postmortem)
+	assert.Equal(saved, *inc.PostmortemAt, "edits keep the time")
+
+	w = f.admin(http.MethodPut, path, obj{"title": obj{"en": "Database outage"}})
+	inc = decode[incidentView](t, w, http.StatusOK)
+	assert.Equal(both, inc.Postmortem, "saving the title keeps the postmortem")
+
+	w = f.admin(http.MethodPut, postmortem, obj{"postmortem": obj{"en": " "}})
+	inc = decode[incidentView](t, w, http.StatusOK)
+	assert.Nil(inc.Postmortem, "an empty postmortem removes it")
+	assert.Nil(inc.PostmortemAt)
+	assert.Nil(inc.PostmortemExcerpt)
+
+	missing := "/api/admin/sites/" + site + "/incidents/" + uuid.NewV7().String()
+	w = f.admin(http.MethodPut, missing+"/postmortem", obj{})
 	assert.Equal(http.StatusNotFound, w.Code)
 }
 
