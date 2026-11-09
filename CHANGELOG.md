@@ -5,6 +5,10 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- The "View incident" link in Atom feed entries opens in a new tab.
+
 ## [0.3.1] - 2026-11-09
 
 ### Security

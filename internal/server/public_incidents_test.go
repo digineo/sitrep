@@ -338,7 +338,7 @@ func TestFeed(t *testing.T) {
 		opening.Link.Href,
 	)
 	assert.Contains(opening.Content, "<p><strong>Gestört</strong></p>")
-	assert.Contains(opening.Content, `<a href="http://status.example.com/shop/de/incidents/`+inc.ID+`">Vorfall ansehen</a>`)
+	assert.Contains(opening.Content, `<a href="http://status.example.com/shop/de/incidents/`+inc.ID+`" target="_blank" rel="noopener">Vorfall ansehen</a>`)
 	assert.NotContains(opening.Content, "Frühere Meldungen")
 	assert.Contains(latest.Content, "Frühere Meldungen")
 	assert.Contains(html.UnescapeString(latest.Content), `<time datetime="2026-10-01T10:00:00Z">01.10.2026, 10:00 +00:00</time> Aktiv: Gestört`)
