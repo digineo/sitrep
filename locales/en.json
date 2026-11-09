@@ -549,7 +549,14 @@
     "deleteLastTitle": "Delete incident?",
     "deleteLastMessage": "This is the only update. Deleting it also deletes the incident {title}.",
     "openingLocked": "The opening update can only be deleted while the next update sets the status to planned or active.",
-    "confirmDeleteUpdate": "Delete update"
+    "confirmDeleteUpdate": "Delete update",
+    "postmortemHelp": "The analysis after the incident. The incident page shows all of it, the feed and incidents.json an excerpt with a link. Save it empty to remove it.",
+    "savePostmortem": "Save postmortem",
+    "postmortemSaved": "Postmortem saved.",
+    "postmortemRemoved": "Postmortem removed.",
+    "removePostmortemTitle": "Remove postmortem?",
+    "removePostmortemMessage": "Visitors no longer see the postmortem, and its text is deleted.",
+    "removePostmortem": "Remove postmortem"
   },
   "updateForm": {
     "time": "Time ({zone})",

@@ -179,6 +179,55 @@ test("follows the rules of the timeline", async({ page }) => {
   await expect(page.getByText("No incidents yet.")).toBeVisible()
 })
 
+test("adds and removes a postmortem", async({ page }) => {
+  await signIn(page)
+  const slug = unique("postmortem")
+  const site = await createSite(page, slug)
+  const incident = await createIncident(page, site.id, { en: "Lost writes" }, {
+    status:      "active",
+    description: { en: "Writes fail." },
+  })
+  await page.goto(`/admin/sites/${site.id}/incidents/${incident.id}`)
+
+  const save = page.getByRole("button", { name: "Save postmortem" })
+  await expect(save).toBeDisabled()
+  const postmortem = page.getByRole("textbox", { name: "Postmortem" })
+  await postmortem.fill("A full disk stopped **all writes**.")
+  await save.click()
+  await expect(page.getByText("Postmortem saved.")).toBeVisible()
+  await expect(save).toBeDisabled()
+
+  await page.goto(`/admin/sites/${site.id}/incidents`)
+  const entry = page.getByRole("link", { name: /Lost writes/ })
+  await expect(entry.locator(".tag", { hasText: "Postmortem" })).toBeVisible()
+  await expect(entry).toContainText("A full disk stopped all writes.")
+
+  await page.goto(`/${slug}/`)
+  const current = page.locator("section")
+    .filter({ has: page.getByRole("heading", { name: "Current incidents" }) })
+  await expect(current.locator(".tag", { hasText: "Postmortem" })).toBeVisible()
+  await expect(current).toContainText("A full disk stopped all writes.")
+  await expect(current).not.toContainText("Writes fail.")
+  await current.getByRole("link", { name: /Lost writes/ }).click()
+  const section = page.locator("section")
+    .filter({ has: page.getByRole("heading", { name: "Postmortem" }) })
+  await expect(section).toContainText("A full disk stopped all writes.")
+  await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible()
+
+  const feed = await text(page, `/${slug}/feed.atom`)
+  expect(feed).toContain("<title>Lost writes: Postmortem</title>")
+  expect(feed).toContain("Read the postmortem")
+
+  await page.goto(`/admin/sites/${site.id}/incidents/${incident.id}`)
+  await postmortem.fill("")
+  await save.click()
+  await page.getByRole("dialog")
+    .getByRole("button", { name: "Remove postmortem" })
+    .click()
+  await expect(page.getByText("Postmortem removed.")).toBeVisible()
+  await expect(save).toBeDisabled()
+})
+
 test.describe("in German", () => {
   test.use({ locale: "de-DE" })
 

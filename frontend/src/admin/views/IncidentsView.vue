@@ -6,6 +6,7 @@ import { useRoute } from "vue-router"
 
 import IncidentEntry from "../../shared/components/IncidentEntry.vue"
 import SRPagination from "../../shared/components/SRPagination.vue"
+import type { IncidentUpdate as PublicUpdate } from "../../shared/payload"
 import { api, ApiError } from "../api"
 import { usePageTitle } from "../composables/usePageTitle"
 import { resolveText } from "../rules"
@@ -59,17 +60,28 @@ watch(page, async(n) => {
 
 /**
  * entry returns an incident in the console's language, shaped like a public
- * one.
+ * one in lists: the postmortem is among the updates.
  */
 function entry(incident: Incident) {
   const langs = site.value!.languages
+  const updates: PublicUpdate[] = incident.updates.map(u => ({
+    ...u,
+    html: resolveText(u.html, locale.value, langs),
+  }))
+  if (incident.postmortemAt) {
+    updates.push({
+      id:         "postmortem",
+      at:         incident.postmortemAt,
+      html:       resolveText(incident.postmortemExcerpt, locale.value, langs),
+      postmortem: true,
+    })
+    // A stable sort keeps the postmortem after updates at the same time.
+    updates.sort((a, b) => Date.parse(a.at) - Date.parse(b.at))
+  }
   return {
     ...incident,
-    title:   resolveText(incident.title, locale.value, langs),
-    updates: incident.updates.map(u => ({
-      ...u,
-      html: resolveText(u.html, locale.value, langs),
-    })),
+    title: resolveText(incident.title, locale.value, langs),
+    updates,
   }
 }
 </script>
