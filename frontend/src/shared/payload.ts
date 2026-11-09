@@ -98,12 +98,14 @@ export type Severity = "minor" | "major" | "critical"
 
 /** IncidentUpdate is one entry of an incident's timeline. */
 export interface IncidentUpdate {
-  id:        string
-  at:        string
-  status?:   IncidentStatus
-  severity?: Severity
+  id:          string
+  at:          string
+  status?:     IncidentStatus
+  severity?:   Severity
   /** html is the rendered description. */
-  html:      string
+  html:        string
+  /** postmortem marks the postmortem in lists; its html is an excerpt. */
+  postmortem?: boolean
 }
 
 /**
@@ -118,6 +120,14 @@ export interface Incident {
   severity?:    Severity
   lastActivity: string
   updates:      IncidentUpdate[]
+  /**
+   * postmortem is the analysis written after the incident, on the incident's
+   * page; lists have it among the updates.
+   */
+  postmortem?:  {
+    at:   string
+    html: string
+  }
 }
 
 /**

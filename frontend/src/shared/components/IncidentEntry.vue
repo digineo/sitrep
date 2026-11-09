@@ -46,6 +46,7 @@ const text = computed(() => excerpt(props.incident))
       <IncidentTags
           :status="incident.status"
           :severity="incident.severity"
+          :postmortem="incident.updates.some(u => u.postmortem)"
       />
     </div>
     <p
