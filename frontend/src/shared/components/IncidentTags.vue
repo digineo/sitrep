@@ -6,8 +6,10 @@ import type { IncidentStatus, Severity } from "../payload"
 import SRTag from "./SRTag.vue"
 
 defineProps<{
-  status?:   IncidentStatus
-  severity?: Severity
+  status?:     IncidentStatus
+  severity?:   Severity
+  /** postmortem marks an incident with a postmortem. */
+  postmortem?: boolean
 }>()
 
 const { t } = useI18n()
@@ -29,6 +31,7 @@ const severityTag = {
         :color="severityTag[severity]"
         :light="severity !== 'minor'"
     >{{ t("incidents.severityLabel", { label: t(`incidents.severity.${severity}`) }) }}</SRTag>
+    <SRTag v-if="postmortem">{{ t("incidents.postmortem") }}</SRTag>
   </span>
 </template>
 

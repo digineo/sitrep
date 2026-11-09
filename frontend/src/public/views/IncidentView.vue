@@ -9,6 +9,7 @@ import { type Bootstrap } from "../../shared/bootstrap"
 import IncidentTags from "../../shared/components/IncidentTags.vue"
 import UpdateEntry from "../../shared/components/UpdateEntry.vue"
 import { useLoad } from "../../shared/composables/useLoad"
+import { formatDateTime } from "../../shared/format"
 import type { Incident } from "../../shared/payload"
 import { getJSON, isNotFound, siteData } from "../siteData"
 import { pagePath } from "../urls"
@@ -80,20 +81,44 @@ useHead({
         v-else-if="!incident || !siteData"
         aria-busy="true"
     />
-    <ol
-        v-else
-        class="sr-timeline"
-    >
-      <li
-          v-for="update in incident.updates.toReversed()"
-          :key="update.id"
+    <template v-else>
+      <section
+          v-if="incident.postmortem?.html"
+          class="block"
       >
-        <UpdateEntry
-            :update
-            :timezone="siteData.site.timezone"
+        <h3 class="title is-5 mb-1">
+          {{ t("incidents.postmortem") }}
+        </h3>
+        <p class="sr-muted">
+          <time :datetime="incident.postmortem.at">{{ t("incidents.postmortemAt", {
+            time: formatDateTime(new Date(incident.postmortem.at), locale, siteData.site.timezone),
+          }) }}</time>
+        </p>
+        <!-- eslint-disable vue/no-v-html -- server-rendered Markdown -->
+        <div
+            class="content mt-2"
+            v-html="incident.postmortem.html"
         />
-      </li>
-    </ol>
+        <!-- eslint-enable vue/no-v-html -->
+      </section>
+      <h3
+          v-if="incident.postmortem"
+          class="title is-5"
+      >
+        {{ t("incidents.timeline") }}
+      </h3>
+      <ol class="sr-timeline">
+        <li
+            v-for="update in incident.updates.toReversed()"
+            :key="update.id"
+        >
+          <UpdateEntry
+              :update
+              :timezone="siteData.site.timezone"
+          />
+        </li>
+      </ol>
+    </template>
   </template>
 </template>
 

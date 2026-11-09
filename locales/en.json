@@ -70,6 +70,8 @@
     },
     "severityLabel": "Severity: {label}",
     "postmortem": "Postmortem",
+    "postmortemAt": "Published {time}",
+    "timeline": "Timeline",
     "pagination": "Pages",
     "newer": "Newer",
     "older": "Older",
