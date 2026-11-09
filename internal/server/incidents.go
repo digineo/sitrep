@@ -49,7 +49,7 @@ func paginate(raw string, n, size int) (from, to, pages int, ok bool) {
 }
 
 // incidentView is an incident as the admin console sees it, with derived
-// values and rendered descriptions.
+// values, rendered descriptions and excerpts of the postmortem.
 type incidentView struct {
 	model.Incident
 	Updates      []updateView `json:"updates"` // replaces the embedded field
@@ -57,6 +57,8 @@ type incidentView struct {
 	Severity     string       `json:"severity,omitempty"`
 	Phase        string       `json:"phase"`
 	LastActivity time.Time    `json:"lastActivity"`
+	// the excerpt of the postmortem as HTML, per language
+	PostmortemExcerpt model.Text `json:"postmortemExcerpt,omitempty"`
 }
 
 type updateView struct {
@@ -83,6 +85,12 @@ func newIncidentView(inc *model.Incident) incidentView {
 		}
 
 		v.Updates = append(v.Updates, uv)
+	}
+	for lang, src := range inc.Postmortem {
+		if v.PostmortemExcerpt == nil {
+			v.PostmortemExcerpt = model.Text{}
+		}
+		v.PostmortemExcerpt[lang] = postmortemExcerpt(src)
 	}
 	return v
 }
@@ -275,6 +283,33 @@ func (s *Server) putIncident(w http.ResponseWriter, r *http.Request) {
 
 	s.change(w, r, err, func(inc *model.Incident) error {
 		inc.Title = title
+		return nil
+	})
+}
+
+// putPostmortem replaces the postmortem; an empty one removes it. Its time
+// is set when it is first saved.
+func (s *Server) putPostmortem(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Postmortem model.Text `json:"postmortem"`
+	}
+	site, err := s.readForSite(w, r, &in)
+	postmortem := in.Postmortem.Normalize()
+	if err == nil {
+		var f apierr.Fields
+		model.ValidatePostmortem(&f, postmortem, site.Languages.Effective())
+		err = f.Err()
+	}
+
+	at := now()
+	s.change(w, r, err, func(inc *model.Incident) error {
+		switch {
+		case postmortem == nil:
+			inc.PostmortemAt = nil
+		case inc.PostmortemAt == nil:
+			inc.PostmortemAt = &at
+		}
+		inc.Postmortem = postmortem
 		return nil
 	})
 }

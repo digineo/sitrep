@@ -1,7 +1,9 @@
 package server
 
 import (
+	"html/template"
 	"net/http"
+	"slices"
 	"time"
 	"uuid"
 
@@ -96,13 +98,22 @@ type incidentsPayload struct {
 // publicIncident is an incident as visitors see it, without authors and
 // Markdown sources. Updates are ordered by time.
 type publicIncident struct {
-	ID           string         `json:"id"`
-	Title        string         `json:"title"`
-	Phase        string         `json:"phase"`
-	Status       string         `json:"status"`
-	Severity     string         `json:"severity,omitempty"`
-	LastActivity time.Time      `json:"lastActivity"`
-	Updates      []publicUpdate `json:"updates"`
+	ID           string            `json:"id"`
+	Title        string            `json:"title"`
+	Phase        string            `json:"phase"`
+	Status       string            `json:"status"`
+	Severity     string            `json:"severity,omitempty"`
+	LastActivity time.Time         `json:"lastActivity"`
+	Updates      []publicUpdate    `json:"updates"`
+	Postmortem   *publicPostmortem `json:"postmortem,omitempty"`
+}
+
+// publicPostmortem is the postmortem of an incident in the requested
+// language, with its rendered text on the incident's page. Lists move it
+// into the updates, see listPostmortem.
+type publicPostmortem struct {
+	At   time.Time `json:"at"`
+	HTML string    `json:"html,omitempty"`
 }
 
 type publicUpdate struct {
@@ -111,6 +122,8 @@ type publicUpdate struct {
 	Status   string    `json:"status,omitempty"`
 	Severity string    `json:"severity,omitempty"`
 	HTML     string    `json:"html"` // the rendered description
+	// Postmortem marks the postmortem, which lists show as an update.
+	Postmortem bool `json:"postmortem,omitempty"`
 }
 
 // span is the time range of an incident in charts; Until is nil while the
@@ -146,7 +159,45 @@ func newPublicIncident(
 			HTML:     markdown.HTML(u.Description.Resolve(lang, l)),
 		})
 	}
+	if inc.PostmortemAt != nil && inc.Postmortem.Resolve(lang, l) != "" {
+		p.Postmortem = &publicPostmortem{At: *inc.PostmortemAt}
+	}
 	return p
+}
+
+// listPostmortem moves the postmortem of p, if any, into its updates, after
+// updates at the same time, with html and the status and severity of the
+// update before it.
+func (p *publicIncident) listPostmortem(html string) {
+	pm := p.Postmortem
+	if pm == nil {
+		return
+	}
+
+	i := slices.IndexFunc(p.Updates, func(u publicUpdate) bool {
+		return u.At.After(pm.At)
+	})
+	if i < 0 {
+		i = len(p.Updates)
+	}
+	u := publicUpdate{
+		ID:         postmortemID(p.ID),
+		At:         pm.At,
+		HTML:       html,
+		Postmortem: true,
+	}
+	if i > 0 {
+		u.Status, u.Severity = p.Updates[i-1].Status, p.Updates[i-1].Severity
+	}
+	p.Updates = slices.Insert(p.Updates, i, u)
+	p.Postmortem = nil
+}
+
+// postmortemExcerpt returns the excerpt of the postmortem src as HTML, for
+// lists.
+func postmortemExcerpt(src string) string {
+	excerpt := markdown.Excerpt(src, maxExcerptLength)
+	return "<p>" + template.HTMLEscapeString(excerpt) + "</p>\n"
 }
 
 // incidentsSection builds the incidents section at now. Spans are those
@@ -183,6 +234,7 @@ func incidentsSection(
 	for _, inc := range incidents {
 		if inc.Public(now) {
 			p := newPublicIncident(&inc, lang, l)
+			p.listPostmortem(postmortemExcerpt(inc.Postmortem.Resolve(lang, l)))
 			switch p.Phase {
 			case model.PhaseOngoing:
 				sec.Ongoing = append(sec.Ongoing, p)
@@ -397,6 +449,10 @@ func (s *Server) publicIncident(w http.ResponseWriter, r *http.Request) {
 		langs := site.Languages.Effective()
 		lang := contentLang(r.URL.Query().Get("lang"), langs)
 		p = newPublicIncident(inc, lang, langs)
+		if p.Postmortem != nil {
+			src := inc.Postmortem.Resolve(lang, langs)
+			p.Postmortem.HTML = markdown.HTML(src)
+		}
 	}
 
 	s.writePublic(w, r, p, err)
@@ -428,7 +484,9 @@ func (s *Server) publicArchive(w http.ResponseWriter, r *http.Request) {
 	lang := contentLang(q.Get("lang"), langs)
 	list := []publicIncident{}
 	for _, inc := range incidents[from:to] {
-		list = append(list, newPublicIncident(&inc, lang, langs))
+		p := newPublicIncident(&inc, lang, langs)
+		p.listPostmortem(postmortemExcerpt(inc.Postmortem.Resolve(lang, langs)))
+		list = append(list, p)
 	}
 
 	body := map[string]any{

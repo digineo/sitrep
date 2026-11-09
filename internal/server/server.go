@@ -143,6 +143,11 @@ func newServer(
 		s.deleteIncident,
 	)
 	handle(
+		"PUT /api/admin/sites/{site}/incidents/{incident}/postmortem",
+		responder,
+		s.putPostmortem,
+	)
+	handle(
 		"POST /api/admin/sites/{site}/incidents/{incident}/updates",
 		responder,
 		s.addUpdate,
@@ -374,7 +379,7 @@ func (s *Server) serveSite(
 		case res.page.kind == pageFeed:
 			s.serveFeed(w, r, info, site, base, res.lang)
 		default:
-			s.serveIncidentsJSON(w, r, site, res.lang)
+			s.serveIncidentsJSON(w, r, info, site, base, res.lang)
 		}
 		return
 	}

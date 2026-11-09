@@ -235,6 +235,157 @@ func TestPublicIncidents(t *testing.T) {
 	)
 }
 
+func TestPublicPostmortem(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	f := newFixture(t)
+	site := f.createSite("shop", "en", "de")
+	inc := f.createFinished(site, obj{
+		"en": "Outage",
+		"de": "Ausfall",
+	}, 20*24*time.Hour)
+	w := f.admin(
+		http.MethodPut,
+		"/api/admin/sites/"+site+"/incidents/"+inc.ID+"/postmortem",
+		obj{"postmortem": obj{
+			"en": "Root cause",
+			"de": "**Ursache:** " + strings.Repeat("Text ", 100),
+		}},
+	)
+	saved := decode[incidentView](t, w, http.StatusOK)
+	link := "http://status.example.com/shop/de/incidents/" + inc.ID
+	teaser := `<p>Ursache: Text Text`
+	readMore := `<a href="` + link + `" target="_blank" rel="noopener">Nachbetrachtung lesen</a>`
+
+	p, _ := f.publicPayload(site, "?lang=de")
+	require.Len(p.Incidents.Finished, 1, "public again after the postmortem")
+	listed := p.Incidents.Finished[0]
+	assert.Nil(listed.Postmortem, "listed as an update instead")
+	require.Len(listed.Updates, 3)
+	pm := listed.Updates[2]
+	assert.True(pm.Postmortem)
+	assert.Equal(postmortemID(inc.ID), pm.ID)
+	assert.True(saved.PostmortemAt.Equal(pm.At))
+	assert.Equal("resolved", pm.Status, "of the update before")
+	assert.True(strings.HasPrefix(pm.HTML, teaser))
+	assert.True(strings.HasSuffix(pm.HTML, "…</p>\n"), "an excerpt")
+
+	w = f.get(
+		"status.example.com",
+		"/api/public/sites/"+site+"/incidents?lang=de",
+	)
+	var archive struct {
+		Incidents []publicIncident `json:"incidents"`
+	}
+	require.NoError(json.Unmarshal(w.Body.Bytes(), &archive))
+	assert.Equal(listed, archive.Incidents[0], "the same in the archive")
+
+	w = f.get(
+		"status.example.com",
+		"/api/public/sites/"+site+"/incidents/"+inc.ID+"?lang=de",
+	)
+	var detail publicIncident
+	require.NoError(json.Unmarshal(w.Body.Bytes(), &detail))
+	require.NotNil(detail.Postmortem)
+	assert.True(strings.HasPrefix(
+		detail.Postmortem.HTML,
+		"<p><strong>Ursache:</strong> Text Text",
+	), "the full text on the incident's page")
+
+	w = f.get("status.example.com", "/shop/de/feed.atom")
+	var feed testFeed
+	require.NoError(xml.Unmarshal(w.Body.Bytes(), &feed))
+	require.Len(feed.Entries, 3, "the updates and the postmortem")
+	entry := feed.Entries[0]
+	assert.Equal("Ausfall: Nachbetrachtung", entry.Title, "newest first")
+	id := uuidV5(uuid.MustParse(inc.ID), "postmortem")
+	assert.Equal("urn:uuid:"+id.String(), entry.ID)
+	assert.Equal(id.String(), postmortemID(inc.ID))
+	assert.Equal(feed.Updated, entry.Updated)
+	assert.Equal(link, entry.Link.Href)
+	assert.Contains(entry.Content, teaser)
+	assert.Contains(entry.Content, "…</p>", "an excerpt")
+	assert.Contains(entry.Content, readMore)
+
+	w = f.get("status.example.com", "/shop/de/incidents.json")
+	var list []publicIncident
+	require.NoError(json.Unmarshal(w.Body.Bytes(), &list))
+	require.Len(list, 1)
+	assert.Nil(list[0].Postmortem, "listed as an update instead")
+	require.Len(list[0].Updates, 3)
+	listedUpdate := list[0].Updates[2]
+	assert.True(listedUpdate.Postmortem)
+	assert.Equal(id.String(), listedUpdate.ID)
+	assert.True(saved.PostmortemAt.Equal(listedUpdate.At))
+	assert.Equal("resolved", listedUpdate.Status)
+	assert.Contains(listedUpdate.HTML, teaser)
+	assert.Contains(listedUpdate.HTML, readMore)
+	assert.False(list[0].Updates[1].Postmortem)
+	assert.Regexp(`"postmortem":true`, w.Body.String())
+	assert.Equal(1, strings.Count(w.Body.String(), `"postmortem"`), "only there")
+
+	w = f.get("status.example.com", "/shop/en/incidents.json")
+	require.NoError(json.Unmarshal(w.Body.Bytes(), &list))
+	assert.Contains(list[0].Updates[2].HTML, "<p>Root cause</p>", "per language")
+}
+
+func TestListPostmortem(t *testing.T) {
+	assert := assert.New(t)
+
+	t0 := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	id := uuid.NewV7().String()
+	pm := postmortemID(id)
+	incident := func(at time.Duration) publicIncident {
+		return publicIncident{
+			ID: id,
+			Updates: []publicUpdate{
+				{ID: "a", At: t0, Status: "active", Severity: "major"},
+				{ID: "b", At: t0.Add(time.Hour), Status: "resolved"},
+			},
+			Postmortem: &publicPostmortem{At: t0.Add(at)},
+		}
+	}
+	ids := func(p publicIncident) []string {
+		var ids []string
+		for _, u := range p.Updates {
+			ids = append(ids, u.ID)
+		}
+		return ids
+	}
+
+	p := incident(2 * time.Hour)
+	p.listPostmortem("<p>x</p>")
+	assert.Nil(p.Postmortem)
+	assert.Equal(publicUpdate{
+		ID:         pm,
+		At:         t0.Add(2 * time.Hour),
+		Status:     "resolved",
+		HTML:       "<p>x</p>",
+		Postmortem: true,
+	}, p.Updates[2], "the status and severity of the update before")
+
+	p = incident(time.Hour)
+	p.listPostmortem("")
+	assert.Equal([]string{"a", "b", pm}, ids(p), "after updates at the same time")
+
+	p = incident(30 * time.Minute)
+	p.listPostmortem("")
+	assert.Equal([]string{"a", pm, "b"}, ids(p), "by time")
+	assert.Equal("active", p.Updates[1].Status)
+	assert.Equal("major", p.Updates[1].Severity)
+
+	p = incident(-time.Hour)
+	p.listPostmortem("")
+	assert.Equal([]string{pm, "a", "b"}, ids(p))
+	assert.Empty(p.Updates[0].Status, "no update before")
+
+	p = incident(0)
+	p.Postmortem = nil
+	p.listPostmortem("<p>x</p>")
+	assert.Equal([]string{"a", "b"}, ids(p), "no postmortem")
+}
+
 func TestUUIDv5(t *testing.T) {
 	dns := uuid.MustParse("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
 	got := uuidV5(dns, "www.example.com")

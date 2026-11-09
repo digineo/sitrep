@@ -69,6 +69,7 @@
       "critical": "Critical"
     },
     "severityLabel": "Severity: {label}",
+    "postmortem": "Postmortem",
     "pagination": "Pages",
     "newer": "Newer",
     "older": "Older",
@@ -506,7 +507,8 @@
   },
   "feed": {
     "previous": "Previous updates",
-    "view": "View incident"
+    "view": "View incident",
+    "readPostmortem": "Read the postmortem"
   },
   "format": {
     "dateTime": "{year}-{month}-{day} {hour}:{minute} {offset}"
