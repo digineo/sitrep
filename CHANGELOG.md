@@ -5,6 +5,20 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Security
+
+- go-jose 4.1.9 fixes excessive CPU use when parsing crafted RSA keys in
+  JWKs (GHSA-mgcc-cww5-fp2q). This affects instances with single sign-on.
+- vue-i18n 11.4.18 fixes two escaping flaws of its `escapeParameter`
+  option (GHSA-83rm-6c8r-g728, GHSA-8rc2-428q-7ww3). sitrep does not use
+  that option and was not affected.
+- Vite 8.3.7 and Happy DOM 21.0.4 fix advisories in the dev server and the
+  test environment (Vite: GHSA-698v-4r3x-3vcv, GHSA-r825-w8mm-5pxw,
+  GHSA-587h-7wmj-h5pm, GHSA-vfpm-58rq-9qcg, GHSA-9jrq-w75r-8gcw,
+  GHSA-rq7h-c2jc-7f22; Happy DOM: GHSA-834v-8h66-3h79,
+  GHSA-c8p4-j97h-3vg8, GHSA-5fpq-26gf-qwcr). Neither is part of a release
+  build.
+
 ## [0.3.0] - 2026-10-16
 
 ### Added

@@ -1,7 +1,7 @@
 # Go build variants: release (no tag), dev and testauth.
 GO_TAGS = "" dev testauth
 
-GOLANGCI_LINT = github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
+GOLANGCI_LINT = github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
 AIR           = github.com/air-verse/air@v1.67.4
 
 # Build information for the release binary and image, see internal/buildinfo.
