@@ -76,7 +76,7 @@ var feedContent = template.Must(template.New("content").Parse(`{{.Description}}
 {{- end}}
 </ul>
 {{- end}}
-<p><a href="{{.Link}}">{{.ViewLabel}}</a></p>
+<p><a href="{{.Link}}" target="_blank" rel="noopener">{{.ViewLabel}}</a></p>
 `))
 
 type feedPrevious struct {
