@@ -549,7 +549,14 @@
     "deleteLastTitle": "Vorfall löschen?",
     "deleteLastMessage": "Dies ist die einzige Meldung. Wenn Sie sie löschen, wird auch der Vorfall {title} gelöscht.",
     "openingLocked": "Die erste Meldung kann nur gelöscht werden, wenn die nächste Meldung den Status geplant oder aktiv setzt.",
-    "confirmDeleteUpdate": "Meldung löschen"
+    "confirmDeleteUpdate": "Meldung löschen",
+    "postmortemHelp": "Die Analyse nach dem Vorfall. Die Vorfallseite zeigt sie vollständig, Feed und incidents.json einen Auszug mit Link. Leer speichern entfernt sie.",
+    "savePostmortem": "Nachbetrachtung speichern",
+    "postmortemSaved": "Nachbetrachtung gespeichert.",
+    "postmortemRemoved": "Nachbetrachtung entfernt.",
+    "removePostmortemTitle": "Nachbetrachtung entfernen?",
+    "removePostmortemMessage": "Besucher sehen die Nachbetrachtung nicht mehr, und ihr Text wird gelöscht.",
+    "removePostmortem": "Nachbetrachtung entfernen"
   },
   "updateForm": {
     "time": "Zeitpunkt ({zone})",

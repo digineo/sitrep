@@ -12,6 +12,7 @@ import UpdateEntry from "../../shared/components/UpdateEntry.vue"
 import { useConfirm } from "../../shared/composables/useConfirm"
 import { formatDateTime } from "../../shared/format"
 import { api, ApiError, fieldErrors, localizedErrors } from "../api"
+import MarkdownEditor from "../components/MarkdownEditor.vue"
 import UpdateFields from "../components/UpdateFields.vue"
 import { usePageTitle } from "../composables/usePageTitle"
 import { useUnsavedChanges } from "../composables/useUnsavedChanges"
@@ -57,6 +58,16 @@ const titleErrors = ref<Record<string, string>>({})
 const titleChanged = computed(() => !!incident.value
   && JSON.stringify(titleDraft.value) !== JSON.stringify(incident.value.title))
 
+/** filled drops blank values, as saving does. */
+const filled = (text: Text | undefined): Text =>
+  Object.fromEntries(Object.entries(text ?? {}).filter(([, v]) => v.trim()))
+
+const postmortemDraft = ref<Text>({})
+const postmortemErrors = ref<Record<string, string>>({})
+const postmortemChanged = computed(() => !!incident.value
+  && JSON.stringify(filled(postmortemDraft.value))
+  !== JSON.stringify(filled(incident.value.postmortem)))
+
 const emptyDraft = (): UpdateDraft => ({
   at:          "",
   status:      "",
@@ -80,7 +91,10 @@ const editChanged = computed(() => !!editing.value
   && JSON.stringify(editDraft.value) !== JSON.stringify(editing.value.initial))
 
 const busy = ref(false)
-useUnsavedChanges(() => titleChanged.value || newChanged.value || editChanged.value)
+useUnsavedChanges(() => titleChanged.value
+  || postmortemChanged.value
+  || newChanged.value
+  || editChanged.value)
 
 Promise.all([
   api<Site>("GET", `/api/admin/sites/${siteId}`),
@@ -88,6 +102,7 @@ Promise.all([
 ]).then(([s, i]) => {
   site.value = s
   show(i)
+  postmortemDraft.value = { ...i.postmortem }
 }).catch((err) => {
   notFound.value = err instanceof ApiError && err.status === 404
   if (!notFound.value) {
@@ -95,7 +110,10 @@ Promise.all([
   }
 })
 
-/** show displays a stored incident and resets the title form. */
+/**
+ * show displays a stored incident and resets the title form. The postmortem
+ * form keeps its draft until the postmortem is saved.
+ */
 function show(i: Incident) {
   incident.value = i
   titleDraft.value = { ...i.title }
@@ -139,6 +157,29 @@ function saveTitle() {
     () => api<Incident>("PUT", base, { title: titleDraft.value }),
     t("incidentEditor.titleSaved"),
   )
+}
+
+async function savePostmortem() {
+  const remove = !Object.keys(filled(postmortemDraft.value)).length
+  if (remove && !await confirm({
+    title:   t("incidentEditor.removePostmortemTitle"),
+    message: t("incidentEditor.removePostmortemMessage"),
+    confirm: t("incidentEditor.removePostmortem"),
+    danger:  true,
+  })) {
+    return
+  }
+
+  const saved = await run(
+    postmortemErrors,
+    () => api<Incident>("PUT", `${base}/postmortem`, { postmortem: postmortemDraft.value }),
+    remove
+      ? t("incidentEditor.postmortemRemoved")
+      : t("incidentEditor.postmortemSaved"),
+  )
+  if (saved && incident.value) {
+    postmortemDraft.value = { ...incident.value.postmortem }
+  }
 }
 
 async function addUpdate() {
@@ -241,6 +282,7 @@ async function removeIncident() {
     await api("DELETE", base)
     incident.value = null
     titleDraft.value = {}
+    postmortemDraft.value = {}
     newDraft.value = emptyDraft()
     editing.value = null
     notices.success(t("incidentEditor.deleted"))
@@ -424,6 +466,38 @@ const history = computed(() => (incident.value?.updates ?? [])
         </UpdateEntry>
       </li>
     </ol>
+
+    <form
+        class="box sr-form mt-5"
+        @submit.prevent="savePostmortem"
+    >
+      <h2 class="title is-5">
+        {{ t("incidents.postmortem") }}
+      </h2>
+      <SRLocalizedInput
+          v-slot="{ value, update, attrs }"
+          v-model="postmortemDraft"
+          :label="t('incidents.postmortem')"
+          hide-label
+          :languages="site.languages"
+          :maxlength="50000"
+          :help="t('incidentEditor.postmortemHelp')"
+          :errors="localizedErrors(postmortemErrors, 'postmortem', t)"
+      >
+        <MarkdownEditor
+            :model-value="value"
+            v-bind="attrs"
+            @update:model-value="update"
+        />
+      </SRLocalizedInput>
+      <SRButton
+          type="submit"
+          :loading="busy"
+          :disabled="!postmortemChanged"
+      >
+        {{ t("incidentEditor.savePostmortem") }}
+      </SRButton>
+    </form>
   </template>
 </template>
 

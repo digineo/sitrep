@@ -5,6 +5,16 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Postmortems: an incident can have a long Markdown text written after it,
+  shown above the timeline on the incident's page. Lists mark the incident
+  with a tag and show the postmortem's excerpt like that of an update. The
+  Atom feed carries an excerpt with a link to the incident; incidents.json
+  lists it among the updates, marked with `"postmortem": true`. Saving a
+  postmortem makes a finished incident public again for seven days and
+  restarts its retention.
+
 ### Changed
 
 - The "View incident" link in Atom feed entries opens in a new tab.

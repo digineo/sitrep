@@ -376,14 +376,21 @@ change. Each update sets a status, a severity (minor, major or critical) or
 both, and has a Markdown description. Ongoing incidents count in the status
 of the page: a critical one as an outage, any other as degraded.
 
+An incident can also have a postmortem: a Markdown text of up to 50,000
+characters per language, usually written once the incident is over.
+The incident's page shows it above the timeline. Lists mark the incident
+with a tag and show the postmortem's excerpt like that of an update. Saving
+it empty removes it. Its time is when it was first saved, and counts as the
+incident's last activity.
+
 Visitors see upcoming and ongoing incidents, and finished ones for seven
-days after their last update; the archive at `/incidents` lists all of
+days after their last activity; the archive at `/incidents` lists all of
 them. Charts shade the time an incident was ongoing in its severity's
 color. Each language has an Atom feed at `/feed.atom` with one entry per
-update.
+update and one per postmortem, with an excerpt and a link to the incident.
 
 A status page can delete finished incidents a number of days after their
-last update ("Keep finished incidents" in its settings). Upcoming and
+last activity ("Keep finished incidents" in its settings). Upcoming and
 ongoing incidents are never deleted. Retention runs at startup and hourly.
 
 ### incidents.json
@@ -392,8 +399,11 @@ ongoing incidents are never deleted. Retention runs at startup and hourly.
 languages, e.g. `/de/incidents.json`) lists the incidents visitors see, in
 the URL's language: ID, title, phase (`upcoming`, `ongoing`, `finished`),
 current status and severity, and every update with its time in UTC, status,
-severity and description as HTML. Responses are cached for 60 seconds. It
-is not linked from any page.
+severity and description as HTML. A postmortem is listed among the updates
+by its time, marked with `"postmortem": true`, with the status and
+severity of the update before it, and with an excerpt and a link to the
+incident as HTML.
+Responses are cached for 60 seconds. It is not linked from any page.
 
 Other websites can read it in the browser when their origin is listed under
 "Allowed origins for incidents.json" in the status page's settings, e.g.

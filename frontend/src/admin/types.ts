@@ -90,14 +90,21 @@ export interface IncidentUpdate {
  * by time.
  */
 export interface Incident {
-  id:           string
-  title:        Text
-  updates:      IncidentUpdate[]
-  author:       Person
-  status:       IncidentStatus
-  severity?:    Severity
-  phase:        "upcoming" | "ongoing" | "finished"
-  lastActivity: string
+  id:                 string
+  title:              Text
+  updates:            IncidentUpdate[]
+  /**
+   * postmortem is the Markdown source, postmortemExcerpt its excerpt as
+   * HTML; postmortemAt is set with it.
+   */
+  postmortem?:        Text
+  postmortemAt?:      string
+  postmortemExcerpt?: Text
+  author:             Person
+  status:             IncidentStatus
+  severity?:          Severity
+  phase:              "upcoming" | "ongoing" | "finished"
+  lastActivity:       string
 }
 
 export interface SiteSummary {
