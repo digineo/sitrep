@@ -65,15 +65,18 @@ var System = Person{
 }
 
 // Incident is a manually managed event with a timeline of updates, kept
-// ordered by time.
+// ordered by time, and an optional postmortem written afterwards.
 type Incident struct {
-	ID        string    `json:"id"`
-	Site      string    `json:"site"`
-	Title     Text      `json:"title"`
-	Updates   []Update  `json:"updates"`
-	Author    Person    `json:"author"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	ID         string   `json:"id"`
+	Site       string   `json:"site"`
+	Title      Text     `json:"title"`
+	Updates    []Update `json:"updates"`
+	Postmortem Text     `json:"postmortem,omitempty"` // Markdown
+	// PostmortemAt is when the postmortem was first saved; edits keep it.
+	PostmortemAt *time.Time `json:"postmortemAt,omitempty"`
+	Author       Person     `json:"author"`
+	CreatedAt    time.Time  `json:"createdAt"`
+	UpdatedAt    time.Time  `json:"updatedAt"`
 }
 
 // Update is one entry of an incident's timeline. It sets a status, a
@@ -111,6 +114,12 @@ func (u *Update) Validate(f *apierr.Fields, prefix string, l Languages) {
 // ValidateTitle checks a normalized incident title.
 func ValidateTitle(f *apierr.Fields, title Text, l Languages) {
 	validateText(f, "title", title, l, true, maxName)
+}
+
+// ValidatePostmortem checks a normalized postmortem; an empty one removes
+// it.
+func ValidatePostmortem(f *apierr.Fields, postmortem Text, l Languages) {
+	validateText(f, "postmortem", postmortem, l, false, maxMarkdown)
 }
 
 // Sort orders the updates by time. Updates at the same time keep the order
@@ -166,9 +175,14 @@ func (inc *Incident) Phase() string {
 	return PhaseFinished
 }
 
-// LastActivity returns the time of the latest update.
+// LastActivity returns the time of the latest update, or of the postmortem
+// if it was saved later.
 func (inc *Incident) LastActivity() time.Time {
-	return inc.Updates[len(inc.Updates)-1].At
+	last := inc.Updates[len(inc.Updates)-1].At
+	if inc.PostmortemAt != nil && inc.PostmortemAt.After(last) {
+		return *inc.PostmortemAt
+	}
+	return last
 }
 
 // Span returns the time range to shade in charts: from the first update

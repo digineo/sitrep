@@ -191,6 +191,14 @@ func TestIncidentDerived(t *testing.T) {
 		"until the latest update that sets a status",
 	)
 
+	early, late := t0.Add(time.Hour), t0.Add(48*time.Hour)
+	inc.PostmortemAt = &early
+	assert.Equal(t0.Add(5*time.Hour), inc.LastActivity(), "an earlier postmortem")
+	inc.PostmortemAt = &late
+	assert.Equal(late, inc.LastActivity(), "a later postmortem")
+	_, until, _ = inc.Span()
+	assert.Equal(t0.Add(4*time.Hour), until, "postmortems leave the span")
+
 	for status, phase := range map[string]string{
 		StatusPlanned:       PhaseUpcoming,
 		StatusActive:        PhaseOngoing,
