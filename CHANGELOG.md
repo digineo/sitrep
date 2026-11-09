@@ -5,6 +5,8 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-09
+
 ### Added
 
 - Postmortems: an incident can have a long Markdown text written after it,
@@ -173,7 +175,8 @@ is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `make build` and the image embed. `sitrep serve` logs them on startup,
   the console shows them below the signed-in admin.
 
-[Unreleased]: https://github.com/digineo/sitrep/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/digineo/sitrep/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/digineo/sitrep/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/digineo/sitrep/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/digineo/sitrep/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/digineo/sitrep/compare/v0.2.0...v0.2.1
